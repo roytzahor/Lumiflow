@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id       String    @id @default(uuid())
+  name     String
+  email    String    @unique
+  accounts Account[] @relation("AccountToUser")
+}
+
+model Account {
+  id                    String                 @id @default(uuid())
+  name                  String
+  type                  String
+  balance               Float                  @default(0)
+  recurringTransactions RecurringTransaction[]
+  transactions          Transaction[]
+  users                 User[]                 @relation("AccountToUser")
+}
+
+model Transaction {
+  id          String   @id @default(uuid())
+  amount      Float
+  category    String
+  date        DateTime @default(now())
+  accountId   String
+  description String?
+  account     Account  @relation(fields: [accountId], references: [id])
+}
+
+model RecurringTransaction {
+  id          String    @id @default(uuid())
+  amount      Float
+  category    String
+  description String?
+  accountId   String
+  startDate   DateTime  @default(now())
+  nextRun     DateTime
+  active      Boolean   @default(true)
+  lastRun     DateTime?
+  account     Account   @relation(fields: [accountId], references: [id])
+}
+
+model BudgetSettings {
+  id              String   @id @default(uuid())
+  monthlyIncome   Float    @default(21000)
+  needsPercent    Int      @default(50)
+  wantsPercent    Int      @default(30)
+  savingsPercent  Int      @default(20)
+  savingsGoal     String?  // e.g. "Ski Trip"
+  savingsGoalAmount Float? 
+}
+
+model Category {
+  id      String @id @default(uuid())
+  name    String @unique
+  icon    String // Emoji
+  type    String // e.g. "expense", "income"
+  isCustom Boolean @default(false)
+}
