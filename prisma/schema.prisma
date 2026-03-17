@@ -7,60 +7,126 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum AccountType {
+  PRIVATE
+  SHARED
+}
+
+enum AccountMemberRole {
+  OWNER
+  MEMBER
+}
+
+enum RecurringMonthPolicy {
+  ROLL_TO_LAST_DAY
+  SKIP_MONTH
+}
+
 model User {
-  id       String    @id @default(uuid())
-  name     String
-  email    String    @unique
-  accounts Account[] @relation("AccountToUser")
+  id              String          @id @default(uuid())
+  name            String?
+  email           String          @unique
+  passwordHash    String
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  accountMembers  AccountMember[]
+  categories      Category[]
+  budgetSettings  BudgetSettings?
+  createdInvites  AccountInvite[] @relation("InviteCreatedBy")
+  acceptedInvites AccountInvite[] @relation("InviteAcceptedBy")
 }
 
 model Account {
   id                    String                 @id @default(uuid())
   name                  String
-  type                  String
+  type                  AccountType            @default(PRIVATE)
   balance               Float                  @default(0)
+  color                 String?
+  icon                  String?
+  isArchived            Boolean                @default(false)
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
   recurringTransactions RecurringTransaction[]
   transactions          Transaction[]
-  users                 User[]                 @relation("AccountToUser")
+  members               AccountMember[]
+  invites               AccountInvite[]
+}
+
+model AccountMember {
+  id        String            @id @default(uuid())
+  userId    String
+  accountId String
+  role      AccountMemberRole @default(MEMBER)
+  createdAt DateTime          @default(now())
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account   Account           @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, accountId])
 }
 
 model Transaction {
-  id          String   @id @default(uuid())
-  amount      Float
-  category    String
-  date        DateTime @default(now())
-  accountId   String
-  description String?
-  account     Account  @relation(fields: [accountId], references: [id])
+  id                   String                @id @default(uuid())
+  amount               Float
+  category             String
+  date                 DateTime              @default(now())
+  accountId            String
+  description          String?
+  recurringTransactionId String?
+  createdAt            DateTime              @default(now())
+  account              Account               @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  recurringTransaction RecurringTransaction? @relation(fields: [recurringTransactionId], references: [id], onDelete: SetNull)
 }
 
 model RecurringTransaction {
-  id          String    @id @default(uuid())
-  amount      Float
-  category    String
-  description String?
-  accountId   String
-  startDate   DateTime  @default(now())
-  nextRun     DateTime
-  active      Boolean   @default(true)
-  lastRun     DateTime?
-  account     Account   @relation(fields: [accountId], references: [id])
+  id             String               @id @default(uuid())
+  amount         Float
+  category       String
+  description    String?
+  accountId      String
+  startDate      DateTime             @default(now())
+  nextRun        DateTime
+  dayOfMonth     Int
+  monthPolicy    RecurringMonthPolicy @default(ROLL_TO_LAST_DAY)
+  active         Boolean              @default(true)
+  lastRun        DateTime?
+  account        Account              @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  transactions   Transaction[]
 }
 
 model BudgetSettings {
-  id              String   @id @default(uuid())
-  monthlyIncome   Float    @default(21000)
-  needsPercent    Int      @default(50)
-  wantsPercent    Int      @default(30)
-  savingsPercent  Int      @default(20)
-  savingsGoal     String?  // e.g. "Ski Trip"
-  savingsGoalAmount Float? 
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  monthlyIncome     Float    @default(21000)
+  needsPercent      Int      @default(50)
+  wantsPercent      Int      @default(30)
+  savingsPercent    Int      @default(20)
+  savingsGoal       String?
+  savingsGoalAmount Float?
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Category {
-  id      String @id @default(uuid())
-  name    String @unique
-  icon    String // Emoji
-  type    String // e.g. "expense", "income"
+  id       String  @id @default(uuid())
+  userId   String
+  name     String
+  icon     String
+  type     String
   isCustom Boolean @default(false)
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name])
+}
+
+model AccountInvite {
+  id           String   @id @default(uuid())
+  accountId    String
+  createdById  String
+  tokenHash    String   @unique
+  expiresAt    DateTime
+  acceptedAt   DateTime?
+  acceptedById String?
+  createdAt    DateTime @default(now())
+  account      Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  createdBy    User     @relation("InviteCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  acceptedBy   User?    @relation("InviteAcceptedBy", fields: [acceptedById], references: [id], onDelete: SetNull)
 }

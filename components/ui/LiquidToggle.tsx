@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 
 interface LiquidToggleProps {
@@ -8,6 +9,14 @@ interface LiquidToggleProps {
 }
 
 export default function LiquidToggle({ isOn, onToggle }: LiquidToggleProps) {
+    const [isRtl, setIsRtl] = useState(true);
+
+    useEffect(() => {
+        if (typeof document !== 'undefined') {
+            setIsRtl(document.documentElement.dir === 'rtl');
+        }
+    }, []);
+
     return (
         <button
             type="button"
@@ -26,7 +35,7 @@ export default function LiquidToggle({ isOn, onToggle }: LiquidToggleProps) {
                 }}
                 className="flex-shrink-0 w-[27px] h-[27px] bg-white rounded-full shadow-sm"
                 animate={{
-                    x: isOn ? 20 : 0
+                    x: isOn ? (isRtl ? -20 : 20) : 0
                 }}
                 style={{ willChange: 'transform' }}
             />

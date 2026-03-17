@@ -9,13 +9,14 @@ import TransactionFeed from "./TransactionFeed";
 import QuickAddSheet from "./QuickAddSheet";
 import PieChart from "./PieChart";
 import { useHaptic } from "@/hooks/useHaptic";
-import type { TransactionWithAccount, Account, Category, BudgetSettings } from "@/lib/types";
+import type { TransactionListItem, Account, Category, BudgetSettings, RecurringWithAccount } from "@/lib/types";
 
 interface DashboardProps {
-    initialTransactions: TransactionWithAccount[];
+    initialTransactions: TransactionListItem[];
     budgetSettings?: BudgetSettings | null;
     categories: Category[];
     accounts: Account[];
+    recurringTransactions?: RecurringWithAccount[];
 }
 
 function getGreeting(): string {
@@ -28,21 +29,17 @@ function getGreeting(): string {
 }
 
 function getAccountLabel(account: Account): string {
-    if (account.type === "JOINT") return "משותף";
-    if (account.name.toLowerCase().includes("roy")) return "רועי";
-    if (account.name.toLowerCase().includes("romi")) return "רומי";
     return account.name;
 }
 
 function getAccountColor(account: Account): { bg: string; text: string; ring: string } {
-    if (account.type === "JOINT") return { bg: "bg-ios-indigo/8", text: "text-ios-indigo", ring: "ring-ios-indigo/20" };
-    if (account.name.toLowerCase().includes("roy")) return { bg: "bg-ios-teal/8", text: "text-ios-blue", ring: "ring-ios-teal/20" };
-    return { bg: "bg-ios-pink/8", text: "text-ios-pink", ring: "ring-ios-pink/20" };
+    if (account.type === "SHARED") return { bg: "bg-ios-indigo/8", text: "text-ios-indigo", ring: "ring-ios-indigo/20" };
+    return { bg: "bg-ios-teal/8", text: "text-ios-blue", ring: "ring-ios-teal/20" };
 }
 
-export default function Dashboard({ initialTransactions = [], budgetSettings, categories = [], accounts = [] }: DashboardProps) {
+export default function Dashboard({ initialTransactions = [], budgetSettings, categories = [], accounts = [], recurringTransactions = [] }: DashboardProps) {
     const [isSheetOpen, setIsSheetOpen] = useState(false);
-    const [editingTransaction, setEditingTransaction] = useState<TransactionWithAccount | null>(null);
+    const [editingTransaction, setEditingTransaction] = useState<TransactionListItem | null>(null);
     const [showStickyHeader, setShowStickyHeader] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
     const { trigger } = useHaptic();
@@ -86,6 +83,25 @@ export default function Dashboard({ initialTransactions = [], budgetSettings, ca
         });
     }, [accounts, initialTransactions]);
 
+    const upcomingRecurring = useMemo(() => {
+        const now = new Date();
+        const horizon = new Date();
+        horizon.setDate(horizon.getDate() + 30);
+
+        return recurringTransactions
+            .filter((item) => {
+                const nextRun = new Date(item.nextRun);
+                return nextRun <= horizon && item.active;
+            })
+            .sort((a, b) => new Date(a.nextRun).getTime() - new Date(b.nextRun).getTime())
+            .slice(0, 4)
+            .map((item) => {
+                const nextRun = new Date(item.nextRun);
+                const isDue = nextRun <= now;
+                return { item, nextRun, isDue };
+            });
+    }, [recurringTransactions]);
+
     useEffect(() => {
         setIsMounted(true);
     }, []);
@@ -101,7 +117,8 @@ export default function Dashboard({ initialTransactions = [], budgetSettings, ca
     const savedSoFar = income - totalSpent;
     const savingsRatio = Math.max(Math.min((savedSoFar / income) * 100, 100), 0);
 
-    const handleTransactionClick = (transaction: TransactionWithAccount) => {
+    const handleTransactionClick = (transaction: TransactionListItem) => {
+        if (transaction.isProjected) return;
         trigger(10);
         setEditingTransaction(transaction);
         setIsSheetOpen(true);
@@ -236,6 +253,41 @@ export default function Dashboard({ initialTransactions = [], budgetSettings, ca
                         );
                     })}
                 </div>
+
+                {/* MVP1: Upcoming bills */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.28 }}
+                    className="bg-white rounded-3xl p-5 shadow-card mb-6"
+                >
+                    <div className="flex items-center justify-between mb-3">
+                        <h2 className="text-lg font-bold text-gray-900">תשלומים קרובים</h2>
+                        <span className="text-xs font-semibold text-gray-400">30 ימים</span>
+                    </div>
+                    {upcomingRecurring.length === 0 ? (
+                        <p className="text-sm text-gray-400 py-2">אין חיובים קבועים בקרוב</p>
+                    ) : (
+                        <div className="space-y-2">
+                            {upcomingRecurring.map(({ item, nextRun, isDue }) => (
+                                <div key={item.id} className="flex items-center justify-between bg-ios-gray-6 rounded-xl px-3.5 py-3">
+                                    <div className="min-w-0">
+                                        <p className="text-sm font-semibold text-gray-900 truncate">{item.description || item.category}</p>
+                                        <p className="text-xs text-gray-400 truncate">
+                                            {item.account.name} · {format(nextRun, 'd MMM', { locale: he })}
+                                        </p>
+                                    </div>
+                                    <div className="text-left">
+                                        <p className="text-sm font-bold text-gray-900 tabular-nums">₪{item.amount.toLocaleString()}</p>
+                                        <p className={`text-[11px] font-semibold ${isDue ? 'text-ios-red' : 'text-ios-blue'}`}>
+                                            {isDue ? 'לביצוע' : 'מתקרב'}
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </motion.div>
 
                 {/* Spending Breakdown */}
                 {chartData.length > 0 && (

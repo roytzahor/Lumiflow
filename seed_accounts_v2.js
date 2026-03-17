@@ -3,47 +3,40 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 async function main() {
-    // JOINT
-    let joint = await prisma.account.findFirst({ where: { type: 'JOINT' } });
-    if (!joint) {
-        console.log('Creating Joint Account...');
-        joint = await prisma.account.create({
-            data: {
-                name: 'Joint Account',
-                type: 'JOINT',
-                balance: 0
-            }
-        });
-    }
-    console.log('Joint:', joint);
+    const user = await prisma.user.upsert({
+        where: { email: 'owner@local.lumiflow' },
+        update: {},
+        create: {
+            email: 'owner@local.lumiflow',
+            name: 'Owner',
+            passwordHash: '',
+        },
+    });
 
-    // Roy
-    let roy = await prisma.account.findFirst({ where: { name: { contains: 'Roy', mode: 'insensitive' } } });
-    if (!roy) {
-        console.log('Creating Roy Private...');
-        roy = await prisma.account.create({
+    let mainAccount = await prisma.account.findFirst({
+        where: { name: 'Main Account', type: 'PRIVATE' },
+    });
+    if (!mainAccount) {
+        mainAccount = await prisma.account.create({
             data: {
-                name: 'Roy Private',
+                name: 'Main Account',
                 type: 'PRIVATE',
-                balance: 0
-            }
+                balance: 0,
+            },
         });
     }
-    console.log('Roy:', roy);
 
-    // Romi
-    let romi = await prisma.account.findFirst({ where: { name: { contains: 'Romi', mode: 'insensitive' } } });
-    if (!romi) {
-        console.log('Creating Romi Private...');
-        romi = await prisma.account.create({
-            data: {
-                name: 'Romi Private',
-                type: 'PRIVATE',
-                balance: 0
-            }
-        });
-    }
-    console.log('Romi:', romi);
+    await prisma.accountMember.upsert({
+        where: { userId_accountId: { userId: user.id, accountId: mainAccount.id } },
+        update: {},
+        create: {
+            userId: user.id,
+            accountId: mainAccount.id,
+            role: 'OWNER',
+        },
+    });
+
+    console.log('Seeded user + account:', user.email, mainAccount.name);
 }
 
 main()

@@ -1,34 +1,44 @@
 "use client";
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { ChevronLeft } from 'lucide-react';
-import type { TransactionWithAccount, Category } from '@/lib/types';
+import type { TransactionListItem, Category } from '@/lib/types';
 
 interface TransactionFeedProps {
-    transactions: TransactionWithAccount[];
+    transactions: TransactionListItem[];
     categories?: Category[];
-    onTransactionClick?: (transaction: TransactionWithAccount) => void;
+    onTransactionClick?: (transaction: TransactionListItem) => void;
 }
 
 export default function TransactionFeed({ transactions = [], categories = [], onTransactionClick }: TransactionFeedProps) {
     const [filter, setFilter] = useState('All');
 
-    const filters = [
-        { id: 'All', label: 'הכל' },
-        { id: 'Joint', label: 'משותף' },
-        { id: 'Roy', label: 'רועי' },
-        { id: 'Romi', label: 'רומי' },
-    ];
+    const accountFilters = useMemo(() => {
+        const map = new Map<string, { id: string; label: string; isShared: boolean }>();
+        transactions.forEach((t) => {
+            if (!map.has(t.accountId)) {
+                map.set(t.accountId, {
+                    id: t.accountId,
+                    label: t.account?.name || 'חשבון',
+                    isShared: t.account?.type === 'SHARED',
+                });
+            }
+        });
+
+        return Array.from(map.values()).sort((a, b) => {
+            if (a.isShared === b.isShared) return a.label.localeCompare(b.label, 'he');
+            return a.isShared ? -1 : 1;
+        });
+    }, [transactions]);
+
+    const filters = [{ id: 'All', label: 'הכל' }, ...accountFilters];
 
     const filteredTransactions = transactions.filter((t) => {
         if (filter === 'All') return true;
-        if (filter === 'Joint') return t.account?.type === 'JOINT';
-        if (filter === 'Roy') return t.account?.name?.includes('Roy');
-        if (filter === 'Romi') return t.account?.name?.includes('Romi');
-        return true;
+        return t.accountId === filter;
     });
 
     const getIcon = (categoryName: string) => {
@@ -36,15 +46,13 @@ export default function TransactionFeed({ transactions = [], categories = [], on
         return cat ? cat.icon : '🛒';
     };
 
-    const getAccountBadge = (t: TransactionWithAccount) => {
-        if (t.account?.type === 'JOINT') return { label: 'משותף', color: 'text-ios-indigo bg-ios-indigo/8' };
-        if (t.account?.name?.toLowerCase().includes('roy')) return { label: 'רועי', color: 'text-ios-blue bg-ios-teal/8' };
-        if (t.account?.name?.toLowerCase().includes('romi')) return { label: 'רומי', color: 'text-ios-pink bg-ios-pink/8' };
-        return { label: t.account?.name || '', color: 'text-gray-500 bg-gray-100' };
+    const getAccountBadge = (t: TransactionListItem) => {
+        if (t.account?.type === 'SHARED') return { label: t.account?.name || 'משותף', color: 'text-ios-indigo bg-ios-indigo/8' };
+        return { label: t.account?.name || '', color: 'text-ios-blue bg-ios-teal/8' };
     };
 
     // Group transactions by date
-    const groupedByDate = filteredTransactions.reduce<Record<string, TransactionWithAccount[]>>((groups, t) => {
+    const groupedByDate = filteredTransactions.reduce<Record<string, TransactionListItem[]>>((groups, t) => {
         const dateKey = format(new Date(t.date), 'yyyy-MM-dd');
         if (!groups[dateKey]) groups[dateKey] = [];
         groups[dateKey].push(t);
@@ -106,12 +114,14 @@ export default function TransactionFeed({ transactions = [], categories = [], on
                                             <motion.div
                                                 key={t.id}
                                                 layout
-                                                onClick={() => onTransactionClick?.(t)}
+                                                onClick={() => !t.isProjected && onTransactionClick?.(t)}
                                                 initial={{ opacity: 0 }}
                                                 animate={{ opacity: 1 }}
                                                 exit={{ opacity: 0, scale: 0.98 }}
-                                                whileTap={{ scale: 0.98, backgroundColor: '#F5F5F7' }}
-                                                className="flex items-center justify-between p-4 cursor-pointer transition-colors active:bg-gray-50"
+                                                whileTap={t.isProjected ? undefined : { scale: 0.98, backgroundColor: '#F5F5F7' }}
+                                                className={`flex items-center justify-between p-4 transition-colors ${
+                                                    t.isProjected ? 'cursor-default' : 'cursor-pointer active:bg-gray-50'
+                                                }`}
                                             >
                                                 <div className="flex items-center gap-3 flex-1 min-w-0">
                                                     <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-lg flex-shrink-0">
@@ -125,6 +135,11 @@ export default function TransactionFeed({ transactions = [], categories = [], on
                                                             <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-md ${badge.color}`}>
                                                                 {badge.label}
                                                             </span>
+                                                            {t.isRecurring && (
+                                                                <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-md ${t.isProjected ? 'text-ios-orange bg-ios-orange/10' : 'text-ios-blue bg-ios-blue/10'}`}>
+                                                                    {t.isProjected ? 'קבועה מתוכננת' : 'קבועה'}
+                                                                </span>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -133,7 +148,7 @@ export default function TransactionFeed({ transactions = [], categories = [], on
                                                     <span className="text-[15px] font-bold text-gray-900 tabular-nums">
                                                         ₪{t.amount.toLocaleString()}
                                                     </span>
-                                                    <ChevronLeft className="w-4 h-4 text-gray-300" />
+                                                    {!t.isProjected && <ChevronLeft className="w-4 h-4 text-gray-300" />}
                                                 </div>
                                             </motion.div>
                                         );

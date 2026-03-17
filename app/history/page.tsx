@@ -1,6 +1,8 @@
 import { getMonthlyStats, getAccounts, getCategories } from "@/app/actions";
 import HistoryView from "@/components/HistoryView";
 
+export const dynamic = 'force-dynamic';
+
 export default async function HistoryPage({
     searchParams,
 }: {
@@ -12,19 +14,17 @@ export default async function HistoryPage({
     const year = params.year ? parseInt(params.year as string) : now.getFullYear();
     const month = params.month ? parseInt(params.month as string) : now.getMonth();
 
-    const [{ jointTotal, privateTotal, transactions }, accounts, categories] = await Promise.all([
+    const [{ total, accountTotals, transactions }, accounts, categories] = await Promise.all([
         getMonthlyStats(year, month),
         getAccounts(),
         getCategories(),
     ]);
-    const total = jointTotal + privateTotal;
 
     return (
         <HistoryView
             transactions={transactions}
             total={total}
-            jointTotal={jointTotal}
-            privateTotal={privateTotal}
+            accountTotals={accountTotals}
             accounts={accounts}
             categories={categories}
         />

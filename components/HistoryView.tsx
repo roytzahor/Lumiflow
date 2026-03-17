@@ -6,23 +6,23 @@ import QuickAddSheet from "./QuickAddSheet";
 import { useHaptic } from "@/hooks/useHaptic";
 import BottomNav from "./BottomNav";
 import MonthSelector from "./MonthSelector";
-import type { TransactionWithAccount, Account, Category } from "@/lib/types";
+import type { TransactionListItem, Account, Category, AccountTotal } from "@/lib/types";
 
 interface HistoryViewProps {
-    transactions: TransactionWithAccount[];
+    transactions: TransactionListItem[];
     total: number;
-    jointTotal: number;
-    privateTotal: number;
+    accountTotals: AccountTotal[];
     accounts: Account[];
     categories: Category[];
 }
 
-export default function HistoryView({ transactions, total, jointTotal, privateTotal, accounts, categories }: HistoryViewProps) {
+export default function HistoryView({ transactions, total, accountTotals, accounts, categories }: HistoryViewProps) {
     const [isSheetOpen, setIsSheetOpen] = useState(false);
-    const [editingTransaction, setEditingTransaction] = useState<TransactionWithAccount | null>(null);
+    const [editingTransaction, setEditingTransaction] = useState<TransactionListItem | null>(null);
     const { trigger } = useHaptic();
 
-    const handleTransactionClick = (transaction: TransactionWithAccount) => {
+    const handleTransactionClick = (transaction: TransactionListItem) => {
+        if (transaction.isProjected) return;
         trigger(10);
         setEditingTransaction(transaction);
         setIsSheetOpen(true);
@@ -54,16 +54,14 @@ export default function HistoryView({ transactions, total, jointTotal, privateTo
                     <p className="text-2xl font-bold text-gray-900 tabular-nums">₪{total.toLocaleString()}</p>
                 </div>
 
-                {/* Joint + Private */}
+                {/* Top accounts */}
                 <div className="flex-1 flex flex-col gap-2">
-                    <div className="bg-white rounded-xl px-4 py-2.5 shadow-card flex justify-between items-center">
-                        <span className="text-xs font-semibold text-ios-indigo">משותף</span>
-                        <span className="text-sm font-bold text-gray-900 tabular-nums">₪{jointTotal.toLocaleString()}</span>
-                    </div>
-                    <div className="bg-white rounded-xl px-4 py-2.5 shadow-card flex justify-between items-center">
-                        <span className="text-xs font-semibold text-ios-pink">פרטי</span>
-                        <span className="text-sm font-bold text-gray-900 tabular-nums">₪{privateTotal.toLocaleString()}</span>
-                    </div>
+                    {accountTotals.slice(0, 2).map((row) => (
+                        <div key={row.accountId} className="bg-white rounded-xl px-4 py-2.5 shadow-card flex justify-between items-center">
+                            <span className="text-xs font-semibold text-ios-indigo truncate max-w-[110px]">{row.accountName}</span>
+                            <span className="text-sm font-bold text-gray-900 tabular-nums">₪{row.total.toLocaleString()}</span>
+                        </div>
+                    ))}
                 </div>
             </div>
 

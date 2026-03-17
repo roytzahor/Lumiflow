@@ -1,9 +1,14 @@
 import { prisma } from '@/lib/prisma';
+import { getNextRunDateFromCurrent } from '@/lib/recurring-utils';
+import type { RecurringMonthPolicy } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
 
 const CRON_SECRET = process.env.CRON_SECRET;
 
 export async function GET(request: NextRequest) {
+    if (!CRON_SECRET && process.env.NODE_ENV === 'production') {
+        return NextResponse.json({ error: 'CRON_SECRET is required in production' }, { status: 500 });
+    }
     if (CRON_SECRET) {
         const authHeader = request.headers.get('authorization');
         const bearer = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
@@ -47,14 +52,13 @@ export async function GET(request: NextRequest) {
                     category: rt.category,
                     accountId: rt.accountId,
                     date: rt.nextRun,
+                    recurringTransactionId: rt.id,
                 },
             });
 
             createdTransactions.push(newTransaction);
 
-            // Update the recurring transaction's nextRun date (add 1 month)
-            const nextRunDate = new Date(rt.nextRun);
-            nextRunDate.setMonth(nextRunDate.getMonth() + 1);
+            const nextRunDate = getNextRunDateFromCurrent(new Date(rt.nextRun), rt.dayOfMonth, rt.monthPolicy);
 
             await prisma.recurringTransaction.update({
                 where: { id: rt.id },

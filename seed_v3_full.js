@@ -14,50 +14,54 @@ const DEFAULT_CATEGORIES = [
 ];
 
 async function main() {
+    console.log('Seeding User...');
+    const user = await prisma.user.upsert({
+        where: { email: 'owner@local.lumiflow' },
+        update: {},
+        create: {
+            email: 'owner@local.lumiflow',
+            name: 'Owner',
+            passwordHash: '',
+        },
+    });
+
     console.log('Seeding Accounts...');
-    // JOINT
-    let joint = await prisma.account.findFirst({ where: { type: 'JOINT' } });
-    if (!joint) {
-        joint = await prisma.account.create({
-            data: {
-                name: 'משותף', // Hebrew default
-                type: 'JOINT',
-                balance: 0
-            }
-        });
-    }
+    const accountDefs = [
+        { name: 'Main Account', type: 'PRIVATE' },
+        { name: 'Shared Home', type: 'SHARED' },
+    ];
 
-    // Roy
-    let roy = await prisma.account.findFirst({ where: { name: { contains: 'Roy', mode: 'insensitive' } } });
-    if (!roy) {
-        roy = await prisma.account.create({
-            data: {
-                name: 'Roy Private',
-                type: 'PRIVATE',
-                balance: 0,
-                // owner: 'Roy' // If we add owner field, but current schema doesn't have it distinct from name logic? 
-                // Schema has just name/type/balance.
-            }
+    for (const accountDef of accountDefs) {
+        let account = await prisma.account.findFirst({
+            where: { name: accountDef.name, type: accountDef.type },
         });
-    }
+        if (!account) {
+            account = await prisma.account.create({
+                data: {
+                    name: accountDef.name,
+                    type: accountDef.type,
+                    balance: 0,
+                },
+            });
+        }
 
-    // Romi
-    let romi = await prisma.account.findFirst({ where: { name: { contains: 'Romi', mode: 'insensitive' } } });
-    if (!romi) {
-        romi = await prisma.account.create({
-            data: {
-                name: 'Romi Private',
-                type: 'PRIVATE',
-                balance: 0
-            }
+        await prisma.accountMember.upsert({
+            where: { userId_accountId: { userId: user.id, accountId: account.id } },
+            update: {},
+            create: {
+                userId: user.id,
+                accountId: account.id,
+                role: 'OWNER',
+            },
         });
     }
 
     console.log('Seeding Budget Settings...');
-    const settings = await prisma.budgetSettings.findFirst();
+    const settings = await prisma.budgetSettings.findUnique({ where: { userId: user.id } });
     if (!settings) {
         await prisma.budgetSettings.create({
             data: {
+                userId: user.id,
                 monthlyIncome: 21000,
                 needsPercent: 50,
                 wantsPercent: 30,
@@ -68,9 +72,9 @@ async function main() {
 
     console.log('Seeding Categories...');
     for (const cat of DEFAULT_CATEGORIES) {
-        const exists = await prisma.category.findUnique({ where: { name: cat.name } });
+        const exists = await prisma.category.findUnique({ where: { userId_name: { userId: user.id, name: cat.name } } });
         if (!exists) {
-            await prisma.category.create({ data: cat });
+            await prisma.category.create({ data: { ...cat, userId: user.id } });
         }
     }
 

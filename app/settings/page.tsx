@@ -2,6 +2,8 @@ import { getBudgetSettings, getCategories, getAccounts, getRecurringTransactions
 import SettingsContent from './SettingsContent';
 import BottomNav from '@/components/BottomNav';
 
+export const dynamic = 'force-dynamic';
+
 export default async function SettingsPage() {
     const [budgetSettings, categories, accounts, recurring] = await Promise.all([
         getBudgetSettings(),

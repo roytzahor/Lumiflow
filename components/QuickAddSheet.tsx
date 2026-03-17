@@ -5,35 +5,33 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence, useDragControls, PanInfo } from 'framer-motion';
 import { X, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
+import { he } from 'date-fns/locale';
 import LiquidToggle from './ui/LiquidToggle';
 import { addTransaction } from '@/app/actions';
 import { useHaptic } from '@/hooks/useHaptic';
 import { detectCategory } from '@/lib/category-dictionary';
-import type { TransactionWithAccount, Account, Category } from '@/lib/types';
+import type { TransactionListItem, Account, Category, RecurringMonthPolicy } from '@/lib/types';
 
 interface QuickAddSheetProps {
     isOpen: boolean;
     onClose: () => void;
-    initialData?: TransactionWithAccount | null;
+    initialData?: TransactionListItem | null;
     categories?: Category[];
     accounts?: Account[];
 }
 
 function getDefaultAccountId(accounts: Account[]): string {
-    const joint = accounts.find((a) => a.type === 'JOINT');
+    const joint = accounts.find((a) => a.type === 'SHARED');
     return joint?.id ?? accounts[0]?.id ?? '';
 }
 
 function getAccountLabel(account: Account): string {
-    if (account.type === 'JOINT') return 'משותף';
-    if (account.name.toLowerCase().includes('roy')) return 'רועי';
-    if (account.name.toLowerCase().includes('romi')) return 'רומי';
     return account.name;
 }
 
 function getAccountIcon(account: Account): string {
-    if (account.type === 'JOINT') return '👥';
-    if (account.name.toLowerCase().includes('roy')) return '👤';
+    if (account.type === 'SHARED') return '👥';
     return '👤';
 }
 
@@ -45,6 +43,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
     const [accountId, setAccountId] = useState('');
     const [category, setCategory] = useState('כללי');
     const [isRecurring, setIsRecurring] = useState(false);
+    const [monthPolicy, setMonthPolicy] = useState<RecurringMonthPolicy>('ROLL_TO_LAST_DAY');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [amountError, setAmountError] = useState('');
     const [isDeleting, setIsDeleting] = useState(false);
@@ -96,12 +95,14 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                 setDate(new Date(initialData.date).toISOString().split('T')[0]);
                 setAccountId(initialData.account.id);
                 setCategory(initialData.category);
-                setIsRecurring(false);
+                setIsRecurring(Boolean(initialData.isRecurring));
+                setMonthPolicy('ROLL_TO_LAST_DAY');
             } else {
                 setAmount('');
                 setDescription('');
                 setDate(new Date().toISOString().split('T')[0]);
                 setIsRecurring(false);
+                setMonthPolicy('ROLL_TO_LAST_DAY');
                 setAccountId(getDefaultAccountId(accounts));
                 setCategory('כללי');
             }
@@ -121,6 +122,14 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
         if (!initialData) setCategory('כללי');
     }, [accountId, initialData]);
 
+    useEffect(() => {
+        if (!isOpen || accounts.length === 0) return;
+        const hasSelectedAccount = accounts.some((acc) => acc.id === accountId);
+        if (!hasSelectedAccount) {
+            setAccountId(getDefaultAccountId(accounts));
+        }
+    }, [isOpen, accountId, accounts]);
+
     const handleSubmit = async () => {
         const num = parseFloat(amount);
         if (!amount || isNaN(num)) { setAmountError('הזן סכום'); return; }
@@ -135,6 +144,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
         formData.append('accountId', accountId);
         formData.append('category', category);
         formData.append('isRecurring', isRecurring ? 'true' : 'false');
+        formData.append('monthPolicy', monthPolicy);
 
         let res;
         if (initialData) {
@@ -173,6 +183,10 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
         if (info.offset.y > 100) onClose();
     };
 
+    const selectedDate = date ? new Date(`${date}T00:00:00`) : null;
+    const selectedDay = selectedDate && !Number.isNaN(selectedDate.getTime()) ? selectedDate.getDate() : null;
+    const shouldShowShortMonthPolicy = isRecurring && selectedDay !== null && selectedDay >= 29;
+
     return (
         <AnimatePresence>
             {isOpen && (
@@ -183,7 +197,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.2 }}
-                        className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+                        className="fixed inset-0 z-[70] bg-black/30 backdrop-blur-sm"
                         onClick={onClose}
                     />
 
@@ -201,7 +215,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                         dragConstraints={{ top: 0 }}
                         dragElastic={0.15}
                         onDragEnd={onDragEnd}
-                        className="fixed bottom-0 left-0 right-0 z-50 max-h-[92vh] bg-ios-bg shadow-sheet flex flex-col pb-safe rounded-t-[20px]"
+                        className="fixed bottom-0 left-0 right-0 z-[80] max-h-[92vh] bg-ios-bg shadow-sheet flex flex-col pb-safe rounded-t-[20px]"
                     >
                         {/* Drag Handle */}
                         <div className="w-full flex justify-center pt-3 pb-2" onPointerDown={(e) => dragControls.start(e)}>
@@ -269,6 +283,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                                     ? 'bg-white shadow-card text-gray-900'
                                                     : 'text-gray-400'
                                             }`}
+                                            aria-pressed={accountId === acc.id}
                                         >
                                             <span className="text-sm">{getAccountIcon(acc)}</span>
                                             {getAccountLabel(acc)}
@@ -291,8 +306,13 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                         type="date"
                                         value={date}
                                         onChange={(e) => setDate(e.target.value)}
-                                        className="bg-transparent text-[15px] text-gray-500 focus:outline-none text-left"
+                                        className="bg-ios-gray-6 border border-gray-200 rounded-xl px-3 py-2 text-[15px] text-gray-700 focus:outline-none focus:ring-2 focus:ring-ios-blue/30 text-left"
                                     />
+                                </div>
+                                <div className="px-4 pb-4 -mt-2">
+                                    <p className="text-xs text-gray-400">
+                                        {date ? format(new Date(date), 'EEEE, d MMMM yyyy', { locale: he }) : ''}
+                                    </p>
                                 </div>
 
                                 {/* Description */}
@@ -353,18 +373,32 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                             </div>
 
                             {/* Recurring Toggle */}
-                            {!initialData && (
-                                <div className="bg-white rounded-2xl shadow-card mb-6 p-4 flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 bg-ios-orange/10 rounded-lg flex items-center justify-center">
-                                            <span className="text-sm">🔄</span>
-                                        </div>
-                                        <div>
-                                            <p className="text-[15px] font-medium text-gray-900">הוצאה קבועה</p>
-                                            <p className="text-xs text-gray-400">יחזור כל חודש</p>
-                                        </div>
+                            <div className="bg-white rounded-2xl shadow-card mb-6 p-4 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 bg-ios-orange/10 rounded-lg flex items-center justify-center">
+                                        <span className="text-sm">🔄</span>
                                     </div>
-                                    <LiquidToggle isOn={isRecurring} onToggle={() => setIsRecurring(!isRecurring)} />
+                                    <div>
+                                        <p className="text-[15px] font-medium text-gray-900">הוצאה קבועה</p>
+                                        <p className="text-xs text-gray-400">
+                                            {initialData ? 'עדכון ייצור/יבטל הוראת קבע' : 'יחזור כל חודש'}
+                                        </p>
+                                    </div>
+                                </div>
+                                <LiquidToggle isOn={isRecurring} onToggle={() => setIsRecurring(!isRecurring)} />
+                            </div>
+
+                            {shouldShowShortMonthPolicy && (
+                                <div className="bg-white rounded-2xl shadow-card mb-6 p-4">
+                                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">חודש קצר</p>
+                                    <select
+                                        value={monthPolicy}
+                                        onChange={(e) => setMonthPolicy(e.target.value as RecurringMonthPolicy)}
+                                        className="w-full bg-ios-gray-6 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-ios-blue/30"
+                                    >
+                                        <option value="ROLL_TO_LAST_DAY">גלישה ליום האחרון בחודש</option>
+                                        <option value="SKIP_MONTH">דילוג על חודש חסר</option>
+                                    </select>
                                 </div>
                             )}
 
@@ -375,7 +409,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                         trigger(15);
                                         handleSubmit();
                                     }}
-                                    disabled={isSubmitting || !amount || !accountId}
+                                    disabled={isSubmitting || !amount}
                                     className="w-full bg-ios-blue text-white font-bold text-base py-4 rounded-2xl shadow-lg shadow-ios-blue/20 hover:bg-ios-blue/90 active:scale-[0.98] transition-all disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed"
                                 >
                                     {isSubmitting ? 'שומר...' : initialData ? 'עדכון' : 'הוסף הוצאה'}

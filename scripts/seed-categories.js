@@ -17,11 +17,21 @@ const categories = [
 ];
 
 async function main() {
+    const user = await prisma.user.upsert({
+        where: { email: 'owner@local.lumiflow' },
+        update: {},
+        create: {
+            email: 'owner@local.lumiflow',
+            name: 'Owner',
+            passwordHash: '',
+        },
+    });
+
     console.log('Start seeding categories...');
     for (const cat of categories) {
-        const existing = await prisma.category.findUnique({ where: { name: cat.name } });
+        const existing = await prisma.category.findUnique({ where: { userId_name: { userId: user.id, name: cat.name } } });
         if (!existing) {
-            await prisma.category.create({ data: cat });
+            await prisma.category.create({ data: { ...cat, userId: user.id } });
             console.log(`Created category: ${cat.name}`);
         } else {
             console.log(`Category exists: ${cat.name}`);

@@ -1,349 +1,430 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { signOut } from 'next-auth/react';
 import { toast } from 'sonner';
-import { updateBudgetSettings, updateAccountNames, addCategory, deleteCategory, deleteRecurringTransaction } from '../actions';
-import { Trash2, Save, Plus, Wallet } from 'lucide-react';
-import { useHaptics } from '@/hooks/use-haptics';
-import type { BudgetSettings, Account, Category, RecurringWithAccount } from '@/lib/types';
+import {
+  updateBudgetSettings,
+  addCategory,
+  deleteCategory,
+  deleteRecurringTransaction,
+  updateAccount,
+  createAccount,
+  archiveAccount,
+  createAccountInvite,
+  acceptAccountInvite,
+  getInvitePreview,
+} from '../actions';
+import { Trash2, Save, Plus, Wallet, Share2, LogOut } from 'lucide-react';
+import type { BudgetSettings, Account, Category, RecurringWithAccount, AccountType } from '@/lib/types';
 
 const DEFAULT_BUDGET: BudgetSettings = {
-    id: '',
-    monthlyIncome: 21000,
-    needsPercent: 50,
-    wantsPercent: 30,
-    savingsPercent: 20,
-    savingsGoal: null,
-    savingsGoalAmount: null,
+  id: '',
+  userId: '',
+  monthlyIncome: 21000,
+  needsPercent: 50,
+  wantsPercent: 30,
+  savingsPercent: 20,
+  savingsGoal: null,
+  savingsGoalAmount: null,
 };
 
+const CATEGORY_EMOJIS = ['🍕', '🛒', '🚗', '🏠', '💡', '🍽️', '☕', '🎁', '🎉', '💊', '🧾', '✈️', '📦', '🧒', '🐶', '💸', '✨'];
+
 interface SettingsContentProps {
-    initialBudget: BudgetSettings | null;
-    initialCategories: Category[];
-    initialAccounts: Account[];
-    initialRecurring: RecurringWithAccount[];
+  initialBudget: BudgetSettings | null;
+  initialCategories: Category[];
+  initialAccounts: Account[];
+  initialRecurring: RecurringWithAccount[];
 }
 
 export default function SettingsContent({ initialBudget, initialCategories, initialAccounts, initialRecurring }: SettingsContentProps) {
-    const router = useRouter();
-    const [budget, setBudget] = useState<BudgetSettings>(initialBudget ?? DEFAULT_BUDGET);
-    const [categories, setCategories] = useState<Category[]>(initialCategories);
-    const [accounts, setAccounts] = useState<Account[]>(initialAccounts);
-    const [recurring, setRecurring] = useState<RecurringWithAccount[]>(initialRecurring);
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
-    useEffect(() => {
-        setCategories(initialCategories);
-        setRecurring(initialRecurring);
-    }, [initialCategories, initialRecurring]);
+  const [budget, setBudget] = useState<BudgetSettings>(initialBudget ?? DEFAULT_BUDGET);
+  const [categories, setCategories] = useState<Category[]>(initialCategories);
+  const [accounts, setAccounts] = useState<Account[]>(initialAccounts);
+  const [recurring, setRecurring] = useState<RecurringWithAccount[]>(initialRecurring);
+  const [loading, setLoading] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatIcon, setNewCatIcon] = useState('🍕');
+  const [newAccountName, setNewAccountName] = useState('');
+  const [newAccountType, setNewAccountType] = useState<AccountType>('PRIVATE');
+  const [inviteAccountId, setInviteAccountId] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteUrl, setInviteUrl] = useState('');
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [pendingInviteToken, setPendingInviteToken] = useState<string | null>(null);
+  const [invitePreview, setInvitePreview] = useState<{
+    accountName: string;
+    invitedByName: string;
+    expiresAt: string;
+  } | null>(null);
+  const [showInvitePopup, setShowInvitePopup] = useState(false);
+  const [acceptingInvite, setAcceptingInvite] = useState(false);
 
-    const [loading, setLoading] = useState(false);
-    const { trigger } = useHaptics();
+  useEffect(() => {
+    setCategories(initialCategories);
+    setRecurring(initialRecurring);
+    setAccounts(initialAccounts);
+    setBudget(initialBudget ?? DEFAULT_BUDGET);
+  }, [initialBudget, initialCategories, initialRecurring, initialAccounts]);
 
-    const [jointName, setJointName] = useState(accounts.find((a) => a.type === 'JOINT')?.name ?? 'משותף');
-    const [royPrivateName, setRoyPrivateName] = useState(accounts.find((a) => a.name.toLowerCase().includes('roy'))?.name ?? 'Roy Private');
-    const [romiPrivateName, setRomiPrivateName] = useState(accounts.find((a) => a.name.toLowerCase().includes('romi'))?.name ?? 'Romi Private');
+  useEffect(() => {
+    const token = searchParams.get('invite');
+    if (!token) {
+      setPendingInviteToken(null);
+      setShowInvitePopup(false);
+      setInvitePreview(null);
+      return;
+    }
 
-    const [newCatName, setNewCatName] = useState('');
-    const [newCatIcon, setNewCatIcon] = useState('🍕');
+    setPendingInviteToken(token);
+    getInvitePreview(token).then((res) => {
+      if (res.success && res.invite) {
+        setInvitePreview(res.invite);
+        setShowInvitePopup(true);
+      } else {
+        toast.error(res.error ?? 'ההזמנה אינה תקינה');
+        router.replace('/settings');
+      }
+    });
+  }, [searchParams, router]);
 
-    const handleSliderChange = (type: 'needs' | 'wants' | 'savings', value: number) => {
-        let newNeeds = type === 'needs' ? value : budget.needsPercent;
-        let newWants = type === 'wants' ? value : budget.wantsPercent;
-        let newSavings = type === 'savings' ? value : budget.savingsPercent;
+  const handleAcceptInvite = async () => {
+    if (!pendingInviteToken) return;
+    setAcceptingInvite(true);
+    const res = await acceptAccountInvite(pendingInviteToken);
+    setAcceptingInvite(false);
+    if (res.success) {
+      toast.success('ההזמנה אושרה בהצלחה');
+      setShowInvitePopup(false);
+      router.replace('/settings');
+      router.refresh();
+    } else {
+      toast.error(res.error ?? 'אישור ההזמנה נכשל');
+    }
+  };
 
-        const diff = (newNeeds + newWants + newSavings) - 100;
-        if (diff !== 0) {
-            if (type === 'needs') { newWants -= diff / 2; newSavings -= diff / 2; }
-            else if (type === 'wants') { newNeeds -= diff / 2; newSavings -= diff / 2; }
-            else { newNeeds -= diff / 2; newWants -= diff / 2; }
-        }
+  const saveBudget = async () => {
+    setLoading(true);
+    const res = await updateBudgetSettings({
+      monthlyIncome: Number(budget.monthlyIncome),
+      needsPercent: budget.needsPercent,
+      wantsPercent: budget.wantsPercent,
+      savingsPercent: budget.savingsPercent,
+      savingsGoal: budget.savingsGoal ?? undefined,
+      savingsGoalAmount: budget.savingsGoalAmount ?? undefined,
+    });
+    setLoading(false);
+    if (res.success) toast.success('נשמר בהצלחה');
+    else toast.error(res.error ?? 'השמירה נכשלה');
+  };
 
-        newNeeds = Math.round(newNeeds);
-        newWants = Math.round(newWants);
-        newSavings = 100 - newNeeds - newWants;
+  const updateLocalAccount = (id: string, patch: Partial<Account>) => {
+    setAccounts((prev) => prev.map((acc) => (acc.id === id ? { ...acc, ...patch } : acc)));
+  };
 
-        setBudget({ ...budget, needsPercent: newNeeds, wantsPercent: newWants, savingsPercent: newSavings });
-    };
+  const saveAccount = async (account: Account) => {
+    const res = await updateAccount(account.id, { name: account.name, type: account.type });
+    if (res.success) toast.success('החשבון עודכן');
+    else toast.error(res.error ?? 'העדכון נכשל');
+  };
 
-    const saveProfile = async () => {
-        setLoading(true);
-        const res = await updateBudgetSettings({
-            monthlyIncome: parseFloat(budget.monthlyIncome as unknown as string),
-            needsPercent: budget.needsPercent,
-            wantsPercent: budget.wantsPercent,
-            savingsPercent: budget.savingsPercent
-        });
+  const addNewAccount = async () => {
+    if (!newAccountName.trim()) return;
+    const res = await createAccount({ name: newAccountName.trim(), type: newAccountType });
+    if (res.success) {
+      toast.success('החשבון נוצר');
+      setNewAccountName('');
+      router.refresh();
+    } else {
+      toast.error(res.error ?? 'יצירת החשבון נכשלה');
+    }
+  };
 
-        if (res.success) trigger('success');
-        else trigger('error');
+  const archiveOneAccount = async (accountId: string) => {
+    const res = await archiveAccount(accountId);
+    if (res.success) {
+      toast.success('החשבון הועבר לארכיון');
+      setAccounts((prev) => prev.filter((acc) => acc.id !== accountId));
+      router.refresh();
+    } else {
+      toast.error(res.error ?? 'הארכוב נכשל');
+    }
+  };
 
-        const updates: { id: string; name: string }[] = [];
-        const joint = accounts.find((a) => a.type === 'JOINT');
-        if (joint) updates.push({ id: joint.id, name: jointName });
-        const roy = accounts.find((a) => a.name.toLowerCase().includes('roy'));
-        if (roy) updates.push({ id: roy.id, name: royPrivateName });
-        const romi = accounts.find((a) => a.name.toLowerCase().includes('romi'));
-        if (romi) updates.push({ id: romi.id, name: romiPrivateName });
+  const handleAddCategory = async () => {
+    if (!newCatName.trim()) return;
+    const res = await addCategory(newCatName.trim(), newCatIcon, 'expense');
+    if (res.success) {
+      toast.success('קטגוריה נוספה');
+      setNewCatName('');
+      router.refresh();
+    } else {
+      toast.error(res.error ?? 'הוספת קטגוריה נכשלה');
+    }
+  };
 
-        await updateAccountNames(updates);
-        setLoading(false);
-        toast.success('נשמר בהצלחה!');
-    };
+  const handleDeleteCategory = async (id: string) => {
+    const res = await deleteCategory(id);
+    if (res.success) {
+      setCategories((prev) => prev.filter((c) => c.id !== id));
+    } else {
+      toast.error(res.error ?? 'מחיקת קטגוריה נכשלה');
+    }
+  };
 
-    const handleAddCategory = async () => {
-        if (!newCatName.trim()) return;
-        trigger('medium');
-        const res = await addCategory(newCatName.trim(), newCatIcon, 'expense');
-        if (res.success) {
-            toast.success('קטגוריה נוספה');
-            router.refresh();
-        } else {
-            toast.error('הוספת קטגוריה נכשלה');
-        }
-        setNewCatName('');
-    };
+  const handleDeleteRecurring = async (id: string) => {
+    const res = await deleteRecurringTransaction(id);
+    if (res.success) {
+      setRecurring((prev) => prev.filter((r) => r.id !== id));
+    } else {
+      toast.error(res.error ?? 'מחיקת הוצאה חוזרת נכשלה');
+    }
+  };
 
-    const handleDeleteCategory = async (id: string) => {
-        if (confirm('למחוק את הקטגוריה?')) {
-            await deleteCategory(id);
-            setCategories(categories.filter((c) => c.id !== id));
-        }
-    };
+  const createInvite = async () => {
+    if (!inviteAccountId) return;
+    setInviteLoading(true);
+    const res = await createAccountInvite(inviteAccountId);
+    setInviteLoading(false);
+    if (res.success && res.inviteUrl) {
+      setInviteUrl(res.inviteUrl);
+      await navigator.clipboard.writeText(res.inviteUrl);
+      if (inviteEmail.trim()) {
+        const subject = encodeURIComponent(`הזמנה להצטרף לחשבון: ${res.accountName ?? 'חשבון משותף'}`);
+        const body = encodeURIComponent(`היי,\n\nהזמנתי אותך להצטרף לחשבון בלומיפלו:\n${res.inviteUrl}\n\nנתראה!`);
+        window.location.href = `mailto:${inviteEmail.trim()}?subject=${subject}&body=${body}`;
+      }
+      toast.success('לינק הזמנה הועתק');
+    } else {
+      toast.error(res.error ?? 'יצירת הזמנה נכשלה');
+    }
+  };
 
-    const handleDeleteRecurring = async (id: string) => {
-        if (confirm('לבטל את ההוצאה הקבועה? העסקאות שכבר נוצרו לא יימחקו.')) {
-            await deleteRecurringTransaction(id);
-            setRecurring(recurring.filter((r) => r.id !== id));
-        }
-    };
-
-    return (
-        <div className="space-y-6 animate-fade-in pb-8">
-
-            {/* Profile & Income */}
-            <section className="bg-white rounded-2xl shadow-card overflow-hidden">
-                <div className="px-5 pt-5 pb-3">
-                    <div className="flex items-center gap-2.5 mb-1">
-                        <div className="w-8 h-8 bg-ios-blue/10 rounded-lg flex items-center justify-center">
-                            <Wallet className="w-4 h-4 text-ios-blue" />
-                        </div>
-                        <h2 className="text-base font-bold text-gray-900">פרופיל והכנסות</h2>
-                    </div>
-                </div>
-
-                <div className="divide-y divide-gray-100">
-                    {/* Monthly income */}
-                    <div className="px-5 py-4">
-                        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                            הכנסה חודשית משותפת (נטו)
-                        </label>
-                        <div className="relative">
-                            <input
-                                type="number"
-                                value={budget.monthlyIncome}
-                                onChange={(e) => setBudget({ ...budget, monthlyIncome: parseFloat(e.target.value) || 0 })}
-                                className="w-full bg-ios-gray-6 rounded-xl px-4 py-3.5 text-xl font-bold text-gray-900 focus:ring-2 focus:ring-ios-blue/30 focus:outline-none text-right transition"
-                            />
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-lg">₪</span>
-                        </div>
-                    </div>
-
-                    {/* Account names */}
-                    <div className="px-5 py-4 space-y-3">
-                        <div className="grid grid-cols-2 gap-3">
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-400 mb-1.5">צד א׳</label>
-                                <input
-                                    type="text"
-                                    value={royPrivateName}
-                                    onChange={(e) => setRoyPrivateName(e.target.value)}
-                                    className="w-full bg-ios-gray-6 rounded-xl px-3.5 py-3 text-sm text-gray-900 focus:ring-2 focus:ring-ios-blue/30 focus:outline-none transition"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-400 mb-1.5">צד ב׳</label>
-                                <input
-                                    type="text"
-                                    value={romiPrivateName}
-                                    onChange={(e) => setRomiPrivateName(e.target.value)}
-                                    className="w-full bg-ios-gray-6 rounded-xl px-3.5 py-3 text-sm text-gray-900 focus:ring-2 focus:ring-ios-blue/30 focus:outline-none transition"
-                                />
-                            </div>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-400 mb-1.5">חשבון משותף</label>
-                            <input
-                                type="text"
-                                value={jointName}
-                                onChange={(e) => setJointName(e.target.value)}
-                                className="w-full bg-ios-gray-6 rounded-xl px-3.5 py-3 text-sm text-gray-900 focus:ring-2 focus:ring-ios-blue/30 focus:outline-none transition"
-                            />
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* Budget Targets */}
-            <section className="bg-white rounded-2xl shadow-card overflow-hidden">
-                <div className="px-5 pt-5 pb-3">
-                    <div className="flex items-center gap-2.5 mb-1">
-                        <div className="w-8 h-8 bg-ios-green/10 rounded-lg flex items-center justify-center">
-                            <span className="text-sm">📊</span>
-                        </div>
-                        <h2 className="text-base font-bold text-gray-900">יעדי תקציב</h2>
-                    </div>
-                </div>
-
-                <div className="px-5 pb-5 space-y-6">
-                    {/* Needs */}
-                    <div>
-                        <div className="flex justify-between items-center mb-2">
-                            <span className="text-sm font-medium text-gray-600">🏠 צרכים</span>
-                            <span className="text-sm font-bold text-gray-900 tabular-nums">{budget.needsPercent}%</span>
-                        </div>
-                        <input
-                            type="range" min="0" max="100"
-                            value={budget.needsPercent}
-                            onChange={(e) => { handleSliderChange('needs', parseInt(e.target.value)); trigger('light'); }}
-                            className="w-full h-2 bg-ios-gray-5 rounded-lg appearance-none cursor-pointer accent-ios-blue"
-                        />
-                    </div>
-
-                    {/* Wants */}
-                    <div>
-                        <div className="flex justify-between items-center mb-2">
-                            <span className="text-sm font-medium text-gray-600">🎉 רצונות</span>
-                            <span className="text-sm font-bold text-gray-900 tabular-nums">{budget.wantsPercent}%</span>
-                        </div>
-                        <input
-                            type="range" min="0" max="100"
-                            value={budget.wantsPercent}
-                            onChange={(e) => { handleSliderChange('wants', parseInt(e.target.value)); trigger('light'); }}
-                            className="w-full h-2 bg-ios-gray-5 rounded-lg appearance-none cursor-pointer accent-ios-indigo"
-                        />
-                    </div>
-
-                    {/* Savings */}
-                    <div>
-                        <div className="flex justify-between items-center mb-2">
-                            <span className="text-sm font-medium text-gray-600">💰 חיסכון</span>
-                            <span className="text-sm font-bold text-ios-green tabular-nums">{budget.savingsPercent}%</span>
-                        </div>
-                        <input
-                            type="range" min="0" max="100"
-                            value={budget.savingsPercent}
-                            onChange={(e) => { handleSliderChange('savings', parseInt(e.target.value)); trigger('light'); }}
-                            className="w-full h-2 bg-ios-gray-5 rounded-lg appearance-none cursor-pointer accent-ios-green"
-                        />
-                    </div>
-
-                    {/* Total indicator */}
-                    <div className="flex justify-between text-xs text-gray-400">
-                        <span>חלוקה חכמה</span>
-                        <span className="tabular-nums">סה״כ: {budget.needsPercent + budget.wantsPercent + budget.savingsPercent}%</span>
-                    </div>
-
-                    {/* Save Button */}
-                    <button
-                        onClick={saveProfile}
-                        disabled={loading}
-                        className="w-full py-3.5 bg-ios-blue text-white rounded-xl font-bold text-sm hover:bg-ios-blue/90 transition-all flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-40"
-                    >
-                        {loading ? 'שומר...' : <>
-                            <Save className="w-4 h-4" />
-                            שמור שינויים
-                        </>}
-                    </button>
-                </div>
-            </section>
-
-            {/* Categories */}
-            <section className="bg-white rounded-2xl shadow-card overflow-hidden">
-                <div className="px-5 pt-5 pb-3">
-                    <div className="flex items-center gap-2.5 mb-1">
-                        <div className="w-8 h-8 bg-ios-orange/10 rounded-lg flex items-center justify-center">
-                            <span className="text-sm">🏷️</span>
-                        </div>
-                        <h2 className="text-base font-bold text-gray-900">קטגוריות</h2>
-                    </div>
-                </div>
-
-                <div className="px-5 pb-5 space-y-3">
-                    {/* Add category */}
-                    <div className="flex gap-2">
-                        <input
-                            type="text"
-                            placeholder="שם קטגוריה חדשה"
-                            value={newCatName}
-                            onChange={(e) => setNewCatName(e.target.value)}
-                            className="flex-1 bg-ios-gray-6 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-ios-blue/30"
-                        />
-                        <input
-                            type="text"
-                            value={newCatIcon}
-                            onChange={(e) => setNewCatIcon(e.target.value)}
-                            className="w-11 text-center bg-ios-gray-6 rounded-xl px-1 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ios-blue/30"
-                            title="אמוג׳י"
-                        />
-                        <button
-                            onClick={handleAddCategory}
-                            className="w-11 bg-ios-blue text-white rounded-xl flex items-center justify-center active:scale-95 transition"
-                        >
-                            <Plus className="w-5 h-5" />
-                        </button>
-                    </div>
-
-                    {/* Category list */}
-                    <div className="bg-ios-gray-6 rounded-xl divide-y divide-gray-200/50 overflow-hidden max-h-52 overflow-y-auto">
-                        {categories.map((cat) => (
-                            <div key={cat.id || cat.name} className="flex items-center justify-between px-4 py-3">
-                                <span className="flex items-center gap-2.5 text-sm font-medium text-gray-700">
-                                    <span className="text-lg">{cat.icon}</span>
-                                    {cat.name}
-                                </span>
-                                {cat.isCustom && (
-                                    <button onClick={() => handleDeleteCategory(cat.id)} className="text-ios-red/70 hover:text-ios-red p-1">
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* Recurring */}
-            <section className="bg-white rounded-2xl shadow-card overflow-hidden">
-                <div className="px-5 pt-5 pb-3">
-                    <div className="flex items-center gap-2.5 mb-1">
-                        <div className="w-8 h-8 bg-ios-purple/10 rounded-lg flex items-center justify-center">
-                            <span className="text-sm">🔄</span>
-                        </div>
-                        <h2 className="text-base font-bold text-gray-900">הוראות קבע</h2>
-                    </div>
-                </div>
-
-                <div className="px-5 pb-5">
-                    {recurring.length === 0 ? (
-                        <p className="text-center text-gray-400 text-sm py-6">אין הוראות קבע פעילות</p>
-                    ) : (
-                        <div className="bg-ios-gray-6 rounded-xl divide-y divide-gray-200/50 overflow-hidden">
-                            {recurring.map((item) => (
-                                <div key={item.id} className="flex items-center justify-between px-4 py-3.5">
-                                    <div className="flex flex-col">
-                                        <span className="text-sm font-semibold text-gray-900">{item.description}</span>
-                                        <span className="text-xs text-gray-400">{item.account.name} &middot; ₪{item.amount}/חודש</span>
-                                    </div>
-                                    <button onClick={() => handleDeleteRecurring(item.id)} className="text-ios-red/70 hover:text-ios-red p-1.5">
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            </section>
+  return (
+    <div className="space-y-6 animate-fade-in pb-8">
+      <section className="bg-white rounded-2xl shadow-card overflow-hidden">
+        <div className="px-5 pt-5 pb-3 flex items-center gap-2.5">
+          <div className="w-8 h-8 bg-ios-blue/10 rounded-lg flex items-center justify-center">
+            <Wallet className="w-4 h-4 text-ios-blue" />
+          </div>
+          <h2 className="text-base font-bold text-gray-900">תקציב</h2>
         </div>
-    );
+        <div className="px-5 pb-5 space-y-4">
+          <input
+            type="number"
+            value={budget.monthlyIncome}
+            onChange={(e) => setBudget({ ...budget, monthlyIncome: parseFloat(e.target.value) || 0 })}
+            className="w-full bg-ios-gray-6 rounded-xl px-4 py-3 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-ios-blue/30"
+          />
+          <button
+            onClick={saveBudget}
+            disabled={loading}
+            className="w-full py-3.5 bg-ios-blue text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            <Save className="w-4 h-4" />
+            {loading ? 'שומר...' : 'שמור תקציב'}
+          </button>
+        </div>
+      </section>
+
+      <section className="bg-white rounded-2xl shadow-card overflow-hidden">
+        <div className="px-5 pt-5 pb-3">
+          <h2 className="text-base font-bold text-gray-900">חשבונות</h2>
+        </div>
+        <div className="px-5 pb-5 space-y-3">
+          {accounts.map((account) => (
+            <div key={account.id} className="bg-ios-gray-6 rounded-xl p-3 space-y-2">
+              <input
+                type="text"
+                value={account.name}
+                onChange={(e) => updateLocalAccount(account.id, { name: e.target.value })}
+                className="w-full bg-white rounded-lg px-3 py-2.5 text-sm"
+              />
+              <div className="flex gap-2">
+                <select
+                  value={account.type}
+                  onChange={(e) => updateLocalAccount(account.id, { type: e.target.value as AccountType })}
+                  className="flex-1 bg-white rounded-lg px-3 py-2 text-sm"
+                >
+                  <option value="PRIVATE">פרטי</option>
+                  <option value="SHARED">משותף</option>
+                </select>
+                <button onClick={() => saveAccount(account)} className="px-3 py-2 rounded-lg bg-ios-blue text-white text-sm">שמור</button>
+                <button onClick={() => archiveOneAccount(account.id)} className="px-3 py-2 rounded-lg bg-ios-red text-white text-sm">ארכיון</button>
+              </div>
+            </div>
+          ))}
+
+          <div className="flex gap-2 pt-2">
+            <input
+              value={newAccountName}
+              onChange={(e) => setNewAccountName(e.target.value)}
+              placeholder="שם חשבון חדש"
+              className="flex-1 bg-ios-gray-6 rounded-xl px-3 py-2.5 text-sm"
+            />
+            <select
+              value={newAccountType}
+              onChange={(e) => setNewAccountType(e.target.value as AccountType)}
+              className="bg-ios-gray-6 rounded-xl px-3 py-2.5 text-sm"
+            >
+              <option value="PRIVATE">פרטי</option>
+              <option value="SHARED">משותף</option>
+            </select>
+            <button onClick={addNewAccount} className="w-11 bg-ios-blue text-white rounded-xl flex items-center justify-center">
+              <Plus className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-white rounded-2xl shadow-card overflow-hidden">
+        <div className="px-5 pt-5 pb-3">
+          <h2 className="text-base font-bold text-gray-900">שיתוף חשבון</h2>
+        </div>
+        <div className="px-5 pb-5 space-y-3">
+          <div className="flex gap-2">
+            <select
+              value={inviteAccountId}
+              onChange={(e) => setInviteAccountId(e.target.value)}
+              className="flex-1 bg-ios-gray-6 rounded-xl px-3 py-2.5 text-sm"
+            >
+              <option value="">בחר חשבון משותף</option>
+              {accounts.filter((a) => a.type === 'SHARED').map((a) => (
+                <option key={a.id} value={a.id}>{a.name}</option>
+              ))}
+            </select>
+            <input
+              value={inviteEmail}
+              onChange={(e) => setInviteEmail(e.target.value)}
+              placeholder="מייל להזמנה (אופציונלי)"
+              className="flex-1 bg-ios-gray-6 rounded-xl px-3 py-2.5 text-sm"
+              dir="ltr"
+            />
+            <button
+              onClick={createInvite}
+              disabled={inviteLoading || !inviteAccountId}
+              className="px-3 py-2.5 rounded-xl bg-ios-indigo text-white text-sm flex items-center gap-1 disabled:opacity-50"
+            >
+              <Share2 className="w-4 h-4" />
+              {inviteLoading ? 'יוצר...' : 'צור לינק'}
+            </button>
+          </div>
+          {inviteUrl && <p className="text-xs text-gray-500 break-all">{inviteUrl}</p>}
+        </div>
+      </section>
+
+      <section className="bg-white rounded-2xl shadow-card overflow-hidden">
+        <div className="px-5 pt-5 pb-3">
+          <h2 className="text-base font-bold text-gray-900">קטגוריות</h2>
+        </div>
+        <div className="px-5 pb-5 space-y-3">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="שם קטגוריה חדשה"
+              value={newCatName}
+              onChange={(e) => setNewCatName(e.target.value)}
+              className="flex-1 bg-ios-gray-6 rounded-xl px-3.5 py-2.5 text-sm"
+            />
+            <select
+              value={newCatIcon}
+              onChange={(e) => setNewCatIcon(e.target.value)}
+              className="w-16 text-center bg-ios-gray-6 rounded-xl px-1 py-2.5 text-sm"
+              aria-label="בחירת אמוג׳י"
+            >
+              {CATEGORY_EMOJIS.map((emoji) => <option key={emoji} value={emoji}>{emoji}</option>)}
+            </select>
+            <button onClick={handleAddCategory} className="w-11 bg-ios-blue text-white rounded-xl flex items-center justify-center">
+              <Plus className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="bg-ios-gray-6 rounded-xl divide-y divide-gray-200/50 overflow-hidden max-h-52 overflow-y-auto">
+            {categories.map((cat) => (
+              <div key={cat.id} className="flex items-center justify-between px-4 py-3">
+                <span className="flex items-center gap-2.5 text-sm font-medium text-gray-700">
+                  <span className="text-lg">{cat.icon}</span>
+                  {cat.name}
+                </span>
+                {cat.isCustom && (
+                  <button onClick={() => handleDeleteCategory(cat.id)} className="text-ios-red/70 hover:text-ios-red p-1">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-white rounded-2xl shadow-card overflow-hidden">
+        <div className="px-5 pt-5 pb-3">
+          <h2 className="text-base font-bold text-gray-900">הוצאות חוזרות</h2>
+        </div>
+        <div className="px-5 pb-5">
+          {recurring.length === 0 ? (
+            <p className="text-center text-gray-400 text-sm py-6">אין הוצאות חוזרות</p>
+          ) : (
+            <div className="bg-ios-gray-6 rounded-xl divide-y divide-gray-200/50 overflow-hidden">
+              {recurring.map((item) => (
+                <div key={item.id} className="flex items-center justify-between px-4 py-3.5">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-semibold text-gray-900">{item.description || item.category}</span>
+                    <span className="text-xs text-gray-400">{item.account.name} · ₪{item.amount}/חודש</span>
+                  </div>
+                  <button onClick={() => handleDeleteRecurring(item.id)} className="text-ios-red/70 hover:text-ios-red p-1.5">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      <button
+        onClick={() => signOut({ callbackUrl: '/auth/signin' })}
+        className="w-full py-3 bg-black text-white rounded-xl font-medium flex items-center justify-center gap-2"
+      >
+        <LogOut className="w-4 h-4" />
+        התנתק
+      </button>
+
+      {showInvitePopup && invitePreview && (
+        <div className="fixed inset-0 z-[90] bg-black/35 backdrop-blur-sm flex items-center justify-center px-5">
+          <div className="w-full max-w-sm bg-white rounded-2xl shadow-card p-5 space-y-4">
+            <h3 className="text-lg font-bold text-gray-900">הזמנה להצטרפות לחשבון</h3>
+            <p className="text-sm text-gray-700 leading-relaxed">
+              <span className="font-semibold">{invitePreview.invitedByName}</span> הזמין אותך להצטרף לחשבון{' '}
+              <span className="font-semibold">{invitePreview.accountName}</span>.
+            </p>
+            <p className="text-xs text-gray-400">תוקף ההזמנה עד {new Date(invitePreview.expiresAt).toLocaleDateString('he-IL')}</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setShowInvitePopup(false);
+                  router.replace('/settings');
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-ios-gray-6 text-gray-700 text-sm font-medium"
+              >
+                לא עכשיו
+              </button>
+              <button
+                onClick={handleAcceptInvite}
+                disabled={acceptingInvite}
+                className="flex-1 py-2.5 rounded-xl bg-ios-blue text-white text-sm font-semibold disabled:opacity-50"
+              >
+                {acceptingInvite ? 'מאשר...' : 'אשר הצטרפות'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
