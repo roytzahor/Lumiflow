@@ -10,7 +10,7 @@ Flexible budgeting for individuals and groups. A mobile-first app for tracking p
 - **Settings** — Manage accounts, budget settings, categories, recurring transactions, and invite links
 - **Multi-Account** — Any number of private or shared accounts
 - **Recurring Transactions** — Monthly automation with short-month policy (`roll to last day` or `skip month`)
-- **Auth** — Email/password sign-in with protected app routes
+- **Auth** — Email/password + Google sign-in with protected app routes
 - **RTL / Hebrew** — Fully right-to-left interface with Hebrew locale
 
 ## Tech Stack
@@ -68,6 +68,16 @@ yarn dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+### Tests
+
+```bash
+# Unit tests
+yarn test:unit
+
+# E2E tests (requires app running)
+yarn test:e2e
+```
 
 ### Production
 

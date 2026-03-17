@@ -33,7 +33,7 @@ export default function SignInPage() {
     window.location.href = res.url ?? '/';
   };
 
-  const signInWithProvider = async (provider: 'google' | 'apple' | 'facebook') => {
+  const signInWithProvider = async (provider: 'google') => {
     await signIn(provider, { callbackUrl });
   };
 
@@ -43,8 +43,6 @@ export default function SignInPage() {
         <h1 className="text-2xl font-bold text-gray-900">כניסה ל־LumiFlow</h1>
         <div className="space-y-2">
           <button type="button" onClick={() => signInWithProvider('google')} className="w-full py-2.5 rounded-xl bg-ios-gray-6 text-sm font-medium">המשך עם Google</button>
-          <button type="button" onClick={() => signInWithProvider('apple')} className="w-full py-2.5 rounded-xl bg-ios-gray-6 text-sm font-medium">המשך עם Apple</button>
-          <button type="button" onClick={() => signInWithProvider('facebook')} className="w-full py-2.5 rounded-xl bg-ios-gray-6 text-sm font-medium">המשך עם Facebook</button>
         </div>
         <div className="flex items-center gap-2">
           <div className="h-px bg-gray-200 flex-1" />
@@ -52,6 +50,7 @@ export default function SignInPage() {
           <div className="h-px bg-gray-200 flex-1" />
         </div>
         <input
+          data-testid="signin-email"
           type="email"
           required
           value={email}
@@ -61,6 +60,7 @@ export default function SignInPage() {
           className="w-full bg-ios-gray-6 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-ios-blue/30"
         />
         <input
+          data-testid="signin-password"
           type="password"
           required
           value={password}
@@ -71,6 +71,7 @@ export default function SignInPage() {
         />
         {error && <p className="text-sm text-ios-red">{error}</p>}
         <button
+          data-testid="signin-submit"
           type="submit"
           disabled={loading}
           className="w-full py-3 rounded-xl bg-ios-blue text-white font-semibold disabled:opacity-50"

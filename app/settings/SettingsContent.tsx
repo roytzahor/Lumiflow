@@ -289,6 +289,7 @@ export default function SettingsContent({ initialBudget, initialCategories, init
         <div className="px-5 pb-5 space-y-3">
           <div className="flex gap-2">
             <select
+              data-testid="settings-invite-account"
               value={inviteAccountId}
               onChange={(e) => setInviteAccountId(e.target.value)}
               className="flex-1 bg-ios-gray-6 rounded-xl px-3 py-2.5 text-sm"
@@ -299,6 +300,7 @@ export default function SettingsContent({ initialBudget, initialCategories, init
               ))}
             </select>
             <input
+              data-testid="settings-invite-email"
               value={inviteEmail}
               onChange={(e) => setInviteEmail(e.target.value)}
               placeholder="מייל להזמנה (אופציונלי)"
@@ -306,6 +308,7 @@ export default function SettingsContent({ initialBudget, initialCategories, init
               dir="ltr"
             />
             <button
+              data-testid="settings-create-invite"
               onClick={createInvite}
               disabled={inviteLoading || !inviteAccountId}
               className="px-3 py-2.5 rounded-xl bg-ios-indigo text-white text-sm flex items-center gap-1 disabled:opacity-50"
@@ -314,7 +317,7 @@ export default function SettingsContent({ initialBudget, initialCategories, init
               {inviteLoading ? 'יוצר...' : 'צור לינק'}
             </button>
           </div>
-          {inviteUrl && <p className="text-xs text-gray-500 break-all">{inviteUrl}</p>}
+          {inviteUrl && <p data-testid="settings-invite-url" className="text-xs text-gray-500 break-all">{inviteUrl}</p>}
         </div>
       </section>
 
@@ -388,6 +391,7 @@ export default function SettingsContent({ initialBudget, initialCategories, init
       </section>
 
       <button
+        data-testid="settings-signout"
         onClick={() => signOut({ callbackUrl: '/auth/signin' })}
         className="w-full py-3 bg-black text-white rounded-xl font-medium flex items-center justify-center gap-2"
       >
@@ -396,7 +400,7 @@ export default function SettingsContent({ initialBudget, initialCategories, init
       </button>
 
       {showInvitePopup && invitePreview && (
-        <div className="fixed inset-0 z-[90] bg-black/35 backdrop-blur-sm flex items-center justify-center px-5">
+        <div data-testid="invite-popup" className="fixed inset-0 z-[90] bg-black/35 backdrop-blur-sm flex items-center justify-center px-5">
           <div className="w-full max-w-sm bg-white rounded-2xl shadow-card p-5 space-y-4">
             <h3 className="text-lg font-bold text-gray-900">הזמנה להצטרפות לחשבון</h3>
             <p className="text-sm text-gray-700 leading-relaxed">
@@ -406,6 +410,7 @@ export default function SettingsContent({ initialBudget, initialCategories, init
             <p className="text-xs text-gray-400">תוקף ההזמנה עד {new Date(invitePreview.expiresAt).toLocaleDateString('he-IL')}</p>
             <div className="flex gap-2">
               <button
+                data-testid="invite-popup-decline"
                 onClick={() => {
                   setShowInvitePopup(false);
                   router.replace('/settings');
@@ -415,6 +420,7 @@ export default function SettingsContent({ initialBudget, initialCategories, init
                 לא עכשיו
               </button>
               <button
+                data-testid="invite-popup-accept"
                 onClick={handleAcceptInvite}
                 disabled={acceptingInvite}
                 className="flex-1 py-2.5 rounded-xl bg-ios-blue text-white text-sm font-semibold disabled:opacity-50"

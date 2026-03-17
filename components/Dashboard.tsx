@@ -162,6 +162,7 @@ export default function Dashboard({ initialTransactions = [], budgetSettings, ca
                             </h1>
                         </div>
                         <motion.button
+                            data-testid="dashboard-open-quickadd"
                             whileTap={{ scale: 0.92 }}
                             onClick={() => {
                                 trigger(10);

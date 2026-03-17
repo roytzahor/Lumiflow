@@ -229,6 +229,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                     {initialData ? 'עריכת הוצאה' : 'הוצאה חדשה'}
                                 </h2>
                                 <button
+                                    data-testid="quickadd-open-close"
                                     type="button"
                                     onClick={onClose}
                                     className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center"
@@ -244,6 +245,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                 <div className="flex items-center justify-center gap-1">
                                     <span className="text-4xl text-gray-300 font-light">₪</span>
                                     <input
+                                        data-testid="quickadd-amount"
                                         type="number"
                                         inputMode="decimal"
                                         value={amount}
@@ -303,6 +305,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                         <span className="text-[15px] font-medium text-gray-900">תאריך</span>
                                     </div>
                                     <input
+                                        data-testid="quickadd-date"
                                         type="date"
                                         value={date}
                                         onChange={(e) => setDate(e.target.value)}
@@ -385,13 +388,14 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                         </p>
                                     </div>
                                 </div>
-                                <LiquidToggle isOn={isRecurring} onToggle={() => setIsRecurring(!isRecurring)} />
+                                <LiquidToggle testId="quickadd-recurring-toggle" isOn={isRecurring} onToggle={() => setIsRecurring(!isRecurring)} />
                             </div>
 
                             {shouldShowShortMonthPolicy && (
                                 <div className="bg-white rounded-2xl shadow-card mb-6 p-4">
                                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">חודש קצר</p>
                                     <select
+                                        data-testid="quickadd-short-month-policy"
                                         value={monthPolicy}
                                         onChange={(e) => setMonthPolicy(e.target.value as RecurringMonthPolicy)}
                                         className="w-full bg-ios-gray-6 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-ios-blue/30"
@@ -405,6 +409,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                             {/* Actions */}
                             <div className="space-y-3">
                                 <button
+                                    data-testid="quickadd-submit"
                                     onClick={() => {
                                         trigger(15);
                                         handleSubmit();

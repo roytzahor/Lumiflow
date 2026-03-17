@@ -48,7 +48,7 @@ export default function SignUpPage() {
     window.location.href = signInResult.url ?? '/';
   };
 
-  const signUpWithProvider = async (provider: 'google' | 'apple' | 'facebook') => {
+  const signUpWithProvider = async (provider: 'google') => {
     await signIn(provider, { callbackUrl: '/onboarding' });
   };
 
@@ -58,8 +58,6 @@ export default function SignUpPage() {
         <h1 className="text-2xl font-bold text-gray-900">יצירת חשבון חדש</h1>
         <div className="space-y-2">
           <button type="button" onClick={() => signUpWithProvider('google')} className="w-full py-2.5 rounded-xl bg-ios-gray-6 text-sm font-medium">המשך עם Google</button>
-          <button type="button" onClick={() => signUpWithProvider('apple')} className="w-full py-2.5 rounded-xl bg-ios-gray-6 text-sm font-medium">המשך עם Apple</button>
-          <button type="button" onClick={() => signUpWithProvider('facebook')} className="w-full py-2.5 rounded-xl bg-ios-gray-6 text-sm font-medium">המשך עם Facebook</button>
         </div>
         <div className="flex items-center gap-2">
           <div className="h-px bg-gray-200 flex-1" />
@@ -67,6 +65,7 @@ export default function SignUpPage() {
           <div className="h-px bg-gray-200 flex-1" />
         </div>
         <input
+          data-testid="signup-name"
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -74,6 +73,7 @@ export default function SignUpPage() {
           className="w-full bg-ios-gray-6 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-ios-blue/30"
         />
         <input
+          data-testid="signup-email"
           type="email"
           required
           value={email}
@@ -83,6 +83,7 @@ export default function SignUpPage() {
           className="w-full bg-ios-gray-6 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-ios-blue/30"
         />
         <input
+          data-testid="signup-password"
           type="password"
           required
           minLength={6}
@@ -94,6 +95,7 @@ export default function SignUpPage() {
         />
         {error && <p className="text-sm text-ios-red">{error}</p>}
         <button
+          data-testid="signup-submit"
           type="submit"
           disabled={loading}
           className="w-full py-3 rounded-xl bg-ios-blue text-white font-semibold disabled:opacity-50"

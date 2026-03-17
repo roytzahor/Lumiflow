@@ -6,9 +6,10 @@ import { motion } from 'framer-motion';
 interface LiquidToggleProps {
     isOn: boolean;
     onToggle: () => void;
+    testId?: string;
 }
 
-export default function LiquidToggle({ isOn, onToggle }: LiquidToggleProps) {
+export default function LiquidToggle({ isOn, onToggle, testId }: LiquidToggleProps) {
     const [isRtl, setIsRtl] = useState(true);
 
     useEffect(() => {
@@ -19,6 +20,7 @@ export default function LiquidToggle({ isOn, onToggle }: LiquidToggleProps) {
 
     return (
         <button
+            data-testid={testId}
             type="button"
             role="switch"
             aria-checked={isOn}
