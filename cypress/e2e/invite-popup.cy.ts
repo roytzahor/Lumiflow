@@ -10,7 +10,10 @@ describe('Invite popup flow', () => {
     cy.get('[data-testid="signup-submit"]').click();
 
     cy.url().should('include', '/onboarding');
-    cy.get('[data-testid="onboarding-template"]').select('אישי + משותף');
+    cy.get('[data-testid="onboarding-template-personalShared"]').click();
+    cy.contains('button', 'המשך').click();
+    cy.contains('button', 'המשך').click();
+    cy.contains('button', 'המשך').click();
     cy.get('[data-testid="onboarding-submit"]').click();
     cy.get('[data-testid="onboarding-continue-dashboard"]').click();
 
@@ -38,8 +41,12 @@ describe('Invite popup flow', () => {
       cy.get('[data-testid="signup-submit"]').click();
 
       cy.url().should('include', '/onboarding');
-      cy.get('[data-testid="onboarding-template"]').select('אישי בלבד');
+      cy.get('[data-testid="onboarding-template-personalOnly"]').click();
+      cy.contains('button', 'המשך').click();
+      cy.contains('button', 'המשך').click();
+      cy.contains('button', 'המשך').click();
       cy.get('[data-testid="onboarding-submit"]').click();
+      cy.get('[data-testid="onboarding-continue-dashboard"]').click();
       cy.url().should('eq', `${Cypress.config('baseUrl')}/`);
 
       cy.visit(inviteUrl);

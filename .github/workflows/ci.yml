@@ -35,7 +35,10 @@ jobs:
           node-version: 20
           cache: yarn
       - run: yarn install --frozen-lockfile
+      - run: yarn prisma generate
       - run: yarn prisma migrate deploy
+      - run: yarn lint
+      - run: yarn typecheck
       - run: yarn test:unit
       - run: yarn build
       - run: yarn start-server-and-test "yarn dev" http://localhost:3000/auth/signup "yarn test:e2e"

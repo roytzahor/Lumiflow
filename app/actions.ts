@@ -2,9 +2,11 @@
 'use server';
 
 import { authOptions } from '@/auth';
+import { parseDateInputToUtc } from '@/lib/date-only';
 import { hashInviteToken } from '@/lib/invite-utils';
 import { prisma } from '@/lib/prisma';
 import { resolveMonthlyDate } from '@/lib/recurring-utils';
+import { resolveOrRestoreSessionUserId } from '@/lib/session-user';
 import type { AccountType, RecurringMonthPolicy, Transaction } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
@@ -21,21 +23,29 @@ const DEFAULT_CATEGORIES = [
 
 async function requireUserId() {
   const session = await getServerSession(authOptions);
-  const userId = session?.user?.id;
-  if (!userId) throw new Error('Unauthorized');
-  return userId;
+  if (!session?.user) throw new Error('Unauthorized');
+
+  return resolveOrRestoreSessionUserId({
+    userId: session.user.id,
+    email: session.user.email,
+    name: session.user.name,
+  });
 }
 
 function startOfMonth(year: number, month: number) {
-  return new Date(year, month, 1, 0, 0, 0, 0);
+  return new Date(Date.UTC(year, month, 1, 0, 0, 0, 0));
 }
 
 function endOfMonth(year: number, month: number) {
-  return new Date(year, month + 1, 0, 23, 59, 59, 999);
+  return new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999));
 }
 
 function isSameDay(a: Date, b: Date) {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  return (
+    a.getUTCFullYear() === b.getUTCFullYear() &&
+    a.getUTCMonth() === b.getUTCMonth() &&
+    a.getUTCDate() === b.getUTCDate()
+  );
 }
 
 async function ensureUserBootstrap(userId: string) {
@@ -88,6 +98,16 @@ function refreshAllViews() {
   revalidatePath('/settings');
 }
 
+async function logActionMetric(eventName: string, userId: string, payload: Record<string, unknown> = {}) {
+  const line = JSON.stringify({
+    eventName,
+    userId,
+    payload,
+    timestamp: new Date().toISOString(),
+  });
+  console.info(`[metric] ${line}`);
+}
+
 async function decorateRecurringFlags(transactions: (Transaction & { recurringTransactionId: string | null; account: { id: string; name: string; type: AccountType; balance: number; color: string | null; icon: string | null; isArchived: boolean; createdAt: Date; updatedAt: Date } })[]) {
   return transactions.map((t) => ({
     ...t,
@@ -102,7 +122,8 @@ export async function addTransaction(formData: FormData) {
 
     const amount = parseFloat(String(formData.get('amount') ?? '0'));
     const description = String(formData.get('description') ?? '').trim();
-    const date = new Date(String(formData.get('date') ?? ''));
+    const rawDate = String(formData.get('date') ?? '');
+    const date = parseDateInputToUtc(rawDate);
     const category = String(formData.get('category') ?? '').trim();
     const isRecurring = formData.get('isRecurring') === 'true';
     const monthPolicy = (formData.get('monthPolicy') as RecurringMonthPolicy | null) ?? 'ROLL_TO_LAST_DAY';
@@ -110,16 +131,16 @@ export async function addTransaction(formData: FormData) {
 
     const accountIds = await getUserAccountIds(userId);
     if (!accountId) accountId = accountIds[0] ?? '';
-    if (!amount || Number.isNaN(amount) || amount <= 0 || !category || !accountId) {
+    if (!amount || Number.isNaN(amount) || amount <= 0 || !category || !accountId || !date) {
       return { success: false, error: 'Missing required fields' };
     }
     if (!accountIds.includes(accountId)) return { success: false, error: 'Forbidden' };
 
     let recurringTransactionId: string | undefined;
     if (isRecurring) {
-      const dayOfMonth = date.getDate();
-      const nextRun = resolveMonthlyDate(date.getFullYear(), date.getMonth() + 1, dayOfMonth, monthPolicy) ??
-        new Date(date.getFullYear(), date.getMonth() + 2, 1);
+      const dayOfMonth = date.getUTCDate();
+      const nextRun = resolveMonthlyDate(date.getUTCFullYear(), date.getUTCMonth() + 1, dayOfMonth, monthPolicy) ??
+        new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 2, 1));
 
       const recurring = await prisma.recurringTransaction.create({
         data: {
@@ -144,10 +165,18 @@ export async function addTransaction(formData: FormData) {
         date,
         accountId,
         category,
+        paidByUserId: userId,
+        attributedToUserId: userId,
         recurringTransactionId,
       },
     });
 
+    await logActionMetric('transaction_created', userId, {
+      accountId,
+      category,
+      isRecurring,
+      hasDescription: Boolean(description),
+    });
     refreshAllViews();
     return { success: true, transaction };
   } catch (error) {
@@ -525,6 +554,60 @@ export async function getAccountContributionTotals() {
   }
 }
 
+export async function getSharedAccountBalancePreview(accountId: string) {
+  try {
+    const userId = await requireUserId();
+    await assertUserHasAccount(userId, accountId);
+
+    const account = await prisma.account.findUnique({
+      where: { id: accountId },
+      select: {
+        id: true,
+        type: true,
+        members: {
+          select: {
+            userId: true,
+            user: { select: { name: true, email: true } },
+          },
+        },
+      },
+    });
+    if (!account || account.type !== 'SHARED') {
+      return { success: true, balances: [] as Array<{ userId: string; label: string; net: number }> };
+    }
+
+    const rows = await prisma.transaction.findMany({
+      where: { accountId },
+      select: {
+        amount: true,
+        paidByUserId: true,
+        attributedToUserId: true,
+      },
+    });
+
+    const totals = new Map<string, number>();
+    account.members.forEach((m) => totals.set(m.userId, 0));
+    rows.forEach((row) => {
+      if (row.paidByUserId && totals.has(row.paidByUserId)) {
+        totals.set(row.paidByUserId, (totals.get(row.paidByUserId) ?? 0) + row.amount);
+      }
+      if (row.attributedToUserId && totals.has(row.attributedToUserId)) {
+        totals.set(row.attributedToUserId, (totals.get(row.attributedToUserId) ?? 0) - row.amount);
+      }
+    });
+
+    const balances = account.members.map((member) => ({
+      userId: member.userId,
+      label: member.user.name ?? member.user.email,
+      net: totals.get(member.userId) ?? 0,
+    }));
+
+    return { success: true, balances };
+  } catch {
+    return { success: false, balances: [] as Array<{ userId: string; label: string; net: number }> };
+  }
+}
+
 export async function getCategories() {
   try {
     const userId = await requireUserId();
@@ -850,11 +933,15 @@ export async function updateTransaction(id: string, formData: FormData) {
     const userId = await requireUserId();
     const amount = parseFloat(String(formData.get('amount') ?? '0'));
     const description = String(formData.get('description') ?? '').trim();
-    const date = new Date(String(formData.get('date') ?? ''));
+    const rawDate = String(formData.get('date') ?? '');
+    const date = parseDateInputToUtc(rawDate);
     const accountId = String(formData.get('accountId') ?? '');
     const category = String(formData.get('category') ?? '');
     const isRecurring = formData.get('isRecurring') === 'true';
     const monthPolicy = (formData.get('monthPolicy') as RecurringMonthPolicy | null) ?? 'ROLL_TO_LAST_DAY';
+    if (!date || !accountId || !category || !Number.isFinite(amount) || amount <= 0) {
+      return { success: false, error: 'Missing required fields' };
+    }
 
     const existing = await prisma.transaction.findUnique({
       where: { id },
@@ -866,9 +953,9 @@ export async function updateTransaction(id: string, formData: FormData) {
 
     let recurringTransactionId = existing.recurringTransactionId;
     if (isRecurring && !recurringTransactionId) {
-      const dayOfMonth = date.getDate();
-      const nextRun = resolveMonthlyDate(date.getFullYear(), date.getMonth() + 1, dayOfMonth, monthPolicy) ??
-        new Date(date.getFullYear(), date.getMonth() + 2, 1);
+      const dayOfMonth = date.getUTCDate();
+      const nextRun = resolveMonthlyDate(date.getUTCFullYear(), date.getUTCMonth() + 1, dayOfMonth, monthPolicy) ??
+        new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 2, 1));
       const created = await prisma.recurringTransaction.create({
         data: {
           amount,
@@ -886,9 +973,9 @@ export async function updateTransaction(id: string, formData: FormData) {
     }
 
     if (isRecurring && recurringTransactionId) {
-      const dayOfMonth = date.getDate();
-      const nextRun = resolveMonthlyDate(date.getFullYear(), date.getMonth() + 1, dayOfMonth, monthPolicy) ??
-        new Date(date.getFullYear(), date.getMonth() + 2, 1);
+      const dayOfMonth = date.getUTCDate();
+      const nextRun = resolveMonthlyDate(date.getUTCFullYear(), date.getUTCMonth() + 1, dayOfMonth, monthPolicy) ??
+        new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 2, 1));
       await prisma.recurringTransaction.update({
         where: { id: recurringTransactionId },
         data: {
@@ -918,10 +1005,18 @@ export async function updateTransaction(id: string, formData: FormData) {
         date,
         accountId,
         category,
+        paidByUserId: existing.paidByUserId ?? userId,
+        attributedToUserId: existing.attributedToUserId ?? userId,
         recurringTransactionId,
       },
     });
 
+    await logActionMetric('transaction_updated', userId, {
+      accountId,
+      category,
+      isRecurring,
+      transactionId: id,
+    });
     refreshAllViews();
     return { success: true };
   } catch {
@@ -940,6 +1035,7 @@ export async function deleteTransaction(id: string) {
     if (!existing.account.members.some((m) => m.userId === userId)) return { success: false, error: 'Forbidden' };
 
     await prisma.transaction.delete({ where: { id } });
+    await logActionMetric('transaction_deleted', userId, { transactionId: id });
     refreshAllViews();
     return { success: true };
   } catch {
@@ -1027,6 +1123,8 @@ export async function getMonthlyStats(year: number, month: number) {
           category: r.category,
           date: occurrence,
           accountId: r.accountId,
+          paidByUserId: null,
+          attributedToUserId: null,
           description: r.description,
           recurringTransactionId: r.id,
           createdAt: occurrence,
@@ -1259,63 +1357,146 @@ export async function completeOnboarding(input: {
   createPersonal: boolean;
   createShared: boolean;
   sharedAccountName?: string;
+  invitedEmail?: string;
 }) {
   try {
     const userId = await requireUserId();
-    const createdAccounts: { id: string; name: string; type: AccountType }[] = [];
+    const normalizedSharedName = input.sharedAccountName?.trim() || 'חשבון משותף';
+    const normalizedInvitedEmail = normalizeInviteEmail(input.invitedEmail);
 
     if (!input.createPersonal && !input.createShared) {
-      return { success: false, error: 'Choose at least one option' };
+      return { success: false, error: 'Choose at least one option', code: 'INVALID_INPUT' as const };
     }
 
-    if (input.createPersonal) {
-      let personal = await prisma.account.findFirst({
-        where: {
-          type: 'PRIVATE',
-          isArchived: false,
-          members: { some: { userId } },
-        },
-      });
-      if (!personal) {
-        personal = await prisma.account.create({
-          data: {
-            name: 'החשבון האישי שלי',
+    const result = await prisma.$transaction(async (tx) => {
+      const createdAccounts: { id: string; name: string; type: AccountType }[] = [];
+      let inviteUrl: string | null = null;
+
+      if (input.createPersonal) {
+        let personal = await tx.account.findFirst({
+          where: {
             type: 'PRIVATE',
+            isArchived: false,
+            members: { some: { userId } },
           },
         });
-        await prisma.accountMember.create({
-          data: { userId, accountId: personal.id, role: 'OWNER' },
+
+        if (!personal) {
+          personal = await tx.account.create({
+            data: {
+              name: 'החשבון האישי שלי',
+              type: 'PRIVATE',
+            },
+          });
+        }
+
+        await tx.accountMember.upsert({
+          where: { userId_accountId: { userId, accountId: personal.id } },
+          create: { userId, accountId: personal.id, role: 'OWNER' },
+          update: { role: 'OWNER' },
         });
+
+        createdAccounts.push({ id: personal.id, name: personal.name, type: personal.type });
       }
-      createdAccounts.push({ id: personal.id, name: personal.name, type: personal.type });
-    }
 
-    let inviteUrl: string | null = null;
-    if (input.createShared) {
-      const sharedName = input.sharedAccountName?.trim() || 'חשבון משותף';
-      const shared = await prisma.account.create({
-        data: {
-          name: sharedName,
-          type: 'SHARED',
-        },
+      if (input.createShared) {
+        let shared = await tx.account.findFirst({
+          where: {
+            type: 'SHARED',
+            isArchived: false,
+            name: normalizedSharedName,
+            members: {
+              some: {
+                userId,
+                role: 'OWNER',
+              },
+            },
+          },
+        });
+
+        if (!shared) {
+          shared = await tx.account.create({
+            data: {
+              name: normalizedSharedName,
+              type: 'SHARED',
+            },
+          });
+        }
+
+        await tx.accountMember.upsert({
+          where: { userId_accountId: { userId, accountId: shared.id } },
+          create: { userId, accountId: shared.id, role: 'OWNER' },
+          update: { role: 'OWNER' },
+        });
+
+        createdAccounts.push({ id: shared.id, name: shared.name, type: shared.type });
+
+        const rawToken = randomBytes(24).toString('hex');
+        const tokenHash = hashInviteToken(rawToken);
+        const expiresInMinutes = 30;
+        const expiresAt = new Date(Date.now() + 1000 * 60 * expiresInMinutes);
+
+        await tx.accountInvite.create({
+          data: {
+            accountId: shared.id,
+            createdById: userId,
+            invitedEmail: normalizedInvitedEmail,
+            tokenHash,
+            expiresAt,
+          },
+        });
+
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
+        inviteUrl = `${baseUrl}/settings?invite=${rawToken}`;
+      }
+
+      await tx.user.update({
+        where: { id: userId },
+        data: { onboardingCompletedAt: new Date() },
       });
-      await prisma.accountMember.create({
-        data: { userId, accountId: shared.id, role: 'OWNER' },
-      });
-      createdAccounts.push({ id: shared.id, name: shared.name, type: shared.type });
 
-      const invite = await createAccountInvite({ accountId: shared.id });
-      inviteUrl = invite.success ? invite.inviteUrl ?? null : null;
-    }
-
-    await prisma.user.update({
-      where: { id: userId },
-      data: { onboardingCompletedAt: new Date() },
+      return { createdAccounts, inviteUrl };
     });
 
     refreshAllViews();
-    return { success: true, createdAccounts, inviteUrl };
-  } catch {
-    return { success: false, error: 'Failed to complete onboarding' };
+    return {
+      success: true,
+      createdAccounts: result.createdAccounts,
+      inviteUrl: result.inviteUrl,
+      code: null,
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('completeOnboarding failed', {
+      error: errorMessage,
+      input: {
+        createPersonal: input.createPersonal,
+        createShared: input.createShared,
+        hasSharedAccountName: Boolean(input.sharedAccountName?.trim()),
+      },
+    });
+
+    const lowerMessage = errorMessage.toLowerCase();
+    const errorCode = lowerMessage.includes('unauthorized')
+      ? 'AUTH_STALE'
+      : lowerMessage.includes('constraint')
+        ? 'DB_CONSTRAINT'
+        : lowerMessage.includes('invite')
+          ? 'INVITE_CREATE_FAILED'
+          : 'UNKNOWN';
+
+    if (process.env.NODE_ENV !== 'production') {
+      return {
+        success: false,
+        error: `השלמת האשף נכשלה: ${errorMessage}`,
+        code: errorCode,
+      };
+    }
+
+    return {
+      success: false,
+      error: 'השלמת האשף נכשלה. נסה/י שוב בעוד רגע.',
+      code: errorCode,
+    };
   }
 }

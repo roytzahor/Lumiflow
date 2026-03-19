@@ -44,6 +44,8 @@ model User {
   createdInvites  AccountInvite[] @relation("InviteCreatedBy")
   acceptedInvites AccountInvite[] @relation("InviteAcceptedBy")
   contributionPlans AccountContributionPlan[]
+  paidTransactions Transaction[]   @relation("TransactionPaidByUser")
+  attributedTransactions Transaction[] @relation("TransactionAttributedToUser")
 }
 
 model Account {
@@ -81,11 +83,19 @@ model Transaction {
   category             String
   date                 DateTime              @default(now())
   accountId            String
+  paidByUserId         String?
+  attributedToUserId   String?
   description          String?
   recurringTransactionId String?
   createdAt            DateTime              @default(now())
   account              Account               @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  paidByUser           User?                 @relation("TransactionPaidByUser", fields: [paidByUserId], references: [id], onDelete: SetNull)
+  attributedToUser     User?                 @relation("TransactionAttributedToUser", fields: [attributedToUserId], references: [id], onDelete: SetNull)
   recurringTransaction RecurringTransaction? @relation(fields: [recurringTransactionId], references: [id], onDelete: SetNull)
+
+  @@index([accountId, date])
+  @@index([paidByUserId])
+  @@index([attributedToUserId])
 }
 
 model RecurringTransaction {
@@ -102,6 +112,8 @@ model RecurringTransaction {
   lastRun        DateTime?
   account        Account              @relation(fields: [accountId], references: [id], onDelete: Cascade)
   transactions   Transaction[]
+
+  @@index([accountId, active, nextRun])
 }
 
 model BudgetSettings {

@@ -1,5 +1,6 @@
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { resolveOrRestoreSessionUserId } from '@/lib/session-user';
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 
@@ -17,8 +18,13 @@ export async function isUserOnboarded(userId: string) {
 
 export async function redirectToOnboardingIfNeeded() {
   const session = await getServerSession(authOptions);
-  const userId = session?.user?.id;
-  if (!userId) return;
+  if (!session?.user) return;
+
+  const userId = await resolveOrRestoreSessionUserId({
+    userId: session.user.id,
+    email: session.user.email,
+    name: session.user.name,
+  });
 
   const onboarded = await isUserOnboarded(userId);
   if (!onboarded) redirect('/onboarding');
@@ -26,8 +32,13 @@ export async function redirectToOnboardingIfNeeded() {
 
 export async function redirectToHomeIfAlreadyOnboarded() {
   const session = await getServerSession(authOptions);
-  const userId = session?.user?.id;
-  if (!userId) return;
+  if (!session?.user) return;
+
+  const userId = await resolveOrRestoreSessionUserId({
+    userId: session.user.id,
+    email: session.user.email,
+    name: session.user.name,
+  });
 
   const onboarded = await isUserOnboarded(userId);
   if (onboarded) redirect('/');

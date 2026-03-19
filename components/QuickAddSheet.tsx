@@ -5,12 +5,11 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence, useDragControls, PanInfo } from 'framer-motion';
 import { X, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
-import { he } from 'date-fns/locale';
 import LiquidToggle from './ui/LiquidToggle';
 import { addTransaction } from '@/app/actions';
 import { useHaptic } from '@/hooks/useHaptic';
 import { detectCategory } from '@/lib/category-dictionary';
+import { formatDateInputForDisplay, getTodayDateInputValue, toDateInputValueFromUtc } from '@/lib/date-only';
 import type { TransactionListItem, Account, Category, RecurringMonthPolicy } from '@/lib/types';
 
 interface QuickAddSheetProps {
@@ -39,13 +38,15 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
     const router = useRouter();
     const [amount, setAmount] = useState('');
     const [description, setDescription] = useState('');
-    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+    const [date, setDate] = useState(getTodayDateInputValue());
     const [accountId, setAccountId] = useState('');
     const [category, setCategory] = useState('כללי');
     const [isRecurring, setIsRecurring] = useState(false);
     const [monthPolicy, setMonthPolicy] = useState<RecurringMonthPolicy>('ROLL_TO_LAST_DAY');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [amountError, setAmountError] = useState('');
+    const [accountError, setAccountError] = useState('');
+    const [dateError, setDateError] = useState('');
     const [isDeleting, setIsDeleting] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -92,7 +93,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
             if (initialData) {
                 setAmount(initialData.amount.toString());
                 setDescription(initialData.description || '');
-                setDate(new Date(initialData.date).toISOString().split('T')[0]);
+                setDate(toDateInputValueFromUtc(new Date(initialData.date)));
                 setAccountId(initialData.account.id);
                 setCategory(initialData.category);
                 setIsRecurring(Boolean(initialData.isRecurring));
@@ -100,7 +101,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
             } else {
                 setAmount('');
                 setDescription('');
-                setDate(new Date().toISOString().split('T')[0]);
+                setDate(getTodayDateInputValue());
                 setIsRecurring(false);
                 setMonthPolicy('ROLL_TO_LAST_DAY');
                 setAccountId(getDefaultAccountId(accounts));
@@ -108,6 +109,8 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
             }
             setShowDeleteConfirm(false);
             setAmountError('');
+            setAccountError('');
+            setDateError('');
         }
     }, [isOpen, initialData, accounts]);
 
@@ -117,10 +120,6 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
             if (detected) setCategory(detected.name);
         }
     }, [description, initialData]);
-
-    useEffect(() => {
-        if (!initialData) setCategory('כללי');
-    }, [accountId, initialData]);
 
     useEffect(() => {
         if (!isOpen || accounts.length === 0) return;
@@ -134,6 +133,11 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
         const num = parseFloat(amount);
         if (!amount || isNaN(num)) { setAmountError('הזן סכום'); return; }
         if (num <= 0) { setAmountError('הסכום חייב להיות גדול מ-0'); return; }
+        if (!date) { setDateError('יש לבחור תאריך'); return; }
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { setDateError('פורמט תאריך לא תקין'); return; }
+        if (!accountId) { setAccountError('יש לבחור חשבון'); return; }
+        setAccountError('');
+        setDateError('');
         setAmountError('');
         setIsSubmitting(true);
 
@@ -292,6 +296,11 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                         </button>
                                     ))}
                                 </div>
+                                {accountError && (
+                                    <p className="text-sm text-ios-red px-4 pb-3" role="alert">
+                                        {accountError}
+                                    </p>
+                                )}
                             </div>
 
                             {/* Form Fields Group */}
@@ -308,14 +317,18 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                         data-testid="quickadd-date"
                                         type="date"
                                         value={date}
-                                        onChange={(e) => setDate(e.target.value)}
+                                        onChange={(e) => {
+                                            setDate(e.target.value);
+                                            if (dateError) setDateError('');
+                                        }}
                                         className="bg-ios-gray-6 dark:bg-ios-dark-fill border border-gray-200 dark:border-white/10 rounded-xl px-3 py-2 text-[15px] text-gray-700 dark:text-ios-dark-text focus:outline-none focus:ring-2 focus:ring-ios-blue/30 text-left"
                                     />
                                 </div>
                                 <div className="px-4 pb-4 -mt-2">
                                     <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle">
-                                        {date ? format(new Date(date), 'EEEE, d MMMM yyyy', { locale: he }) : ''}
+                                        {date ? formatDateInputForDisplay(date, 'he-IL') : ''}
                                     </p>
+                                    {dateError && <p className="text-xs text-ios-red mt-1">{dateError}</p>}
                                 </div>
 
                                 {/* Description */}
@@ -414,7 +427,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                         trigger(15);
                                         handleSubmit();
                                     }}
-                                    disabled={isSubmitting || !amount}
+                                    disabled={isSubmitting || !amount || !accountId}
                                     className="w-full bg-ios-blue text-white font-bold text-base py-4 rounded-2xl shadow-lg shadow-ios-blue/20 hover:bg-ios-blue/90 active:scale-[0.98] transition-all disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed"
                                 >
                                     {isSubmitting ? 'שומר...' : initialData ? 'עדכון' : 'הוסף הוצאה'}

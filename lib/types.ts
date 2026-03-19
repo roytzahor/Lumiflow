@@ -40,3 +40,16 @@ export type AccountTotal = {
   accountName: string;
   total: number;
 };
+
+export type BudgetAlert = {
+  id: string;
+  severity: 'ok' | 'warning' | 'critical';
+  message: string;
+};
+
+export type DailyNudge = {
+  id: string;
+  title: string;
+  description: string;
+  tone: 'neutral' | 'positive' | 'warning';
+};

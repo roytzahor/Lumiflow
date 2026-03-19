@@ -10,8 +10,11 @@ import { ChevronRight, ChevronLeft } from 'lucide-react';
 export default function MonthSelector() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const currentYear = parseInt(searchParams.get('year') || new Date().getFullYear().toString());
-    const currentMonth = parseInt(searchParams.get('month') || new Date().getMonth().toString());
+    const now = new Date();
+    const yearParam = parseInt(searchParams.get('year') || now.getFullYear().toString(), 10);
+    const monthParam = parseInt(searchParams.get('month') || now.getMonth().toString(), 10);
+    const currentYear = Number.isFinite(yearParam) && yearParam >= 2020 && yearParam <= 2100 ? yearParam : now.getFullYear();
+    const currentMonth = Number.isFinite(monthParam) && monthParam >= 0 && monthParam <= 11 ? monthParam : now.getMonth();
 
     const months = eachMonthOfInterval({
         start: startOfYear(new Date(currentYear, 0, 1)),

@@ -13,8 +13,10 @@ export default async function HistoryPage({
     const params = await searchParams;
 
     const now = new Date();
-    const year = params.year ? parseInt(params.year as string) : now.getFullYear();
-    const month = params.month ? parseInt(params.month as string) : now.getMonth();
+    const parsedYear = params.year ? parseInt(params.year as string, 10) : now.getFullYear();
+    const parsedMonth = params.month ? parseInt(params.month as string, 10) : now.getMonth();
+    const year = Number.isFinite(parsedYear) && parsedYear >= 2020 && parsedYear <= 2100 ? parsedYear : now.getFullYear();
+    const month = Number.isFinite(parsedMonth) && parsedMonth >= 0 && parsedMonth <= 11 ? parsedMonth : now.getMonth();
 
     const [{ total, accountTotals, transactions }, accounts, categories] = await Promise.all([
         getMonthlyStats(year, month),

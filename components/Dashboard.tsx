@@ -9,7 +9,7 @@ import QuickAddSheet from "./QuickAddSheet";
 import PieChart from "./PieChart";
 import { useHaptic } from "@/hooks/useHaptic";
 import { useRouter, useSearchParams } from "next/navigation";
-import type { TransactionListItem, Account, Category, BudgetSettings, RecurringWithAccount } from "@/lib/types";
+import type { TransactionListItem, Account, Category, BudgetSettings, RecurringWithAccount, BudgetAlert, DailyNudge } from "@/lib/types";
 
 interface DashboardProps {
     initialTransactions: TransactionListItem[];
@@ -23,6 +23,10 @@ interface DashboardProps {
         accountType: "PRIVATE" | "SHARED";
         totalMonthlyInflow: number;
     }>;
+    retentionSignals?: {
+        alerts: BudgetAlert[];
+        nudges: DailyNudge[];
+    };
 }
 
 function getGreeting(): string {
@@ -50,6 +54,7 @@ export default function Dashboard({
     accounts = [],
     recurringTransactions = [],
     contributionTotals = [],
+    retentionSignals = { alerts: [], nudges: [] },
 }: DashboardProps) {
     const [isSheetOpen, setIsSheetOpen] = useState(false);
     const [editingTransaction, setEditingTransaction] = useState<TransactionListItem | null>(null);
@@ -269,6 +274,44 @@ export default function Dashboard({
                         );
                     })}
                 </div>
+
+                {(retentionSignals.alerts.length > 0 || retentionSignals.nudges.length > 0) && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.24 }}
+                        className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 shadow-card mb-6"
+                    >
+                        <div className="flex items-center justify-between mb-3">
+                            <h2 className="text-lg font-bold text-ios-text dark:text-ios-dark-text">פוקוס יומי</h2>
+                            <span className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle">היום</span>
+                        </div>
+                        <div className="space-y-2 mb-3">
+                            {retentionSignals.alerts.map((alert) => (
+                                <div
+                                    key={alert.id}
+                                    className={`rounded-xl px-3.5 py-3 text-sm font-medium ${
+                                        alert.severity === 'critical'
+                                            ? 'bg-ios-red/10 text-ios-red'
+                                            : alert.severity === 'warning'
+                                                ? 'bg-ios-orange/10 text-ios-orange'
+                                                : 'bg-ios-green/10 text-ios-green'
+                                    }`}
+                                >
+                                    {alert.message}
+                                </div>
+                            ))}
+                        </div>
+                        <div className="space-y-2">
+                            {retentionSignals.nudges.map((nudge) => (
+                                <div key={nudge.id} className="bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-3.5 py-3">
+                                    <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text">{nudge.title}</p>
+                                    <p className="text-xs mt-1 text-ios-subtle dark:text-ios-dark-subtle">{nudge.description}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </motion.div>
+                )}
 
                 {/* MVP1: Upcoming bills */}
                 <motion.div

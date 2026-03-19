@@ -2,6 +2,7 @@ import { getMonthlyStats, getRecurringTransactions } from "@/app/actions";
 import BottomNav from "@/components/BottomNav";
 import InsightsAI from "@/components/InsightsAI";
 import { redirectToOnboardingIfNeeded } from "@/lib/onboarding";
+import { buildRetentionSignals } from "@/lib/retention-signals";
 import { format } from "date-fns";
 import { he } from "date-fns/locale";
 
@@ -17,6 +18,7 @@ export default async function InsightsPage() {
   ]);
 
   const average = transactions.length > 0 ? total / transactions.length : 0;
+  const retentionSignals = buildRetentionSignals({ transactions });
   const topCategoryEntry = Object.entries(
     transactions.reduce<Record<string, number>>((acc, row) => {
       const key = row.category || "כללי";
@@ -59,6 +61,32 @@ export default async function InsightsPage() {
               <span className="text-sm text-ios-subtle dark:text-ios-dark-subtle">הוצאות חוזרות פעילות</span>
               <span className="text-sm font-semibold">{recurring.length}</span>
             </div>
+          </div>
+        </section>
+
+        <section className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 shadow-card">
+          <h2 className="text-base font-bold mb-3">צעדים מומלצים להמשך החודש</h2>
+          <div className="space-y-2">
+            {retentionSignals.nudges.map((nudge) => (
+              <div key={nudge.id} className="bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-4 py-3">
+                <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text">{nudge.title}</p>
+                <p className="text-xs mt-1 text-ios-subtle dark:text-ios-dark-subtle">{nudge.description}</p>
+              </div>
+            ))}
+            {retentionSignals.alerts.map((alert) => (
+              <p
+                key={alert.id}
+                className={`text-xs px-3 py-2 rounded-lg ${
+                  alert.severity === "critical"
+                    ? "bg-ios-red/10 text-ios-red"
+                    : alert.severity === "warning"
+                      ? "bg-ios-orange/10 text-ios-orange"
+                      : "bg-ios-green/10 text-ios-green"
+                }`}
+              >
+                {alert.message}
+              </p>
+            ))}
           </div>
         </section>
 

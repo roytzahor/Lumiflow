@@ -47,19 +47,35 @@ yarn install
 Create a `.env` file in the project root:
 
 ```
-DATABASE_URL="postgresql://user:password@localhost:5432/lumiflow"
+DATABASE_URL="postgresql://lumiflow:lumiflow@localhost:5433/lumiflow?schema=public"
 NEXTAUTH_SECRET="<random-long-secret>"
 NEXTAUTH_URL="http://localhost:3000"
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
 CRON_SECRET="<optional-secret-for-cron-endpoint>"
 ```
 
-### Database Setup
+You can bootstrap from:
 
 ```bash
-# Generate Prisma client and run migrations
-yarn prisma migrate dev
+cp .env.example .env
 ```
+
+### Database Setup
+
+Option A (recommended): local PostgreSQL via Docker
+
+```bash
+# Start local Postgres
+yarn db:up
+
+# Generate Prisma client + run local migrations
+yarn prisma:generate
+yarn prisma:migrate:dev
+```
+
+If you already run PostgreSQL locally on `5432` (e.g. Homebrew), this project intentionally uses Docker on `5433` to avoid port conflicts.
+
+Option B: use an existing hosted PostgreSQL database and set `DATABASE_URL` accordingly.
 
 ### Development
 
@@ -85,6 +101,54 @@ yarn test:e2e
 yarn build
 yarn start
 ```
+
+`yarn build` runs `prisma generate` before `next build` (important for Vercel cached installs).
+
+## Vercel Environments (Local + Preview + Prod)
+
+Use a separate `DATABASE_URL` per environment:
+
+- `Development` -> local or dedicated dev DB
+- `Preview` -> preview/staging DB
+- `Production` -> production DB
+
+In Vercel Project Settings -> Environment Variables, set at least:
+
+- `DATABASE_URL`
+- `NEXTAUTH_SECRET`
+- `NEXTAUTH_URL`
+- `NEXT_PUBLIC_APP_URL`
+- `CRON_SECRET` (if using cron route protection)
+- `GEMINI_API_KEY` (if using AI insights)
+- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (if using Google auth)
+
+Run schema changes safely:
+
+- Local development: `yarn prisma:migrate:dev`
+- Deployment/production: `yarn prisma:migrate:deploy`
+
+## Deployment Checklist (Vercel)
+
+Before merging to `main`:
+
+1. Run locally:
+   - `yarn prisma:generate`
+   - `yarn test`
+   - `yarn build`
+2. If Prisma schema changed, ensure migration files were added under `prisma/migrations`.
+3. Confirm `.env.example` includes any newly required variables.
+
+In Vercel project settings:
+
+1. Set environment variables for `Development`, `Preview`, and `Production`.
+2. Use separate database URLs for each environment.
+3. Ensure `DATABASE_URL` points to PostgreSQL (Neon/Supabase/etc.).
+
+After deploy:
+
+1. Verify auth flow (sign in/sign up).
+2. Verify dashboard and settings load data.
+3. Verify key mutations (create transaction, update settings, invite flow).
 
 ## Project Structure
 
