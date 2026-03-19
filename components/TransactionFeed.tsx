@@ -2,9 +2,8 @@
 
 import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { format } from 'date-fns';
-import { he } from 'date-fns/locale';
 import { ChevronLeft } from 'lucide-react';
+import { formatIlsAmount, formatUtcDateLabel, getUtcDateKey } from '@/lib/formatters';
 import type { TransactionListItem, Category } from '@/lib/types';
 
 interface TransactionFeedProps {
@@ -53,7 +52,7 @@ export default function TransactionFeed({ transactions = [], categories = [], on
 
     // Group transactions by date
     const groupedByDate = filteredTransactions.reduce<Record<string, TransactionListItem[]>>((groups, t) => {
-        const dateKey = format(new Date(t.date), 'yyyy-MM-dd');
+        const dateKey = getUtcDateKey(t.date);
         if (!groups[dateKey]) groups[dateKey] = [];
         groups[dateKey].push(t);
         return groups;
@@ -103,7 +102,7 @@ export default function TransactionFeed({ transactions = [], categories = [], on
                             <div key={dateKey}>
                                 {/* Date Header */}
                                 <p className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle uppercase tracking-wider mb-2 px-1">
-                                    {format(new Date(dateKey), 'EEEE, d MMMM', { locale: he })}
+                                    {formatUtcDateLabel(dateKey)}
                                 </p>
 
                                 {/* Transactions Card */}
@@ -146,7 +145,7 @@ export default function TransactionFeed({ transactions = [], categories = [], on
 
                                                 <div className="flex items-center gap-2 flex-shrink-0">
                                                     <span className="text-[15px] font-bold text-ios-text dark:text-ios-dark-text tabular-nums">
-                                                        ₪{t.amount.toLocaleString()}
+                                                        ₪{formatIlsAmount(t.amount)}
                                                     </span>
                                                     {!t.isProjected && <ChevronLeft className="w-4 h-4 text-gray-300 dark:text-ios-dark-subtle/60" />}
                                                 </div>

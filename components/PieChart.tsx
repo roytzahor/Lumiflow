@@ -2,18 +2,14 @@
 
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { useTheme } from 'next-themes';
+import { formatIlsAmount } from '@/lib/formatters';
 
 interface PieChartProps {
     data: { name: string; value: number; color: string; icon: string }[];
 }
 
 export default function PieChart({ data }: PieChartProps) {
-    const { resolvedTheme } = useTheme();
-    const isDark = resolvedTheme === 'dark';
     const total = useMemo(() => data.reduce((acc, curr) => acc + curr.value, 0), [data]);
-    const segmentStroke = isDark ? '#243347' : '#FFFFFF';
-    const centerFill = isDark ? '#0F1827' : '#FFFFFF';
 
     // Calculate donut segments
     let currentAngle = 0;
@@ -53,13 +49,13 @@ export default function PieChart({ data }: PieChartProps) {
         <div className="flex flex-col items-center w-full">
             {/* Donut Chart */}
             <div className="relative w-48 h-48 my-2">
-                <svg viewBox="0 0 200 200" className="w-full h-full -rotate-90">
+                <svg viewBox="0 0 200 200" className="w-full h-full -rotate-90 text-white dark:text-ios-dark-card">
                     {segments.map((segment, index) => (
                         <motion.path
                             key={segment.name}
                             d={segment.pathData}
                             fill={segment.color}
-                            stroke={segmentStroke}
+                            stroke="currentColor"
                             strokeWidth="3"
                             initial={{ scale: 0, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
@@ -68,14 +64,14 @@ export default function PieChart({ data }: PieChartProps) {
                         />
                     ))}
                     {/* Center hole */}
-                    <circle cx="100" cy="100" r="54" fill={centerFill} />
+                    <circle cx="100" cy="100" r="54" fill="currentColor" />
                 </svg>
 
                 {/* Center label */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                     <span className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle font-medium">סה״כ</span>
                     <span className="text-xl font-bold text-ios-text dark:text-ios-dark-text tracking-tight tabular-nums">
-                        ₪{total.toLocaleString()}
+                        ₪{formatIlsAmount(total)}
                     </span>
                 </div>
             </div>
@@ -95,14 +91,14 @@ export default function PieChart({ data }: PieChartProps) {
                                 className="w-3 h-3 rounded-full flex-shrink-0"
                                 style={{ backgroundColor: item.color }}
                             />
-                            <span className="text-sm text-gray-600 dark:text-ios-dark-subtle">{item.icon} {item.name}</span>
+                            <span className="text-sm text-gray-600 dark:text-ios-dark-text/90">{item.icon} {item.name}</span>
                         </div>
                         <div className="flex items-center gap-3">
                             <span className="text-xs text-ios-subtle dark:text-ios-dark-subtle tabular-nums">
                                 {Math.round(item.value / total * 100)}%
                             </span>
                             <span className="text-sm font-semibold text-ios-text dark:text-ios-dark-text tabular-nums">
-                                ₪{item.value.toLocaleString()}
+                                ₪{formatIlsAmount(item.value)}
                             </span>
                         </div>
                     </motion.div>

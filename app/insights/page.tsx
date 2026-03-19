@@ -1,6 +1,7 @@
 import { getMonthlyStats, getRecurringTransactions } from "@/app/actions";
 import BottomNav from "@/components/BottomNav";
 import InsightsAI from "@/components/InsightsAI";
+import { formatIlsAmount } from "@/lib/formatters";
 import { redirectToOnboardingIfNeeded } from "@/lib/onboarding";
 import { buildRetentionSignals } from "@/lib/retention-signals";
 import { format } from "date-fns";
@@ -47,15 +48,15 @@ export default async function InsightsPage() {
           <div className="space-y-2">
             <div className="flex items-center justify-between bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-4 py-3">
               <span className="text-sm text-ios-subtle dark:text-ios-dark-subtle">סה״כ הוצאות</span>
-              <span className="text-lg font-bold tabular-nums">₪{total.toLocaleString()}</span>
+              <span className="text-lg font-bold tabular-nums">₪{formatIlsAmount(total)}</span>
             </div>
             <div className="flex items-center justify-between bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-4 py-3">
               <span className="text-sm text-ios-subtle dark:text-ios-dark-subtle">ממוצע פעולה</span>
-              <span className="text-lg font-bold tabular-nums">₪{Math.round(average).toLocaleString()}</span>
+              <span className="text-lg font-bold tabular-nums">₪{formatIlsAmount(Math.round(average))}</span>
             </div>
             <div className="flex items-center justify-between bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-4 py-3">
               <span className="text-sm text-ios-subtle dark:text-ios-dark-subtle">קטגוריה מובילה</span>
-              <span className="text-sm font-semibold">{topCategoryEntry ? `${topCategoryEntry[0]} · ₪${Math.round(topCategoryEntry[1]).toLocaleString()}` : "אין נתונים"}</span>
+              <span className="text-sm font-semibold">{topCategoryEntry ? `${topCategoryEntry[0]} · ₪${formatIlsAmount(Math.round(topCategoryEntry[1]))}` : "אין נתונים"}</span>
             </div>
             <div className="flex items-center justify-between bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-4 py-3">
               <span className="text-sm text-ios-subtle dark:text-ios-dark-subtle">הוצאות חוזרות פעילות</span>

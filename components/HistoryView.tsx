@@ -4,6 +4,7 @@ import { useState } from "react";
 import TransactionFeed from "./TransactionFeed";
 import QuickAddSheet from "./QuickAddSheet";
 import { useHaptic } from "@/hooks/useHaptic";
+import { formatIlsAmount } from "@/lib/formatters";
 import BottomNav from "./BottomNav";
 import MonthSelector from "./MonthSelector";
 import type { TransactionListItem, Account, Category, AccountTotal } from "@/lib/types";
@@ -51,7 +52,7 @@ export default function HistoryView({ transactions, total, accountTotals, accoun
                 {/* Total */}
                 <div className="flex-1 bg-white dark:bg-ios-dark-card rounded-2xl p-4 shadow-card">
                     <p className="text-[11px] font-semibold text-ios-subtle dark:text-ios-dark-subtle uppercase tracking-wider mb-1">סה״כ</p>
-                    <p className="text-2xl font-bold text-ios-text dark:text-ios-dark-text tabular-nums">₪{total.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-ios-text dark:text-ios-dark-text tabular-nums">₪{formatIlsAmount(total)}</p>
                 </div>
 
                 {/* Top accounts */}
@@ -59,7 +60,7 @@ export default function HistoryView({ transactions, total, accountTotals, accoun
                     {accountTotals.slice(0, 2).map((row) => (
                         <div key={row.accountId} className="bg-white dark:bg-ios-dark-card rounded-xl px-4 py-2.5 shadow-card flex justify-between items-center">
                             <span className="text-xs font-semibold text-ios-indigo truncate max-w-[110px]">{row.accountName}</span>
-                            <span className="text-sm font-bold text-ios-text dark:text-ios-dark-text tabular-nums">₪{row.total.toLocaleString()}</span>
+                            <span className="text-sm font-bold text-ios-text dark:text-ios-dark-text tabular-nums">₪{formatIlsAmount(row.total)}</span>
                         </div>
                     ))}
                 </div>

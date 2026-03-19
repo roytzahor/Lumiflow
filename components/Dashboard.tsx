@@ -2,17 +2,15 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { motion, useScroll, useMotionValueEvent } from "framer-motion";
-import { format } from "date-fns";
-import { he } from "date-fns/locale";
-import TransactionFeed from "./TransactionFeed";
 import QuickAddSheet from "./QuickAddSheet";
 import PieChart from "./PieChart";
-import { useHaptic } from "@/hooks/useHaptic";
+import { formatIlsAmount, formatUtcDayMonthYear, formatUtcMonthYear, getHourInTimezone } from "@/lib/formatters";
 import { useRouter, useSearchParams } from "next/navigation";
-import type { TransactionListItem, Account, Category, BudgetSettings, RecurringWithAccount, BudgetAlert, DailyNudge } from "@/lib/types";
+import type { TransactionListItem, Account, Category, BudgetSettings, RecurringWithAccount } from "@/lib/types";
 
 interface DashboardProps {
     initialTransactions: TransactionListItem[];
+    nowIso: string;
     budgetSettings?: BudgetSettings | null;
     categories: Category[];
     accounts: Account[];
@@ -23,14 +21,10 @@ interface DashboardProps {
         accountType: "PRIVATE" | "SHARED";
         totalMonthlyInflow: number;
     }>;
-    retentionSignals?: {
-        alerts: BudgetAlert[];
-        nudges: DailyNudge[];
-    };
 }
 
-function getGreeting(): string {
-    const hour = new Date().getHours();
+function getGreeting(now: Date): string {
+    const hour = getHourInTimezone(now, "Asia/Jerusalem");
     if (hour < 6) return "לילה טוב";
     if (hour < 12) return "בוקר טוב";
     if (hour < 17) return "צהריים טובים";
@@ -49,20 +43,18 @@ function getAccountColor(account: Account): { bg: string; text: string; ring: st
 
 export default function Dashboard({
     initialTransactions = [],
+    nowIso,
     budgetSettings,
     categories = [],
     accounts = [],
     recurringTransactions = [],
     contributionTotals = [],
-    retentionSignals = { alerts: [], nudges: [] },
 }: DashboardProps) {
     const [isSheetOpen, setIsSheetOpen] = useState(false);
-    const [editingTransaction, setEditingTransaction] = useState<TransactionListItem | null>(null);
     const [showStickyHeader, setShowStickyHeader] = useState(false);
-    const [isMounted, setIsMounted] = useState(false);
-    const { trigger } = useHaptic();
     const router = useRouter();
     const searchParams = useSearchParams();
+    const stableNow = useMemo(() => new Date(nowIso), [nowIso]);
 
     const { scrollY } = useScroll();
 
@@ -93,43 +85,20 @@ export default function Dashboard({
             .sort((a, b) => b.value - a.value);
     }, [initialTransactions, categories]);
 
-    // Per-account spending
-    const accountSpending = useMemo(() => {
+    const accountBalances = useMemo(() => {
         const inflowByAccountId = new Map(contributionTotals.map((row) => [row.accountId, row.totalMonthlyInflow]));
         return accounts.map(acc => {
-            const spent = initialTransactions
+            const expenses = initialTransactions
                 .filter(t => t.accountId === acc.id && t.amount > 0)
                 .reduce((sum, t) => sum + t.amount, 0);
-            return { account: acc, spent, monthlyInflow: inflowByAccountId.get(acc.id) ?? 0 };
+            const monthlyInflow = inflowByAccountId.get(acc.id) ?? 0;
+            const balance = monthlyInflow - expenses;
+            return { account: acc, expenses, monthlyInflow, balance };
         });
     }, [accounts, initialTransactions, contributionTotals]);
 
-    const upcomingRecurring = useMemo(() => {
-        const now = new Date();
-        const horizon = new Date();
-        horizon.setDate(horizon.getDate() + 30);
-
-        return recurringTransactions
-            .filter((item) => {
-                const nextRun = new Date(item.nextRun);
-                return nextRun <= horizon && item.active;
-            })
-            .sort((a, b) => new Date(a.nextRun).getTime() - new Date(b.nextRun).getTime())
-            .slice(0, 4)
-            .map((item) => {
-                const nextRun = new Date(item.nextRun);
-                const isDue = nextRun <= now;
-                return { item, nextRun, isDue };
-            });
-    }, [recurringTransactions]);
-
-    useEffect(() => {
-        setIsMounted(true);
-    }, []);
-
     useEffect(() => {
         if (searchParams.get('quickAdd') !== '1') return;
-        setEditingTransaction(null);
         setIsSheetOpen(true);
         router.replace('/', { scroll: false });
     }, [searchParams, router]);
@@ -138,26 +107,16 @@ export default function Dashboard({
         setShowStickyHeader(latest > 280);
     });
 
-    if (!isMounted) return null;
-
     const totalSpent = initialTransactions.reduce((sum, t) => sum + t.amount, 0);
     const income = budgetSettings?.monthlyIncome || 21000;
     const savedSoFar = income - totalSpent;
     const savingsRatio = Math.max(Math.min((savedSoFar / income) * 100, 100), 0);
 
-    const handleTransactionClick = (transaction: TransactionListItem) => {
-        if (transaction.isProjected) return;
-        trigger(10);
-        setEditingTransaction(transaction);
-        setIsSheetOpen(true);
-    };
-
     const handleCloseSheet = () => {
         setIsSheetOpen(false);
-        setEditingTransaction(null);
     };
 
-    const monthName = format(new Date(), "MMMM yyyy", { locale: he });
+    const monthName = formatUtcMonthYear(stableNow);
 
     return (
         <div className="w-full max-w-md mx-auto h-full relative min-h-screen pb-28 pt-safe">
@@ -173,7 +132,7 @@ export default function Dashboard({
                             {savedSoFar >= 0 ? "חסכנו" : "חריגה"} החודש
                         </span>
                         <span className={`font-bold tabular-nums ${savedSoFar >= 0 ? 'text-ios-green' : 'text-ios-red'}`}>
-                            {savedSoFar >= 0 ? '₪' : '-₪'}{Math.abs(savedSoFar).toLocaleString()}
+                            {savedSoFar >= 0 ? '₪' : '-₪'}{formatIlsAmount(Math.abs(savedSoFar))}
                         </span>
                     </div>
                 </motion.div>
@@ -184,7 +143,7 @@ export default function Dashboard({
                 <header className="mb-8">
                     <div className="flex justify-between items-start">
                         <div>
-                            <p className="text-base text-ios-subtle dark:text-ios-dark-subtle mb-1">{getGreeting()}</p>
+                            <p className="text-base text-ios-subtle dark:text-ios-dark-subtle mb-1">{getGreeting(stableNow)}</p>
                             <h1 className="text-3xl font-bold text-ios-text dark:text-ios-dark-text tracking-tight">
                                 {monthName}
                             </h1>
@@ -232,118 +191,78 @@ export default function Dashboard({
                             <div>
                                 <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle font-medium">חסכנו החודש</p>
                                 <p className={`text-2xl font-bold tracking-tight ${savedSoFar >= 0 ? 'text-ios-green' : 'text-ios-red'}`}>
-                                    ₪{savedSoFar.toLocaleString()}
+                                    ₪{formatIlsAmount(savedSoFar)}
                                 </p>
                             </div>
                             <div className="flex gap-6">
                                 <div>
                                     <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">הכנסה</p>
-                                    <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text">₪{income.toLocaleString()}</p>
+                                    <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text">₪{formatIlsAmount(income)}</p>
                                 </div>
                                 <div>
                                     <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">הוצאות</p>
-                                    <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text">₪{totalSpent.toLocaleString()}</p>
+                                    <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text">₪{formatIlsAmount(totalSpent)}</p>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </motion.div>
 
-                {/* Account Cards */}
-                <div className="flex gap-3 mb-6 overflow-x-auto no-scrollbar">
-                    {accountSpending.map(({ account, spent, monthlyInflow }, index) => {
-                        const colors = getAccountColor(account);
-                        return (
-                            <motion.div
-                                key={account.id}
-                                initial={{ opacity: 0, y: 15 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.2 + index * 0.08 }}
-                                className={`flex-1 min-w-[110px] ${colors.bg} rounded-2xl p-4 ring-1 ${colors.ring}`}
-                            >
-                                <p className={`text-xs font-semibold ${colors.text} mb-2`}>
-                                    {getAccountLabel(account)}
-                                </p>
-                                <p className="text-lg font-bold text-ios-text dark:text-ios-dark-text tabular-nums">
-                                    ₪{spent.toLocaleString()}
-                                </p>
-                                <p className="text-[11px] mt-1 text-ios-subtle dark:text-ios-dark-subtle">
-                                    נכנס חודשי: ₪{Math.round(monthlyInflow).toLocaleString()}
-                                </p>
-                            </motion.div>
-                        );
-                    })}
-                </div>
-
-                {(retentionSignals.alerts.length > 0 || retentionSignals.nudges.length > 0) && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.24 }}
-                        className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 shadow-card mb-6"
-                    >
-                        <div className="flex items-center justify-between mb-3">
-                            <h2 className="text-lg font-bold text-ios-text dark:text-ios-dark-text">פוקוס יומי</h2>
-                            <span className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle">היום</span>
-                        </div>
-                        <div className="space-y-2 mb-3">
-                            {retentionSignals.alerts.map((alert) => (
-                                <div
-                                    key={alert.id}
-                                    className={`rounded-xl px-3.5 py-3 text-sm font-medium ${
-                                        alert.severity === 'critical'
-                                            ? 'bg-ios-red/10 text-ios-red'
-                                            : alert.severity === 'warning'
-                                                ? 'bg-ios-orange/10 text-ios-orange'
-                                                : 'bg-ios-green/10 text-ios-green'
-                                    }`}
-                                >
-                                    {alert.message}
-                                </div>
-                            ))}
-                        </div>
-                        <div className="space-y-2">
-                            {retentionSignals.nudges.map((nudge) => (
-                                <div key={nudge.id} className="bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-3.5 py-3">
-                                    <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text">{nudge.title}</p>
-                                    <p className="text-xs mt-1 text-ios-subtle dark:text-ios-dark-subtle">{nudge.description}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </motion.div>
-                )}
-
-                {/* MVP1: Upcoming bills */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.28 }}
+                    transition={{ delay: 0.2 }}
                     className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 shadow-card mb-6"
                 >
                     <div className="flex items-center justify-between mb-3">
-                        <h2 className="text-lg font-bold text-ios-text dark:text-ios-dark-text">תשלומים קרובים</h2>
-                        <span className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle">30 ימים</span>
+                        <h2 className="text-lg font-bold text-ios-text dark:text-ios-dark-text">מאזן לפי חשבון</h2>
+                        <span className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle">{accountBalances.length} חשבונות</span>
                     </div>
-                    {upcomingRecurring.length === 0 ? (
-                        <p className="text-sm text-ios-subtle dark:text-ios-dark-subtle py-2">אין חיובים קבועים בקרוב</p>
+                    {accountBalances.length === 0 ? (
+                        <p className="text-sm text-ios-subtle dark:text-ios-dark-subtle py-2">אין חשבונות להצגה כרגע</p>
                     ) : (
-                        <div className="space-y-2">
-                            {upcomingRecurring.map(({ item, nextRun, isDue }) => (
-                                <div key={item.id} className="flex items-center justify-between bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-3.5 py-3">
-                                    <div className="min-w-0">
-                                        <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text truncate">{item.description || item.category}</p>
-                                        <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle truncate">
-                                            {item.account.name} · {format(nextRun, 'd MMM', { locale: he })}
-                                        </p>
-                                    </div>
-                                    <div className="text-left">
-                                        <p className="text-sm font-bold text-ios-text dark:text-ios-dark-text tabular-nums">₪{item.amount.toLocaleString()}</p>
-                                        <p className={`text-[11px] font-semibold ${isDue ? 'text-ios-red' : 'text-ios-blue'}`}>
-                                            {isDue ? 'לביצוע' : 'מתקרב'}
-                                        </p>
-                                    </div>
-                                </div>
-                            ))}
+                        <div className="space-y-2.5">
+                            {accountBalances.map(({ account, expenses, monthlyInflow, balance }, index) => {
+                                const colors = getAccountColor(account);
+                                return (
+                                    <motion.div
+                                        key={account.id}
+                                        initial={{ opacity: 0, y: 15 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: 0.24 + index * 0.06 }}
+                                        className={`rounded-2xl p-4 ring-1 ${colors.ring} ${colors.bg}`}
+                                    >
+                                        <div className="flex items-center justify-between mb-3">
+                                            <p className={`text-sm font-semibold ${colors.text}`}>
+                                                {getAccountLabel(account)}
+                                            </p>
+                                            <p className={`text-sm font-bold tabular-nums ${balance >= 0 ? 'text-ios-green' : 'text-ios-red'}`}>
+                                                {balance >= 0 ? '₪' : '-₪'}{formatIlsAmount(Math.abs(balance))}
+                                            </p>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2 text-center">
+                                            <div className="rounded-lg bg-white/70 dark:bg-ios-dark-card/70 px-2 py-2">
+                                                <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">הכנסות</p>
+                                                <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text tabular-nums">
+                                                    ₪{formatIlsAmount(Math.round(monthlyInflow))}
+                                                </p>
+                                            </div>
+                                            <div className="rounded-lg bg-white/70 dark:bg-ios-dark-card/70 px-2 py-2">
+                                                <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">הוצאות</p>
+                                                <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text tabular-nums">
+                                                    ₪{formatIlsAmount(Math.round(expenses))}
+                                                </p>
+                                            </div>
+                                            <div className="rounded-lg bg-white/70 dark:bg-ios-dark-card/70 px-2 py-2">
+                                                <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">מאזן</p>
+                                                <p className={`text-sm font-semibold tabular-nums ${balance >= 0 ? 'text-ios-green' : 'text-ios-red'}`}>
+                                                    {balance >= 0 ? '₪' : '-₪'}{formatIlsAmount(Math.abs(Math.round(balance)))}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                );
+                            })}
                         </div>
                     )}
                 </motion.div>
@@ -360,13 +279,6 @@ export default function Dashboard({
                         <PieChart data={chartData} />
                     </motion.div>
                 )}
-
-                {/* Transaction Feed */}
-                <TransactionFeed
-                    transactions={initialTransactions}
-                    categories={categories}
-                    onTransactionClick={handleTransactionClick}
-                />
 
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
@@ -389,10 +301,10 @@ export default function Dashboard({
                                         <div className="min-w-0">
                                             <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text truncate">{item.description || item.category}</p>
                                             <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle truncate">
-                                                {item.account.name} · חיוב הבא {format(nextRun, 'd MMM yyyy', { locale: he })}
+                                                {item.account.name} · חיוב הבא {formatUtcDayMonthYear(nextRun)}
                                             </p>
                                         </div>
-                                        <p className="text-sm font-bold text-ios-text dark:text-ios-dark-text tabular-nums">₪{item.amount.toLocaleString()}</p>
+                                        <p className="text-sm font-bold text-ios-text dark:text-ios-dark-text tabular-nums">₪{formatIlsAmount(item.amount)}</p>
                                     </div>
                                 );
                             })}
@@ -405,7 +317,7 @@ export default function Dashboard({
             <QuickAddSheet
                 isOpen={isSheetOpen}
                 onClose={handleCloseSheet}
-                initialData={editingTransaction}
+                initialData={null}
                 categories={categories}
                 accounts={accounts}
             />
