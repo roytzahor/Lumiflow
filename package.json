@@ -12,6 +12,7 @@
     "db:up": "docker compose up -d postgres",
     "db:down": "docker compose down",
     "db:logs": "docker compose logs -f postgres",
+    "db:seed:demo": "node scripts/seed-demo-data.js",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "yarn test:unit",

@@ -37,6 +37,12 @@ const DEFAULT_BUDGET: BudgetSettings = {
 
 const CATEGORY_EMOJIS = ['🍕', '🛒', '🚗', '🏠', '💡', '🍽️', '☕', '🎁', '🎉', '💊', '🧾', '✈️', '📦', '🧒', '🐶', '💸', '✨'];
 
+function mapThemePreferenceToClientTheme(theme: 'LIGHT' | 'DARK' | 'SYSTEM'): 'light' | 'dark' | 'system' {
+  if (theme === 'LIGHT') return 'light';
+  if (theme === 'DARK') return 'dark';
+  return 'system';
+}
+
 interface SettingsContentProps {
   initialBudget: BudgetSettings | null;
   initialCategories: Category[];
@@ -101,7 +107,7 @@ export default function SettingsContent({
     const preference = currentUser?.themePreference ?? 'SYSTEM';
     setThemePreference(preference);
     if (!themeInitializedRef.current) {
-      setTheme(preference.toLowerCase());
+      setTheme(mapThemePreferenceToClientTheme(preference));
       themeInitializedRef.current = true;
     }
     setContributionDrafts(
@@ -307,17 +313,16 @@ export default function SettingsContent({
     if (isThemeSaving || nextTheme === themePreference) return;
     const previousTheme = themePreference;
     setThemePreference(nextTheme);
-    setTheme(nextTheme.toLowerCase());
+    setTheme(mapThemePreferenceToClientTheme(nextTheme));
     setIsThemeSaving(true);
     const res = await updateThemePreference(nextTheme);
     setIsThemeSaving(false);
     if (!res.success) {
       setThemePreference(previousTheme);
-      setTheme(previousTheme.toLowerCase());
+      setTheme(mapThemePreferenceToClientTheme(previousTheme));
       toast.error(res.error ?? 'עדכון תצוגה נכשל');
       return;
     }
-    router.refresh();
   };
 
   const createInvite = async () => {
