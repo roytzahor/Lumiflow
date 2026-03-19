@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     await prisma.budgetSettings.create({
       data: {
         userId: user.id,
-        monthlyIncome: 21000,
+        monthlyIncome: 0,
         needsPercent: 50,
         wantsPercent: 30,
         savingsPercent: 20,

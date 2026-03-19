@@ -3,17 +3,15 @@
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
 import AuthThemeToggle from '@/components/AuthThemeToggle';
 
 export default function SignUpPage() {
-  const searchParams = useSearchParams();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const callbackUrl = searchParams.get('callbackUrl') || '/onboarding';
+  const callbackUrl = '/onboarding';
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -122,7 +120,7 @@ export default function SignUpPage() {
         <p className="text-sm text-ios-subtle dark:text-ios-dark-subtle">
           כבר יש לך חשבון?{' '}
           <Link
-            href={`/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`}
+            href={`/auth/signin?callbackUrl=${encodeURIComponent('/onboarding')}`}
             className="text-ios-blue font-medium"
           >
             התחבר

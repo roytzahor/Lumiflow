@@ -15,6 +15,7 @@ type OnboardingDraft = {
   invitedEmail: string;
   monthlyIncomeNet: string;
   autoSplitContributions: boolean;
+  personalSplitAmount: number;
 };
 
 type OnboardingSuccess = {
@@ -31,6 +32,7 @@ const DEFAULT_DRAFT: OnboardingDraft = {
   invitedEmail: '',
   monthlyIncomeNet: '',
   autoSplitContributions: true,
+  personalSplitAmount: 0,
 };
 
 function getTemplateLabel(template: OnboardingTemplate) {
@@ -72,6 +74,9 @@ export default function OnboardingClient() {
         autoSplitContributions: typeof parsed.autoSplitContributions === 'boolean'
           ? parsed.autoSplitContributions
           : DEFAULT_DRAFT.autoSplitContributions,
+        personalSplitAmount: typeof parsed.personalSplitAmount === 'number' && Number.isFinite(parsed.personalSplitAmount)
+          ? Math.max(0, Math.round(parsed.personalSplitAmount))
+          : DEFAULT_DRAFT.personalSplitAmount,
       };
 
       setDraft(restored);
@@ -92,15 +97,36 @@ export default function OnboardingClient() {
   const progress = useMemo(() => Math.round((step / totalSteps) * 100), [step]);
   const incomeValue = Number(draft.monthlyIncomeNet);
   const hasIncomeInput = draft.monthlyIncomeNet.trim() !== '' && Number.isFinite(incomeValue) && incomeValue >= 0;
+  const hasAdditionalAccount = draft.createPersonal && draft.createShared;
+  const personalSplitAmount = hasIncomeInput
+    ? Math.max(0, Math.min(Math.round(draft.personalSplitAmount), Math.round(incomeValue)))
+    : 0;
+  const sharedSplitAmount = hasIncomeInput
+    ? Math.max(Math.round(incomeValue) - personalSplitAmount, 0)
+    : 0;
   const accountTargets = useMemo(() => {
     const labels: string[] = [];
     if (draft.createPersonal) labels.push('חשבון אישי');
     if (draft.createShared) labels.push(draft.sharedAccountName.trim() || 'חשבון משותף');
     return labels;
   }, [draft.createPersonal, draft.createShared, draft.sharedAccountName]);
-  const suggestedContributionPerAccount = hasIncomeInput && accountTargets.length > 0
-    ? incomeValue / accountTargets.length
-    : 0;
+  useEffect(() => {
+    if (hasAdditionalAccount) return;
+    setDraft((prev) => (prev.autoSplitContributions || prev.personalSplitAmount !== 0
+      ? { ...prev, autoSplitContributions: false, personalSplitAmount: 0 }
+      : prev));
+  }, [hasAdditionalAccount]);
+
+  useEffect(() => {
+    if (!hasIncomeInput) return;
+    setDraft((prev) => {
+      if (prev.personalSplitAmount <= incomeValue) return prev;
+      return {
+        ...prev,
+        personalSplitAmount: Math.max(0, Math.round(incomeValue)),
+      };
+    });
+  }, [hasIncomeInput, incomeValue]);
 
   const applyTemplate = (value: OnboardingTemplate) => {
     setDraft((prev) => ({ ...prev, template: value }));
@@ -152,6 +178,7 @@ export default function OnboardingClient() {
       invitedEmail: draft.invitedEmail,
       monthlyIncomeNet: hasIncomeInput ? incomeValue : null,
       autoSplitContributions: draft.autoSplitContributions,
+      personalContributionAmount: hasAdditionalAccount && draft.autoSplitContributions ? personalSplitAmount : null,
     });
 
     setLoading(false);
@@ -291,7 +318,7 @@ export default function OnboardingClient() {
           <div className="space-y-3">
             <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text">הכנסה נטו ותרומות (אופציונלי)</p>
             <p className="text-sm text-ios-subtle dark:text-ios-dark-subtle">
-              אפשר להגדיר הכנסה חודשית נטו, ולבצע פיצול חכם אוטומטי לכל חשבון שנוצר.
+              אפשר להגדיר הכנסה חודשית נטו, ובמידה שנבחר גם חשבון אישי וגם חשבון משותף לבצע פיצול חכם ביניהם.
             </p>
             <div className="space-y-2">
               <label className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle">הכנסה נטו חודשית</label>
@@ -307,25 +334,71 @@ export default function OnboardingClient() {
               />
             </div>
 
-            <label className="flex items-center gap-3 bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-4 py-3">
-              <input
-                data-testid="onboarding-auto-split"
-                type="checkbox"
-                checked={draft.autoSplitContributions}
-                onChange={(e) => setDraft((prev) => ({ ...prev, autoSplitContributions: e.target.checked }))}
-              />
-              <span className="text-sm font-medium text-ios-text dark:text-ios-dark-text">
-                פיצול חכם של תרומה חודשית לפי מספר החשבונות
-              </span>
-            </label>
+            {hasAdditionalAccount && (
+              <>
+                <label className="flex items-center gap-3 bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-4 py-3">
+                  <input
+                    data-testid="onboarding-auto-split"
+                    type="checkbox"
+                    checked={draft.autoSplitContributions}
+                    onChange={(e) => setDraft((prev) => ({ ...prev, autoSplitContributions: e.target.checked }))}
+                  />
+                  <span className="text-sm font-medium text-ios-text dark:text-ios-dark-text">
+                    פיצול חכם של תרומה חודשית בין אישי למשותף
+                  </span>
+                </label>
 
-            {hasIncomeInput && draft.autoSplitContributions && accountTargets.length > 0 && (
-              <div className="rounded-xl bg-ios-blue/10 dark:bg-ios-blue/20 border border-ios-blue/20 px-3 py-2.5 space-y-1.5">
+                {draft.autoSplitContributions && hasIncomeInput && (
+                  <div className="rounded-xl bg-ios-gray-6 dark:bg-ios-dark-fill px-4 py-3 space-y-2.5">
+                    <p className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle">
+                      פיצול לפי סכום: חשבון אישי מול חשבון משותף
+                    </p>
+                    <input
+                      data-testid="onboarding-personal-split-slider"
+                      type="range"
+                      min={0}
+                      max={Math.max(Math.round(incomeValue), 0)}
+                      step={1}
+                      value={personalSplitAmount}
+                      onChange={(e) => setDraft((prev) => ({ ...prev, personalSplitAmount: Number(e.target.value) }))}
+                      className="w-full accent-ios-blue"
+                      dir="ltr"
+                    />
+                    <div className="flex items-center justify-between text-xs text-ios-subtle dark:text-ios-dark-subtle">
+                      <span>אישי ₪{personalSplitAmount.toLocaleString('he-IL')}</span>
+                      <span>משותף ₪{sharedSplitAmount.toLocaleString('he-IL')}</span>
+                    </div>
+                  </div>
+                )}
+
+                {draft.autoSplitContributions && !hasIncomeInput && (
+                  <div className="rounded-xl bg-ios-gray-6 dark:bg-ios-dark-fill px-3 py-2.5">
+                    <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle">
+                      כדי להציג סליידר סכומים צריך להזין קודם הכנסה נטו חודשית.
+                    </p>
+                  </div>
+                )}
+
+                {hasIncomeInput && draft.autoSplitContributions && (
+                  <div className="rounded-xl bg-ios-blue/10 dark:bg-ios-blue/20 border border-ios-blue/20 px-3 py-2.5 space-y-1.5">
+                    <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle">
+                      אישי: כ-{personalSplitAmount.toLocaleString('he-IL')} ₪
+                    </p>
+                    <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle">
+                      משותף: כ-{sharedSplitAmount.toLocaleString('he-IL')} ₪
+                    </p>
+                    <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle">
+                      חשבונות מתוכננים: {accountTargets.join(' + ')}
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+
+            {!hasAdditionalAccount && (
+              <div className="rounded-xl bg-ios-gray-6 dark:bg-ios-dark-fill px-3 py-2.5">
                 <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle">
-                  הצעה חכמה: כ-{Math.round(suggestedContributionPerAccount).toLocaleString('he-IL')} ₪ לכל חשבון.
-                </p>
-                <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle">
-                  חשבונות מתוכננים: {accountTargets.join(' + ')}
+                  פיצול חכם זמין אחרי בחירה של חשבון אישי + חשבון משותף בשלב הקודם.
                 </p>
               </div>
             )}
@@ -374,6 +447,11 @@ export default function OnboardingClient() {
               <p className="text-ios-subtle dark:text-ios-dark-subtle">
                 פיצול חכם לתרומות: <span className="font-semibold text-ios-text dark:text-ios-dark-text">{draft.autoSplitContributions ? 'פעיל' : 'כבוי'}</span>
               </p>
+              {hasAdditionalAccount && draft.autoSplitContributions && hasIncomeInput && (
+                <p className="text-ios-subtle dark:text-ios-dark-subtle">
+                  פיצול אישי/משותף: <span className="font-semibold text-ios-text dark:text-ios-dark-text">₪{personalSplitAmount.toLocaleString('he-IL')} / ₪{sharedSplitAmount.toLocaleString('he-IL')}</span>
+                </p>
+              )}
               {draft.createShared && (
                 <p className="text-ios-subtle dark:text-ios-dark-subtle">אימייל הזמנה: <span className="font-semibold text-ios-text dark:text-ios-dark-text">{draft.invitedEmail.trim() || 'ללא אימייל (לינק כללי)'}</span></p>
               )}

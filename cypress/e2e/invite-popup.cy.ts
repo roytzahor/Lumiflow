@@ -13,6 +13,10 @@ describe('Invite popup flow', () => {
     cy.get('[data-testid="onboarding-template-personalShared"]').click();
     cy.contains('button', 'המשך').click();
     cy.contains('button', 'המשך').click();
+    cy.get('[data-testid="onboarding-auto-split"]').should('be.visible');
+    cy.get('[data-testid="onboarding-monthly-income"]').type('11000');
+    cy.get('[data-testid="onboarding-personal-split-slider"]').should('be.visible');
+    cy.contains('אישי ₪').should('be.visible');
     cy.contains('button', 'המשך').click();
     cy.contains('button', 'המשך').click();
     cy.get('[data-testid="onboarding-submit"]').click();

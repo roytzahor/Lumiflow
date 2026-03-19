@@ -1360,6 +1360,7 @@ export async function completeOnboarding(input: {
   invitedEmail?: string;
   monthlyIncomeNet?: number | null;
   autoSplitContributions?: boolean;
+  personalContributionAmount?: number | null;
 }) {
   try {
     const userId = await requireUserId();
@@ -1368,6 +1369,12 @@ export async function completeOnboarding(input: {
     const hasMonthlyIncomeInput = input.monthlyIncomeNet != null && Number.isFinite(input.monthlyIncomeNet) && input.monthlyIncomeNet >= 0;
     const normalizedMonthlyIncome = hasMonthlyIncomeInput ? Number(input.monthlyIncomeNet) : null;
     const shouldAutoSplitContributions = Boolean(input.autoSplitContributions);
+    const hasCustomSplitAmountInput =
+      input.personalContributionAmount != null &&
+      Number.isFinite(input.personalContributionAmount);
+    const normalizedPersonalContributionAmount = hasCustomSplitAmountInput
+      ? Math.max(0, Number(input.personalContributionAmount))
+      : null;
 
     if (!input.createPersonal && !input.createShared) {
       return { success: false, error: 'Choose at least one option', code: 'INVALID_INPUT' as const };
@@ -1471,30 +1478,58 @@ export async function completeOnboarding(input: {
         });
       }
 
-      if (hasMonthlyIncomeInput && normalizedMonthlyIncome != null && shouldAutoSplitContributions && createdAccounts.length > 0) {
+      if (hasMonthlyIncomeInput && normalizedMonthlyIncome != null && createdAccounts.length > 0) {
         const incomeInCents = Math.max(Math.round(normalizedMonthlyIncome * 100), 0);
-        const basePerAccountInCents = Math.floor(incomeInCents / createdAccounts.length);
-        const remainderInCents = incomeInCents % createdAccounts.length;
+        const contributionByAccountId = new Map<string, number>();
 
-        for (let i = 0; i < createdAccounts.length; i += 1) {
-          const account = createdAccounts[i];
-          const monthlyAmount = (basePerAccountInCents + (i < remainderInCents ? 1 : 0)) / 100;
-          await tx.accountContributionPlan.upsert({
-            where: {
-              userId_accountId: {
+        if (createdAccounts.length === 1) {
+          contributionByAccountId.set(createdAccounts[0].id, incomeInCents / 100);
+        } else if (shouldAutoSplitContributions) {
+          const personalAccount = createdAccounts.find((account) => account.type === 'PRIVATE');
+          const sharedAccount = createdAccounts.find((account) => account.type === 'SHARED');
+          const canApplyPersonalSharedSplit = Boolean(personalAccount && sharedAccount);
+
+          if (canApplyPersonalSharedSplit && personalAccount && sharedAccount) {
+            const desiredPersonalInCents = normalizedPersonalContributionAmount != null
+              ? Math.round(normalizedPersonalContributionAmount * 100)
+              : Math.round(incomeInCents / 2);
+            const personalInCents = Math.max(0, Math.min(desiredPersonalInCents, incomeInCents));
+            const sharedInCents = Math.max(incomeInCents - personalInCents, 0);
+            contributionByAccountId.set(personalAccount.id, personalInCents / 100);
+            contributionByAccountId.set(sharedAccount.id, sharedInCents / 100);
+          } else {
+            const basePerAccountInCents = Math.floor(incomeInCents / createdAccounts.length);
+            const remainderInCents = incomeInCents % createdAccounts.length;
+            for (let i = 0; i < createdAccounts.length; i += 1) {
+              const account = createdAccounts[i];
+              const monthlyAmount = (basePerAccountInCents + (i < remainderInCents ? 1 : 0)) / 100;
+              contributionByAccountId.set(account.id, monthlyAmount);
+            }
+          }
+        }
+
+        if (contributionByAccountId.size > 0) {
+          for (let i = 0; i < createdAccounts.length; i += 1) {
+            const account = createdAccounts[i];
+            const monthlyAmount = contributionByAccountId.get(account.id);
+            if (monthlyAmount == null) continue;
+            await tx.accountContributionPlan.upsert({
+              where: {
+                userId_accountId: {
+                  userId,
+                  accountId: account.id,
+                },
+              },
+              create: {
                 userId,
                 accountId: account.id,
+                monthlyAmount,
               },
-            },
-            create: {
-              userId,
-              accountId: account.id,
-              monthlyAmount,
-            },
-            update: {
-              monthlyAmount,
-            },
-          });
+              update: {
+                monthlyAmount,
+              },
+            });
+          }
         }
       }
 

@@ -163,7 +163,7 @@ export default function Dashboard({
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
-                    className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-6 shadow-card mb-4"
+                    className={`bg-ios-card dark:bg-ios-dark-card rounded-3xl p-6 shadow-card mb-4 ${hasIncomeConfigured ? '' : 'opacity-80'}`}
                 >
                     {hasIncomeConfigured ? (
                         <div className="flex items-center gap-6">
@@ -266,6 +266,7 @@ export default function Dashboard({
                         <div className="space-y-2.5">
                             {accountBalances.map(({ account, expenses, monthlyInflow, balance }, index) => {
                                 const colors = getAccountColor(account);
+                                const isAccountLocked = monthlyInflow === 0 && expenses === 0;
                                 return (
                                     <motion.div
                                         key={account.id}
@@ -274,34 +275,61 @@ export default function Dashboard({
                                         transition={{ delay: 0.24 + index * 0.06 }}
                                         className={`rounded-2xl p-4 ring-1 ${colors.ring} ${colors.bg}`}
                                     >
-                                        <div className="flex items-center justify-between mb-3">
-                                            <p className={`text-sm font-semibold ${colors.text}`}>
-                                                {getAccountLabel(account)}
-                                            </p>
-                                            <p className={`text-sm font-bold tabular-nums ${balance >= 0 ? 'text-ios-green' : 'text-ios-red'}`}>
-                                                {balance >= 0 ? '₪' : '-₪'}{formatIlsAmount(Math.abs(balance))}
-                                            </p>
-                                        </div>
-                                        <div className="grid grid-cols-3 gap-2 text-center">
-                                            <div className="rounded-lg bg-white/70 dark:bg-ios-dark-card/70 px-2 py-2">
-                                                <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">הכנסות</p>
-                                                <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text tabular-nums">
-                                                    ₪{formatIlsAmount(Math.round(monthlyInflow))}
-                                                </p>
+                                        {isAccountLocked ? (
+                                            <div className="rounded-xl border border-dashed border-gray-200/70 dark:border-white/20 bg-white/70 dark:bg-ios-dark-card/50 p-3.5">
+                                                <div className="flex items-start gap-2.5">
+                                                    <div className="w-7 h-7 rounded-full bg-ios-blue/15 text-ios-blue flex items-center justify-center flex-shrink-0">
+                                                        <Lock className="w-3.5 h-3.5" />
+                                                    </div>
+                                                    <div>
+                                                        <p className={`text-sm font-semibold ${colors.text}`}>
+                                                            {getAccountLabel(account)}
+                                                        </p>
+                                                        <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle mt-1">
+                                                            הכרטיס נעול כי טרם הוגדרו הכנסות/הוצאות לחשבון הזה.
+                                                        </p>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => router.push('/settings')}
+                                                            className="mt-2 px-2.5 py-1.5 rounded-lg bg-ios-blue text-white text-[11px] font-semibold"
+                                                        >
+                                                            עדכון
+                                                        </button>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div className="rounded-lg bg-white/70 dark:bg-ios-dark-card/70 px-2 py-2">
-                                                <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">הוצאות</p>
-                                                <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text tabular-nums">
-                                                    ₪{formatIlsAmount(Math.round(expenses))}
-                                                </p>
-                                            </div>
-                                            <div className="rounded-lg bg-white/70 dark:bg-ios-dark-card/70 px-2 py-2">
-                                                <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">מאזן</p>
-                                                <p className={`text-sm font-semibold tabular-nums ${balance >= 0 ? 'text-ios-green' : 'text-ios-red'}`}>
-                                                    {balance >= 0 ? '₪' : '-₪'}{formatIlsAmount(Math.abs(Math.round(balance)))}
-                                                </p>
-                                            </div>
-                                        </div>
+                                        ) : (
+                                            <>
+                                                <div className="flex items-center justify-between mb-3">
+                                                    <p className={`text-sm font-semibold ${colors.text}`}>
+                                                        {getAccountLabel(account)}
+                                                    </p>
+                                                    <p className={`text-sm font-bold tabular-nums ${balance >= 0 ? 'text-ios-green' : 'text-ios-red'}`}>
+                                                        {balance >= 0 ? '₪' : '-₪'}{formatIlsAmount(Math.abs(balance))}
+                                                    </p>
+                                                </div>
+                                                <div className="grid grid-cols-3 gap-2 text-center">
+                                                    <div className="rounded-lg bg-white/70 dark:bg-ios-dark-card/70 px-2 py-2">
+                                                        <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">הכנסות</p>
+                                                        <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text tabular-nums">
+                                                            ₪{formatIlsAmount(Math.round(monthlyInflow))}
+                                                        </p>
+                                                    </div>
+                                                    <div className="rounded-lg bg-white/70 dark:bg-ios-dark-card/70 px-2 py-2">
+                                                        <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">הוצאות</p>
+                                                        <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text tabular-nums">
+                                                            ₪{formatIlsAmount(Math.round(expenses))}
+                                                        </p>
+                                                    </div>
+                                                    <div className="rounded-lg bg-white/70 dark:bg-ios-dark-card/70 px-2 py-2">
+                                                        <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">מאזן</p>
+                                                        <p className={`text-sm font-semibold tabular-nums ${balance >= 0 ? 'text-ios-green' : 'text-ios-red'}`}>
+                                                            {balance >= 0 ? '₪' : '-₪'}{formatIlsAmount(Math.abs(Math.round(balance)))}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
                                     </motion.div>
                                 );
                             })}
