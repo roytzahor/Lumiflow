@@ -3,7 +3,6 @@
 import { Home, Clock, PieChart, Plus, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { motion } from 'framer-motion';
 import { useHaptic } from '@/hooks/useHaptic';
 
 export default function BottomNav() {

@@ -13,5 +13,6 @@ interface MonthlyStoryProps {
 }
 
 export default function MonthlyStory(_props: MonthlyStoryProps) {
+    void _props;
     return null;
 }

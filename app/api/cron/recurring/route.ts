@@ -1,6 +1,5 @@
 import { prisma } from '@/lib/prisma';
 import { getNextRunDateFromCurrent } from '@/lib/recurring-utils';
-import type { RecurringMonthPolicy } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
 
 const CRON_SECRET = process.env.CRON_SECRET;

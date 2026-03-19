@@ -179,7 +179,7 @@ export async function addTransaction(formData: FormData) {
     });
     refreshAllViews();
     return { success: true, transaction };
-  } catch (error) {
+  } catch {
     return { success: false, error: 'Failed to add transaction' };
   }
 }
