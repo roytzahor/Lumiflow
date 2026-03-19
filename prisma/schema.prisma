@@ -119,7 +119,7 @@ model RecurringTransaction {
 model BudgetSettings {
   id                String   @id @default(uuid())
   userId            String   @unique
-  monthlyIncome     Float    @default(21000)
+  monthlyIncome     Float    @default(0)
   needsPercent      Int      @default(50)
   wantsPercent      Int      @default(30)
   savingsPercent    Int      @default(20)

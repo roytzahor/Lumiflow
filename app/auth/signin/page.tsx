@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import AuthThemeToggle from '@/components/AuthThemeToggle';
 
 export default function SignInPage() {
   const searchParams = useSearchParams();
@@ -37,17 +38,33 @@ export default function SignInPage() {
     await signIn(provider, { callbackUrl });
   };
 
+  const inputClassName =
+    'w-full rounded-xl px-4 py-3 text-ios-text dark:text-ios-dark-text bg-white dark:bg-[#111a2e] border border-gray-200 dark:border-white/20 placeholder:text-gray-400 dark:placeholder:text-ios-dark-subtle/90 focus:outline-none focus:ring-2 focus:ring-ios-blue/45 focus:border-ios-blue/35 transition-shadow shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]';
+
   return (
-    <main className="min-h-screen bg-ios-bg dark:bg-ios-dark-bg flex items-center justify-center px-5 transition-colors">
-      <form onSubmit={onSubmit} className="w-full max-w-sm bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card p-6 space-y-4">
-        <h1 className="text-2xl font-bold text-ios-text dark:text-ios-dark-text">כניסה ל־LumiFlow</h1>
+    <main className="min-h-screen bg-ios-bg dark:bg-ios-dark-bg dark:bg-[radial-gradient(120%_85%_at_50%_0%,rgba(42,102,237,0.22),rgba(6,13,28,1))] flex items-center justify-center px-5 py-8 transition-colors">
+      <form
+        onSubmit={onSubmit}
+        className="w-full max-w-sm bg-ios-card/95 dark:bg-ios-dark-card/95 rounded-3xl shadow-card p-6 space-y-4 border border-gray-100 dark:border-white/10 backdrop-blur-sm"
+      >
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle">ברוך/ה הבא/ה</p>
+          <AuthThemeToggle />
+        </div>
+        <h1 className="text-3xl font-bold text-ios-text dark:text-ios-dark-text tracking-tight">כניסה ל־LumiFlow</h1>
         <div className="space-y-2">
-          <button type="button" onClick={() => signInWithProvider('google')} className="w-full py-2.5 rounded-xl bg-ios-gray-6 text-sm font-medium">המשך עם Google</button>
+          <button
+            type="button"
+            onClick={() => signInWithProvider('google')}
+            className="w-full py-2.5 rounded-xl bg-ios-gray-6 dark:bg-[#121d34] border border-gray-200 dark:border-white/15 text-sm font-semibold text-ios-text dark:text-ios-dark-text hover:bg-ios-gray-5 dark:hover:bg-[#172541] transition"
+          >
+            המשך עם Google
+          </button>
         </div>
         <div className="flex items-center gap-2">
-          <div className="h-px bg-gray-200 flex-1" />
-          <span className="text-xs text-gray-400">או עם אימייל וסיסמה</span>
-          <div className="h-px bg-gray-200 flex-1" />
+          <div className="h-px bg-gray-200 dark:bg-white/15 flex-1" />
+          <span className="text-xs text-gray-400 dark:text-ios-dark-subtle">או עם אימייל וסיסמה</span>
+          <div className="h-px bg-gray-200 dark:bg-white/15 flex-1" />
         </div>
         <input
           data-testid="signin-email"
@@ -57,7 +74,7 @@ export default function SignInPage() {
           onChange={(e) => setEmail(e.target.value)}
           placeholder="אימייל"
           dir="ltr"
-          className="w-full bg-ios-gray-6 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-ios-blue/30"
+          className={inputClassName}
         />
         <input
           data-testid="signin-password"
@@ -67,14 +84,14 @@ export default function SignInPage() {
           onChange={(e) => setPassword(e.target.value)}
           placeholder="סיסמה"
           dir="ltr"
-          className="w-full bg-ios-gray-6 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-ios-blue/30"
+          className={inputClassName}
         />
         {error && <p className="text-sm text-ios-red">{error}</p>}
         <button
           data-testid="signin-submit"
           type="submit"
           disabled={loading}
-          className="w-full py-3 rounded-xl bg-ios-blue text-white font-semibold disabled:opacity-50"
+          className="w-full py-3 rounded-xl bg-ios-blue text-white font-semibold shadow-[0_10px_24px_rgba(42,102,237,0.34)] hover:brightness-105 disabled:opacity-50 disabled:cursor-not-allowed transition"
         >
           {loading ? 'נכנס...' : 'כניסה'}
         </button>

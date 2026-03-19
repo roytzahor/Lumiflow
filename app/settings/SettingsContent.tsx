@@ -21,13 +21,13 @@ import {
   getInvitePreview,
   upsertContributionPlan,
 } from '../actions';
-import { User, MoonStar, Pencil, Check, X, Trash2, Save, Plus, Wallet, Share2, LogOut } from 'lucide-react';
+import { User, MoonStar, Pencil, Check, X, Trash2, Save, Plus, Wallet, Share2, LogOut, Link2, Mail, Copy, SendHorizontal } from 'lucide-react';
 import type { BudgetSettings, Account, Category, AccountType } from '@/lib/types';
 
 const DEFAULT_BUDGET: BudgetSettings = {
   id: '',
   userId: '',
-  monthlyIncome: 21000,
+  monthlyIncome: 0,
   needsPercent: 50,
   wantsPercent: 30,
   savingsPercent: 20,
@@ -97,6 +97,9 @@ export default function SettingsContent({
   const [contributionDrafts, setContributionDrafts] = useState<Record<string, number>>({});
   const [savingContributionId, setSavingContributionId] = useState<string | null>(null);
   const themeInitializedRef = useRef(false);
+  const sharedAccounts = accounts.filter((a) => a.type === 'SHARED');
+  const selectedInviteAccountName = sharedAccounts.find((a) => a.id === inviteAccountId)?.name ?? '';
+  const inviteEmailIsValid = inviteMethod !== 'email' || !inviteEmail.trim() || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inviteEmail.trim());
 
   useEffect(() => {
     setCategories(initialCategories);
@@ -329,6 +332,10 @@ export default function SettingsContent({
     if (!inviteAccountId) return;
     if (inviteMethod === 'email' && !inviteEmail.trim()) {
       toast.error('יש להזין אימייל לקבלת הזמנה אישית');
+      return;
+    }
+    if (inviteMethod === 'email' && !inviteEmailIsValid) {
+      toast.error('נראה שכתובת האימייל אינה תקינה');
       return;
     }
     setInviteLoading(true);
@@ -568,65 +575,93 @@ export default function SettingsContent({
         <div className="px-5 pt-5 pb-3">
           <h2 className="text-base font-bold text-ios-text dark:text-ios-dark-text">שיתוף חשבון</h2>
         </div>
-        <div className="px-5 pb-5 space-y-3">
-          <div className="grid grid-cols-2 gap-2">
+        <div className="px-5 pb-5 space-y-4">
+          <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle">
+            בחר/י איך להזמין שותף לחשבון משותף. כל הזמנה תקפה לזמן מוגבל.
+          </p>
+
+          {sharedAccounts.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-gray-300 dark:border-white/20 px-4 py-3 text-sm text-ios-subtle dark:text-ios-dark-subtle">
+              עדיין אין לך חשבון משותף. אפשר ליצור חשבון חדש מסוג &quot;משותף&quot; ואז לשלוח הזמנה.
+            </div>
+          ) : null}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() => setInviteMethod('link')}
-              className={`py-2 rounded-xl text-sm font-semibold transition ${inviteMethod === 'link'
+              className={`rounded-xl px-3 py-2.5 text-sm font-semibold transition flex items-center justify-center gap-2 ${inviteMethod === 'link'
                 ? 'bg-ios-blue text-white'
                 : 'bg-ios-gray-6 dark:bg-ios-dark-fill text-ios-text dark:text-ios-dark-text'
                 }`}
             >
+              <Link2 className="w-4 h-4" />
               שיתוף בקישור
             </button>
             <button
               type="button"
               onClick={() => setInviteMethod('email')}
-              className={`py-2 rounded-xl text-sm font-semibold transition ${inviteMethod === 'email'
+              className={`rounded-xl px-3 py-2.5 text-sm font-semibold transition flex items-center justify-center gap-2 ${inviteMethod === 'email'
                 ? 'bg-ios-blue text-white'
                 : 'bg-ios-gray-6 dark:bg-ios-dark-fill text-ios-text dark:text-ios-dark-text'
                 }`}
             >
+              <Mail className="w-4 h-4" />
               הזמנה במייל
             </button>
           </div>
-          <div className="flex gap-2">
+
+          <div className="space-y-2">
+            <label className="block text-xs font-medium text-ios-subtle dark:text-ios-dark-subtle">חשבון לשיתוף</label>
             <select
               data-testid="settings-invite-account"
               value={inviteAccountId}
               onChange={(e) => setInviteAccountId(e.target.value)}
-              className="flex-1 bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-3 py-2.5 text-sm text-ios-text dark:text-ios-dark-text"
+              className="w-full bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-3 py-2.5 text-sm text-ios-text dark:text-ios-dark-text border border-transparent dark:border-white/10"
             >
               <option value="">בחר חשבון משותף</option>
-              {accounts.filter((a) => a.type === 'SHARED').map((a) => (
+              {sharedAccounts.map((a) => (
                 <option key={a.id} value={a.id}>{a.name}</option>
               ))}
             </select>
-            {inviteMethod === 'email' ? (
+          </div>
+
+          {inviteMethod === 'email' ? (
+            <div className="space-y-2">
+              <label className="block text-xs font-medium text-ios-subtle dark:text-ios-dark-subtle">אימייל מוזמן</label>
               <input
                 data-testid="settings-invite-email"
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
-                placeholder="מייל להזמנה אישית"
-                className="flex-1 bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-3 py-2.5 text-sm text-ios-text dark:text-ios-dark-text"
+                placeholder="name@example.com"
+                className="w-full bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-3 py-2.5 text-sm text-ios-text dark:text-ios-dark-text border border-transparent dark:border-white/10"
                 dir="ltr"
               />
-            ) : (
-              <div className="flex-1 flex items-center px-3 rounded-xl bg-ios-gray-6 dark:bg-ios-dark-fill text-xs text-ios-subtle dark:text-ios-dark-subtle">
-                הקישור שנוצר ניתן לשיתוף ידני עם כל מי שתרצה/י.
-              </div>
-            )}
-            <button
-              data-testid="settings-create-invite"
-              onClick={createInvite}
-              disabled={inviteLoading || !inviteAccountId}
-              className="px-3 py-2.5 rounded-xl bg-ios-indigo text-white text-sm flex items-center gap-1 disabled:opacity-50"
-            >
-              <Share2 className="w-4 h-4" />
-              {inviteLoading ? 'יוצר...' : inviteMethod === 'email' ? 'צור הזמנה' : 'צור לינק'}
-            </button>
-          </div>
+              {!inviteEmailIsValid ? (
+                <p className="text-xs text-ios-red">נראה שכתובת האימייל אינה תקינה.</p>
+              ) : null}
+            </div>
+          ) : (
+            <div className="rounded-xl bg-ios-gray-6 dark:bg-ios-dark-fill px-3 py-2.5 text-xs text-ios-subtle dark:text-ios-dark-subtle">
+              ייווצר קישור חד-פעמי לשיתוף ידני דרך וואטסאפ, מייל או כל ערוץ אחר.
+            </div>
+          )}
+
+          <button
+            data-testid="settings-create-invite"
+            onClick={createInvite}
+            disabled={inviteLoading || !inviteAccountId || (inviteMethod === 'email' && (!inviteEmail.trim() || !inviteEmailIsValid))}
+            className="w-full px-3 py-3 rounded-xl bg-ios-indigo text-white text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Share2 className="w-4 h-4" />
+            {inviteLoading ? 'יוצר הזמנה...' : inviteMethod === 'email' ? 'צור הזמנה אישית במייל' : 'צור קישור הזמנה'}
+          </button>
+
+          {selectedInviteAccountName ? (
+            <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">
+              ההזמנה תישלח עבור החשבון: <span className="font-semibold">{selectedInviteAccountName}</span>
+            </p>
+          ) : null}
         </div>
       </section>
 
@@ -748,7 +783,9 @@ export default function SettingsContent({
         <div className="fixed inset-0 z-[95] bg-black/35 backdrop-blur-sm flex items-center justify-center px-5">
           <div className="w-full max-w-sm bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card p-5 space-y-4">
             <h3 className="text-lg font-bold text-ios-text dark:text-ios-dark-text">לינק הזמנה מוכן</h3>
-            <p data-testid="settings-invite-url" className="text-xs text-ios-subtle dark:text-ios-dark-subtle break-all">{inviteUrl}</p>
+            <div data-testid="settings-invite-url" className="text-xs text-ios-subtle dark:text-ios-dark-subtle break-all bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-3 py-2.5">
+              {inviteUrl}
+            </div>
             <p className="text-xs text-ios-red">
               שים/י לב: הקישור תקף ל-{inviteExpiresInMinutes ?? 30} דקות בלבד. אין לשתף עם אף אחד אחר.
             </p>
@@ -756,25 +793,42 @@ export default function SettingsContent({
               <button
                 onClick={async () => {
                   await navigator.clipboard.writeText(inviteUrl);
-                  setShowInviteLinkPopup(false);
-                  setInviteUrl('');
-                  setInviteExpiresInMinutes(null);
+                  toast.success('הקישור הועתק');
                 }}
-                className="flex-1 py-2.5 rounded-xl bg-ios-blue text-white text-sm font-semibold"
+                className="flex-1 py-2.5 rounded-xl bg-ios-blue text-white text-sm font-semibold flex items-center justify-center gap-1.5"
               >
+                <Copy className="w-4 h-4" />
                 העתק קישור
               </button>
               <button
-                onClick={() => {
-                  setShowInviteLinkPopup(false);
-                  setInviteUrl('');
-                  setInviteExpiresInMinutes(null);
+                onClick={async () => {
+                  if (navigator.share) {
+                    await navigator.share({
+                      title: 'הזמנה ל-LumiFlow',
+                      text: 'הזמנה להצטרפות לחשבון משותף',
+                      url: inviteUrl,
+                    });
+                    return;
+                  }
+                  await navigator.clipboard.writeText(inviteUrl);
+                  toast.success('הקישור הועתק לשיתוף');
                 }}
-                className="flex-1 py-2.5 rounded-xl bg-ios-gray-6 dark:bg-ios-dark-fill text-ios-text dark:text-ios-dark-text text-sm font-medium"
+                className="flex-1 py-2.5 rounded-xl bg-ios-indigo text-white text-sm font-semibold flex items-center justify-center gap-1.5"
               >
-                סגור
+                <SendHorizontal className="w-4 h-4" />
+                שתף
               </button>
             </div>
+            <button
+              onClick={() => {
+                setShowInviteLinkPopup(false);
+                setInviteUrl('');
+                setInviteExpiresInMinutes(null);
+              }}
+              className="w-full py-2.5 rounded-xl bg-ios-gray-6 dark:bg-ios-dark-fill text-ios-text dark:text-ios-dark-text text-sm font-medium"
+            >
+              סגור
+            </button>
           </div>
         </div>
       )}

@@ -3,6 +3,7 @@ function completePersonalOnlyOnboarding() {
   cy.contains('button', 'המשך').click();
   cy.contains('button', 'המשך').click();
   cy.contains('button', 'המשך').click();
+  cy.contains('button', 'המשך').click();
   cy.get('[data-testid="onboarding-submit"]').click();
   cy.get('[data-testid="onboarding-continue-dashboard"]').click();
 }

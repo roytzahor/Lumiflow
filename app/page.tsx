@@ -7,6 +7,7 @@ import {
   getAccounts,
   getRecurringTransactions,
   getAccountContributionTotals,
+  getCurrentUserProfile,
 } from "./actions";
 import BottomNav from "@/components/BottomNav";
 import { redirectToOnboardingIfNeeded } from "@/lib/onboarding";
@@ -27,13 +28,14 @@ export default async function Home({
     }
 
     const now = new Date();
-    const [transactions, budgetSettings, categories, accounts, recurringTransactions, contributionTotals] = await Promise.all([
+    const [transactions, budgetSettings, categories, accounts, recurringTransactions, contributionTotals, currentUser] = await Promise.all([
       getTransactions('All', now.getFullYear(), now.getMonth()),
       getBudgetSettings(),
       getCategories(),
       getAccounts(),
       getRecurringTransactions(),
       getAccountContributionTotals(),
+      getCurrentUserProfile(),
     ]);
     return (
       <main className="min-h-screen bg-ios-bg dark:bg-ios-dark-bg transition-colors">
@@ -45,6 +47,7 @@ export default async function Home({
           accounts={accounts}
           recurringTransactions={recurringTransactions}
           contributionTotals={contributionTotals}
+          viewerName={currentUser?.name ?? null}
         />
         <BottomNav />
       </main>

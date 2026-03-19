@@ -14,9 +14,19 @@ describe('Auth and onboarding flow', () => {
     cy.contains('button', 'המשך').click();
     cy.contains('button', 'המשך').click();
     cy.contains('button', 'המשך').click();
+    cy.contains('button', 'המשך').click();
     cy.get('[data-testid="onboarding-submit"]').click();
     cy.get('[data-testid="onboarding-continue-dashboard"]').click();
 
     cy.url().should('eq', `${Cypress.config('baseUrl')}/`);
+    cy.contains('החיסכון החודשי נעול').should('be.visible');
+    cy.contains('כדי לראות את החסכון החודשי מומלץ לעדכן את ההכנסה בעמוד ההגדרות').should('be.visible');
+
+    cy.visit('/settings');
+    cy.contains('button', 'ארכיון').first().click();
+
+    cy.visit('/');
+    cy.contains('על מנת לצפות במאזן יש להוסיף לפחות חשבון אחד').should('be.visible');
+    cy.contains('button', 'עדכון').should('be.visible');
   });
 });

@@ -6,6 +6,7 @@ import QuickAddSheet from "./QuickAddSheet";
 import PieChart from "./PieChart";
 import { formatIlsAmount, formatUtcDayMonthYear, formatUtcMonthYear, getHourInTimezone } from "@/lib/formatters";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Lock } from "lucide-react";
 import type { TransactionListItem, Account, Category, BudgetSettings, RecurringWithAccount } from "@/lib/types";
 
 interface DashboardProps {
@@ -21,6 +22,7 @@ interface DashboardProps {
         accountType: "PRIVATE" | "SHARED";
         totalMonthlyInflow: number;
     }>;
+    viewerName?: string | null;
 }
 
 function getGreeting(now: Date): string {
@@ -49,6 +51,7 @@ export default function Dashboard({
     accounts = [],
     recurringTransactions = [],
     contributionTotals = [],
+    viewerName = null,
 }: DashboardProps) {
     const [isSheetOpen, setIsSheetOpen] = useState(false);
     const [showStickyHeader, setShowStickyHeader] = useState(false);
@@ -108,9 +111,11 @@ export default function Dashboard({
     });
 
     const totalSpent = initialTransactions.reduce((sum, t) => sum + t.amount, 0);
-    const income = budgetSettings?.monthlyIncome || 21000;
-    const savedSoFar = income - totalSpent;
-    const savingsRatio = Math.max(Math.min((savedSoFar / income) * 100, 100), 0);
+    const income = budgetSettings?.monthlyIncome ?? 0;
+    const hasIncomeConfigured = income > 0;
+    const savedSoFar = hasIncomeConfigured ? income - totalSpent : 0;
+    const rawRatio = hasIncomeConfigured ? (savedSoFar / income) * 100 : 0;
+    const savingsRatio = Math.max(Math.min(rawRatio, 100), 0);
 
     const handleCloseSheet = () => {
         setIsSheetOpen(false);
@@ -121,7 +126,7 @@ export default function Dashboard({
     return (
         <div className="w-full max-w-md mx-auto h-full relative min-h-screen pb-28 pt-safe">
             {/* Sticky Header */}
-            {showStickyHeader && (
+            {showStickyHeader && hasIncomeConfigured && (
                 <motion.div
                     initial={{ y: -60, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
@@ -143,7 +148,9 @@ export default function Dashboard({
                 <header className="mb-8">
                     <div className="flex justify-between items-start">
                         <div>
-                            <p className="text-base text-ios-subtle dark:text-ios-dark-subtle mb-1">{getGreeting(stableNow)}</p>
+                            <p className="text-base text-ios-subtle dark:text-ios-dark-subtle mb-1">
+                                {viewerName?.trim() ? `${getGreeting(stableNow)}, ${viewerName.trim()}` : getGreeting(stableNow)}
+                            </p>
                             <h1 className="text-3xl font-bold text-ios-text dark:text-ios-dark-text tracking-tight">
                                 {monthName}
                             </h1>
@@ -158,54 +165,78 @@ export default function Dashboard({
                     transition={{ delay: 0.1 }}
                     className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-6 shadow-card mb-4"
                 >
-                    <div className="flex items-center gap-6">
-                        {/* Ring */}
-                        <div className="relative w-24 h-24 flex-shrink-0">
-                            <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                                <circle
-                                    cx="50" cy="50" r="42"
-                                    stroke="#E5E5EA" strokeWidth="6"
-                                    fill="transparent"
-                                />
-                                <motion.circle
-                                    cx="50" cy="50" r="42"
-                                    stroke={savedSoFar >= 0 ? "#34C759" : "#FF3B30"}
-                                    strokeWidth="6"
-                                    fill="transparent"
-                                    strokeLinecap="round"
-                                    initial={{ pathLength: 0 }}
-                                    animate={{ pathLength: savingsRatio / 100 }}
-                                    transition={{ duration: 1.2, ease: "easeOut", delay: 0.3 }}
-                                    strokeDasharray="1"
-                                />
-                            </svg>
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <span className="text-sm font-bold text-ios-text dark:text-ios-dark-text">
-                                    {Math.round(savingsRatio)}%
-                                </span>
+                    {hasIncomeConfigured ? (
+                        <div className="flex items-center gap-6">
+                            {/* Ring */}
+                            <div className="relative w-24 h-24 flex-shrink-0">
+                                <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                                    <circle
+                                        cx="50" cy="50" r="42"
+                                        stroke="#E5E5EA" strokeWidth="6"
+                                        fill="transparent"
+                                    />
+                                    <motion.circle
+                                        cx="50" cy="50" r="42"
+                                        stroke={savedSoFar >= 0 ? "#34C759" : "#FF3B30"}
+                                        strokeWidth="6"
+                                        fill="transparent"
+                                        strokeLinecap="round"
+                                        initial={{ pathLength: 0 }}
+                                        animate={{ pathLength: savingsRatio / 100 }}
+                                        transition={{ duration: 1.2, ease: "easeOut", delay: 0.3 }}
+                                        strokeDasharray="1"
+                                    />
+                                </svg>
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <span className="text-sm font-bold text-ios-text dark:text-ios-dark-text">
+                                        {Math.round(savingsRatio)}%
+                                    </span>
+                                </div>
                             </div>
-                        </div>
 
-                        {/* Stats */}
-                        <div className="flex-1 space-y-3">
-                            <div>
-                                <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle font-medium">חסכנו החודש</p>
-                                <p className={`text-2xl font-bold tracking-tight ${savedSoFar >= 0 ? 'text-ios-green' : 'text-ios-red'}`}>
-                                    ₪{formatIlsAmount(savedSoFar)}
-                                </p>
-                            </div>
-                            <div className="flex gap-6">
+                            {/* Stats */}
+                            <div className="flex-1 space-y-3">
                                 <div>
-                                    <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">הכנסה</p>
-                                    <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text">₪{formatIlsAmount(income)}</p>
+                                    <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle font-medium">חסכנו החודש</p>
+                                    <p className={`text-2xl font-bold tracking-tight ${savedSoFar >= 0 ? 'text-ios-green' : 'text-ios-red'}`}>
+                                        ₪{formatIlsAmount(savedSoFar)}
+                                    </p>
                                 </div>
-                                <div>
-                                    <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">הוצאות</p>
-                                    <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text">₪{formatIlsAmount(totalSpent)}</p>
+                                <div className="flex gap-6">
+                                    <div>
+                                        <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">הכנסה</p>
+                                        <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text">₪{formatIlsAmount(income)}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">הוצאות</p>
+                                        <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text">₪{formatIlsAmount(totalSpent)}</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    ) : (
+                        <div className="relative overflow-hidden rounded-2xl border border-dashed border-gray-200 dark:border-white/15 bg-ios-gray-6/50 dark:bg-ios-dark-fill/40 p-5">
+                            <div className="absolute inset-0 pointer-events-none bg-gradient-to-br from-transparent via-white/10 to-transparent dark:via-white/[0.03]" />
+                            <div className="relative flex items-start gap-3">
+                                <div className="w-9 h-9 rounded-full bg-ios-blue/15 text-ios-blue flex items-center justify-center">
+                                    <Lock className="w-4 h-4" />
+                                </div>
+                                <div className="flex-1">
+                                    <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text mb-1">החיסכון החודשי נעול</p>
+                                    <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle leading-relaxed mb-3">
+                                        כדי לראות את החסכון החודשי מומלץ לעדכן את ההכנסה בעמוד ההגדרות.
+                                    </p>
+                                    <button
+                                        type="button"
+                                        onClick={() => router.push('/settings')}
+                                        className="px-3 py-2 rounded-lg bg-ios-blue text-white text-xs font-semibold"
+                                    >
+                                        עדכון
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </motion.div>
 
                 <motion.div
@@ -219,7 +250,18 @@ export default function Dashboard({
                         <span className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle">{accountBalances.length} חשבונות</span>
                     </div>
                     {accountBalances.length === 0 ? (
-                        <p className="text-sm text-ios-subtle dark:text-ios-dark-subtle py-2">אין חשבונות להצגה כרגע</p>
+                        <div className="rounded-2xl border border-dashed border-gray-200 dark:border-white/15 bg-ios-gray-6/60 dark:bg-ios-dark-fill/40 p-4">
+                            <p className="text-sm text-ios-subtle dark:text-ios-dark-subtle mb-3">
+                                על מנת לצפות במאזן יש להוסיף לפחות חשבון אחד.
+                            </p>
+                            <button
+                                type="button"
+                                onClick={() => router.push('/settings')}
+                                className="px-3 py-2 rounded-lg bg-ios-blue text-white text-xs font-semibold"
+                            >
+                                עדכון
+                            </button>
+                        </div>
                     ) : (
                         <div className="space-y-2.5">
                             {accountBalances.map(({ account, expenses, monthlyInflow, balance }, index) => {

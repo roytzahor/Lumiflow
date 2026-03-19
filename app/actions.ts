@@ -54,7 +54,7 @@ async function ensureUserBootstrap(userId: string) {
     await prisma.budgetSettings.create({
       data: {
         userId,
-        monthlyIncome: 21000,
+        monthlyIncome: 0,
         needsPercent: 50,
         wantsPercent: 30,
         savingsPercent: 20,
@@ -1358,11 +1358,16 @@ export async function completeOnboarding(input: {
   createShared: boolean;
   sharedAccountName?: string;
   invitedEmail?: string;
+  monthlyIncomeNet?: number | null;
+  autoSplitContributions?: boolean;
 }) {
   try {
     const userId = await requireUserId();
     const normalizedSharedName = input.sharedAccountName?.trim() || 'חשבון משותף';
     const normalizedInvitedEmail = normalizeInviteEmail(input.invitedEmail);
+    const hasMonthlyIncomeInput = input.monthlyIncomeNet != null && Number.isFinite(input.monthlyIncomeNet) && input.monthlyIncomeNet >= 0;
+    const normalizedMonthlyIncome = hasMonthlyIncomeInput ? Number(input.monthlyIncomeNet) : null;
+    const shouldAutoSplitContributions = Boolean(input.autoSplitContributions);
 
     if (!input.createPersonal && !input.createShared) {
       return { success: false, error: 'Choose at least one option', code: 'INVALID_INPUT' as const };
@@ -1448,6 +1453,49 @@ export async function completeOnboarding(input: {
 
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
         inviteUrl = `${baseUrl}/settings?invite=${rawToken}`;
+      }
+
+      if (hasMonthlyIncomeInput && normalizedMonthlyIncome != null) {
+        await tx.budgetSettings.upsert({
+          where: { userId },
+          create: {
+            userId,
+            monthlyIncome: normalizedMonthlyIncome,
+            needsPercent: 50,
+            wantsPercent: 30,
+            savingsPercent: 20,
+          },
+          update: {
+            monthlyIncome: normalizedMonthlyIncome,
+          },
+        });
+      }
+
+      if (hasMonthlyIncomeInput && normalizedMonthlyIncome != null && shouldAutoSplitContributions && createdAccounts.length > 0) {
+        const incomeInCents = Math.max(Math.round(normalizedMonthlyIncome * 100), 0);
+        const basePerAccountInCents = Math.floor(incomeInCents / createdAccounts.length);
+        const remainderInCents = incomeInCents % createdAccounts.length;
+
+        for (let i = 0; i < createdAccounts.length; i += 1) {
+          const account = createdAccounts[i];
+          const monthlyAmount = (basePerAccountInCents + (i < remainderInCents ? 1 : 0)) / 100;
+          await tx.accountContributionPlan.upsert({
+            where: {
+              userId_accountId: {
+                userId,
+                accountId: account.id,
+              },
+            },
+            create: {
+              userId,
+              accountId: account.id,
+              monthlyAmount,
+            },
+            update: {
+              monthlyAmount,
+            },
+          });
+        }
       }
 
       await tx.user.update({

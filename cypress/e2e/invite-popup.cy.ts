@@ -14,6 +14,7 @@ describe('Invite popup flow', () => {
     cy.contains('button', 'המשך').click();
     cy.contains('button', 'המשך').click();
     cy.contains('button', 'המשך').click();
+    cy.contains('button', 'המשך').click();
     cy.get('[data-testid="onboarding-submit"]').click();
     cy.get('[data-testid="onboarding-continue-dashboard"]').click();
 
@@ -42,6 +43,7 @@ describe('Invite popup flow', () => {
 
       cy.url().should('include', '/onboarding');
       cy.get('[data-testid="onboarding-template-personalOnly"]').click();
+      cy.contains('button', 'המשך').click();
       cy.contains('button', 'המשך').click();
       cy.contains('button', 'המשך').click();
       cy.contains('button', 'המשך').click();
