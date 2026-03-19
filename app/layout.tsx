@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Assistant } from "next/font/google";
 import { Toaster } from "sonner";
+import PendingInviteGate from "@/components/PendingInviteGate";
+import ThemeProvider from "@/components/ThemeProvider";
 import "./globals.css";
 
 const assistant = Assistant({
@@ -24,7 +26,7 @@ export const viewport: Viewport = {
     initialScale: 1,
     maximumScale: 1,
     viewportFit: "cover",
-    themeColor: "#F2F2F7",
+    themeColor: "#0F1115",
 };
 
 export default function RootLayout({
@@ -34,20 +36,23 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="he" dir="rtl" suppressHydrationWarning>
-            <body className={`${assistant.variable} font-sans antialiased min-h-screen bg-ios-bg text-gray-900`}>
-                {children}
-                <Toaster
-                    position="top-center"
-                    richColors
-                    closeButton
-                    dir="rtl"
-                    toastOptions={{
-                        style: {
-                            borderRadius: '14px',
-                            fontFamily: 'var(--font-assistant)',
-                        },
-                    }}
-                />
+            <body className={`${assistant.variable} font-sans antialiased min-h-screen bg-ios-bg dark:bg-ios-dark-bg text-ios-text dark:text-ios-dark-text transition-colors`}>
+                <ThemeProvider>
+                    {children}
+                    <PendingInviteGate />
+                    <Toaster
+                        position="top-center"
+                        richColors
+                        closeButton
+                        dir="rtl"
+                        toastOptions={{
+                            style: {
+                                borderRadius: '14px',
+                                fontFamily: 'var(--font-assistant)',
+                            },
+                        }}
+                    />
+                </ThemeProvider>
             </body>
         </html>
     );

@@ -65,6 +65,8 @@ export const authOptions: NextAuthOptions = {
           email,
           name: user.name ?? null,
           passwordHash: '',
+          onboardingCompletedAt: null,
+          themePreference: 'SYSTEM',
         },
       });
 

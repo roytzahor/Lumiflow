@@ -38,12 +38,12 @@ export default function MonthSelector() {
         <div className="w-full">
             {/* Year selector */}
             <div className="flex justify-between items-center px-5 mb-3">
-                <button onClick={nextYear} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center active:bg-gray-200 transition">
-                    <ChevronRight className="w-4 h-4 text-gray-500" />
+                <button onClick={nextYear} className="w-8 h-8 rounded-full bg-gray-100 dark:bg-ios-dark-fill flex items-center justify-center active:bg-gray-200 dark:active:bg-ios-dark-card transition">
+                    <ChevronRight className="w-4 h-4 text-gray-500 dark:text-ios-dark-subtle" />
                 </button>
-                <h2 className="text-base font-bold text-gray-900">{currentYear}</h2>
-                <button onClick={prevYear} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center active:bg-gray-200 transition">
-                    <ChevronLeft className="w-4 h-4 text-gray-500" />
+                <h2 className="text-base font-bold text-ios-text dark:text-ios-dark-text">{currentYear}</h2>
+                <button onClick={prevYear} className="w-8 h-8 rounded-full bg-gray-100 dark:bg-ios-dark-fill flex items-center justify-center active:bg-gray-200 dark:active:bg-ios-dark-card transition">
+                    <ChevronLeft className="w-4 h-4 text-gray-500 dark:text-ios-dark-subtle" />
                 </button>
             </div>
 
@@ -72,7 +72,7 @@ export default function MonthSelector() {
                                 />
                             )}
                             <span className={`relative z-10 text-xs font-semibold ${
-                                isSelected ? 'text-white' : 'text-gray-500'
+                                isSelected ? 'text-white' : 'text-gray-500 dark:text-ios-dark-subtle'
                             }`}>
                                 {format(date, 'MMM', { locale: he })}
                             </span>

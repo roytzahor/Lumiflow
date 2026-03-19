@@ -22,11 +22,20 @@ enum RecurringMonthPolicy {
   SKIP_MONTH
 }
 
+enum ThemePreference {
+  LIGHT
+  DARK
+  SYSTEM
+}
+
 model User {
   id              String          @id @default(uuid())
   name            String?
   email           String          @unique
   passwordHash    String
+  onboardingCompletedAt DateTime?
+  themePreference ThemePreference @default(SYSTEM)
+  isPremiumMock   Boolean         @default(false)
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
   accountMembers  AccountMember[]
@@ -34,6 +43,7 @@ model User {
   budgetSettings  BudgetSettings?
   createdInvites  AccountInvite[] @relation("InviteCreatedBy")
   acceptedInvites AccountInvite[] @relation("InviteAcceptedBy")
+  contributionPlans AccountContributionPlan[]
 }
 
 model Account {
@@ -50,6 +60,7 @@ model Account {
   transactions          Transaction[]
   members               AccountMember[]
   invites               AccountInvite[]
+  contributionPlans     AccountContributionPlan[]
 }
 
 model AccountMember {
@@ -121,6 +132,7 @@ model AccountInvite {
   id           String   @id @default(uuid())
   accountId    String
   createdById  String
+  invitedEmail String?
   tokenHash    String   @unique
   expiresAt    DateTime
   acceptedAt   DateTime?
@@ -129,4 +141,17 @@ model AccountInvite {
   account      Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
   createdBy    User     @relation("InviteCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
   acceptedBy   User?    @relation("InviteAcceptedBy", fields: [acceptedById], references: [id], onDelete: SetNull)
+}
+
+model AccountContributionPlan {
+  id            String   @id @default(uuid())
+  userId        String
+  accountId     String
+  monthlyAmount Float
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account       Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, accountId])
 }

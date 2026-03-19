@@ -1,6 +1,7 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+    darkMode: "class",
     content: [
         "./pages/**/*.{js,ts,jsx,tsx,mdx}",
         "./components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -36,6 +37,15 @@ const config: Config = {
                         6: '#F2F2F7',
                     }
                 },
+                'ios-dark': {
+                    bg: '#0C121B',
+                    card: '#121A26',
+                    fill: '#1B293B',
+                    text: '#F5F7FF',
+                    subtle: '#9AA7BE',
+                },
+                'ios-text': '#1C1C1E',
+                'ios-subtle': '#6B7280',
             },
             fontFamily: {
                 sans: ['var(--font-assistant)', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],

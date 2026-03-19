@@ -62,9 +62,9 @@ export default function TransactionFeed({ transactions = [], categories = [], on
     const sortedDates = Object.keys(groupedByDate).sort((a, b) => b.localeCompare(a));
 
     return (
-        <div className="w-full mt-4 pb-24">
+        <div className="w-full mt-4 pb-6">
             {/* Section Header */}
-            <h2 className="text-lg font-bold text-gray-900 mb-3">פעולות אחרונות</h2>
+            <h2 className="text-lg font-bold text-ios-text dark:text-ios-dark-text mb-3">פעולות אחרונות</h2>
 
             {/* Segmented Control */}
             <div className="segmented-control mb-4">
@@ -90,9 +90,9 @@ export default function TransactionFeed({ transactions = [], categories = [], on
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.95 }}
-                        className="flex flex-col items-center justify-center py-16 text-gray-400"
+                        className="flex flex-col items-center justify-center py-16 text-ios-subtle dark:text-ios-dark-subtle"
                     >
-                        <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+                        <div className="w-14 h-14 bg-gray-100 dark:bg-ios-dark-fill rounded-full flex items-center justify-center mb-3">
                             <span className="text-2xl opacity-60">💸</span>
                         </div>
                         <p className="text-sm font-medium">אין הוצאות להצגה</p>
@@ -102,12 +102,12 @@ export default function TransactionFeed({ transactions = [], categories = [], on
                         {sortedDates.map((dateKey) => (
                             <div key={dateKey}>
                                 {/* Date Header */}
-                                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-1">
+                                <p className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle uppercase tracking-wider mb-2 px-1">
                                     {format(new Date(dateKey), 'EEEE, d MMMM', { locale: he })}
                                 </p>
 
                                 {/* Transactions Card */}
-                                <div className="bg-white rounded-2xl shadow-card overflow-hidden divide-y divide-gray-100">
+                                <div className="bg-white dark:bg-ios-dark-card rounded-2xl shadow-card overflow-hidden divide-y divide-gray-100 dark:divide-white/10">
                                     {groupedByDate[dateKey].map((t) => {
                                         const badge = getAccountBadge(t);
                                         return (
@@ -118,17 +118,17 @@ export default function TransactionFeed({ transactions = [], categories = [], on
                                                 initial={{ opacity: 0 }}
                                                 animate={{ opacity: 1 }}
                                                 exit={{ opacity: 0, scale: 0.98 }}
-                                                whileTap={t.isProjected ? undefined : { scale: 0.98, backgroundColor: '#F5F5F7' }}
+                                                whileTap={t.isProjected ? undefined : { scale: 0.98 }}
                                                 className={`flex items-center justify-between p-4 transition-colors ${
-                                                    t.isProjected ? 'cursor-default' : 'cursor-pointer active:bg-gray-50'
+                                                    t.isProjected ? 'cursor-default' : 'cursor-pointer active:bg-gray-50 dark:active:bg-ios-dark-fill'
                                                 }`}
                                             >
                                                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                    <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-lg flex-shrink-0">
+                                                    <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-ios-dark-fill flex items-center justify-center text-lg flex-shrink-0">
                                                         {getIcon(t.category)}
                                                     </div>
                                                     <div className="flex-1 min-w-0">
-                                                        <h3 className="text-[15px] font-semibold text-gray-900 truncate">
+                                                        <h3 className="text-[15px] font-semibold text-ios-text dark:text-ios-dark-text truncate">
                                                             {t.description || t.category}
                                                         </h3>
                                                         <div className="flex items-center gap-2 mt-0.5">
@@ -145,10 +145,10 @@ export default function TransactionFeed({ transactions = [], categories = [], on
                                                 </div>
 
                                                 <div className="flex items-center gap-2 flex-shrink-0">
-                                                    <span className="text-[15px] font-bold text-gray-900 tabular-nums">
+                                                    <span className="text-[15px] font-bold text-ios-text dark:text-ios-dark-text tabular-nums">
                                                         ₪{t.amount.toLocaleString()}
                                                     </span>
-                                                    {!t.isProjected && <ChevronLeft className="w-4 h-4 text-gray-300" />}
+                                                    {!t.isProjected && <ChevronLeft className="w-4 h-4 text-gray-300 dark:text-ios-dark-subtle/60" />}
                                                 </div>
                                             </motion.div>
                                         );

@@ -1,5 +1,6 @@
 import { getMonthlyStats, getAccounts, getCategories } from "@/app/actions";
 import HistoryView from "@/components/HistoryView";
+import { redirectToOnboardingIfNeeded } from "@/lib/onboarding";
 
 export const dynamic = 'force-dynamic';
 
@@ -8,6 +9,7 @@ export default async function HistoryPage({
 }: {
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
+    await redirectToOnboardingIfNeeded();
     const params = await searchParams;
 
     const now = new Date();

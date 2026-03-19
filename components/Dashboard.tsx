@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { motion, useScroll, useMotionValueEvent } from "framer-motion";
-import { Plus } from "lucide-react";
 import { format } from "date-fns";
 import { he } from "date-fns/locale";
 import TransactionFeed from "./TransactionFeed";
 import QuickAddSheet from "./QuickAddSheet";
 import PieChart from "./PieChart";
 import { useHaptic } from "@/hooks/useHaptic";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { TransactionListItem, Account, Category, BudgetSettings, RecurringWithAccount } from "@/lib/types";
 
 interface DashboardProps {
@@ -17,6 +17,12 @@ interface DashboardProps {
     categories: Category[];
     accounts: Account[];
     recurringTransactions?: RecurringWithAccount[];
+    contributionTotals?: Array<{
+        accountId: string;
+        accountName: string;
+        accountType: "PRIVATE" | "SHARED";
+        totalMonthlyInflow: number;
+    }>;
 }
 
 function getGreeting(): string {
@@ -37,12 +43,21 @@ function getAccountColor(account: Account): { bg: string; text: string; ring: st
     return { bg: "bg-ios-teal/8", text: "text-ios-blue", ring: "ring-ios-teal/20" };
 }
 
-export default function Dashboard({ initialTransactions = [], budgetSettings, categories = [], accounts = [], recurringTransactions = [] }: DashboardProps) {
+export default function Dashboard({
+    initialTransactions = [],
+    budgetSettings,
+    categories = [],
+    accounts = [],
+    recurringTransactions = [],
+    contributionTotals = [],
+}: DashboardProps) {
     const [isSheetOpen, setIsSheetOpen] = useState(false);
     const [editingTransaction, setEditingTransaction] = useState<TransactionListItem | null>(null);
     const [showStickyHeader, setShowStickyHeader] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
     const { trigger } = useHaptic();
+    const router = useRouter();
+    const searchParams = useSearchParams();
 
     const { scrollY } = useScroll();
 
@@ -75,13 +90,14 @@ export default function Dashboard({ initialTransactions = [], budgetSettings, ca
 
     // Per-account spending
     const accountSpending = useMemo(() => {
+        const inflowByAccountId = new Map(contributionTotals.map((row) => [row.accountId, row.totalMonthlyInflow]));
         return accounts.map(acc => {
             const spent = initialTransactions
                 .filter(t => t.accountId === acc.id && t.amount > 0)
                 .reduce((sum, t) => sum + t.amount, 0);
-            return { account: acc, spent };
+            return { account: acc, spent, monthlyInflow: inflowByAccountId.get(acc.id) ?? 0 };
         });
-    }, [accounts, initialTransactions]);
+    }, [accounts, initialTransactions, contributionTotals]);
 
     const upcomingRecurring = useMemo(() => {
         const now = new Date();
@@ -105,6 +121,13 @@ export default function Dashboard({ initialTransactions = [], budgetSettings, ca
     useEffect(() => {
         setIsMounted(true);
     }, []);
+
+    useEffect(() => {
+        if (searchParams.get('quickAdd') !== '1') return;
+        setEditingTransaction(null);
+        setIsSheetOpen(true);
+        router.replace('/', { scroll: false });
+    }, [searchParams, router]);
 
     useMotionValueEvent(scrollY, "change", (latest) => {
         setShowStickyHeader(latest > 280);
@@ -138,10 +161,10 @@ export default function Dashboard({ initialTransactions = [], budgetSettings, ca
                 <motion.div
                     initial={{ y: -60, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
-                    className="fixed top-0 inset-x-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-200/60 pt-safe"
+                    className="fixed top-0 inset-x-0 z-50 bg-white/80 dark:bg-ios-dark-card/80 backdrop-blur-xl border-b border-gray-200/60 dark:border-white/10 pt-safe"
                 >
                     <div className="max-w-md mx-auto px-5 py-3 flex justify-between items-center">
-                        <span className="font-bold text-base text-gray-900">
+                        <span className="font-bold text-base text-ios-text dark:text-ios-dark-text">
                             {savedSoFar >= 0 ? "חסכנו" : "חריגה"} החודש
                         </span>
                         <span className={`font-bold tabular-nums ${savedSoFar >= 0 ? 'text-ios-green' : 'text-ios-red'}`}>
@@ -156,22 +179,11 @@ export default function Dashboard({ initialTransactions = [], budgetSettings, ca
                 <header className="mb-8">
                     <div className="flex justify-between items-start">
                         <div>
-                            <p className="text-base text-gray-500 mb-1">{getGreeting()}</p>
-                            <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
+                            <p className="text-base text-ios-subtle dark:text-ios-dark-subtle mb-1">{getGreeting()}</p>
+                            <h1 className="text-3xl font-bold text-ios-text dark:text-ios-dark-text tracking-tight">
                                 {monthName}
                             </h1>
                         </div>
-                        <motion.button
-                            data-testid="dashboard-open-quickadd"
-                            whileTap={{ scale: 0.92 }}
-                            onClick={() => {
-                                trigger(10);
-                                setIsSheetOpen(true);
-                            }}
-                            className="w-11 h-11 rounded-full bg-ios-blue flex items-center justify-center shadow-lg shadow-ios-blue/25"
-                        >
-                            <Plus className="w-5 h-5 text-white" strokeWidth={2.5} />
-                        </motion.button>
                     </div>
                 </header>
 
@@ -180,7 +192,7 @@ export default function Dashboard({ initialTransactions = [], budgetSettings, ca
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
-                    className="bg-white rounded-3xl p-6 shadow-card mb-4"
+                    className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-6 shadow-card mb-4"
                 >
                     <div className="flex items-center gap-6">
                         {/* Ring */}
@@ -204,7 +216,7 @@ export default function Dashboard({ initialTransactions = [], budgetSettings, ca
                                 />
                             </svg>
                             <div className="absolute inset-0 flex items-center justify-center">
-                                <span className="text-sm font-bold text-gray-900">
+                                <span className="text-sm font-bold text-ios-text dark:text-ios-dark-text">
                                     {Math.round(savingsRatio)}%
                                 </span>
                             </div>
@@ -213,19 +225,19 @@ export default function Dashboard({ initialTransactions = [], budgetSettings, ca
                         {/* Stats */}
                         <div className="flex-1 space-y-3">
                             <div>
-                                <p className="text-xs text-gray-400 font-medium">חסכנו החודש</p>
+                                <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle font-medium">חסכנו החודש</p>
                                 <p className={`text-2xl font-bold tracking-tight ${savedSoFar >= 0 ? 'text-ios-green' : 'text-ios-red'}`}>
                                     ₪{savedSoFar.toLocaleString()}
                                 </p>
                             </div>
                             <div className="flex gap-6">
                                 <div>
-                                    <p className="text-[11px] text-gray-400">הכנסה</p>
-                                    <p className="text-sm font-semibold text-gray-700">₪{income.toLocaleString()}</p>
+                                    <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">הכנסה</p>
+                                    <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text">₪{income.toLocaleString()}</p>
                                 </div>
                                 <div>
-                                    <p className="text-[11px] text-gray-400">הוצאות</p>
-                                    <p className="text-sm font-semibold text-gray-700">₪{totalSpent.toLocaleString()}</p>
+                                    <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">הוצאות</p>
+                                    <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text">₪{totalSpent.toLocaleString()}</p>
                                 </div>
                             </div>
                         </div>
@@ -234,7 +246,7 @@ export default function Dashboard({ initialTransactions = [], budgetSettings, ca
 
                 {/* Account Cards */}
                 <div className="flex gap-3 mb-6 overflow-x-auto no-scrollbar">
-                    {accountSpending.map(({ account, spent }, index) => {
+                    {accountSpending.map(({ account, spent, monthlyInflow }, index) => {
                         const colors = getAccountColor(account);
                         return (
                             <motion.div
@@ -247,8 +259,11 @@ export default function Dashboard({ initialTransactions = [], budgetSettings, ca
                                 <p className={`text-xs font-semibold ${colors.text} mb-2`}>
                                     {getAccountLabel(account)}
                                 </p>
-                                <p className="text-lg font-bold text-gray-900 tabular-nums">
+                                <p className="text-lg font-bold text-ios-text dark:text-ios-dark-text tabular-nums">
                                     ₪{spent.toLocaleString()}
+                                </p>
+                                <p className="text-[11px] mt-1 text-ios-subtle dark:text-ios-dark-subtle">
+                                    נכנס חודשי: ₪{Math.round(monthlyInflow).toLocaleString()}
                                 </p>
                             </motion.div>
                         );
@@ -260,26 +275,26 @@ export default function Dashboard({ initialTransactions = [], budgetSettings, ca
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.28 }}
-                    className="bg-white rounded-3xl p-5 shadow-card mb-6"
+                    className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 shadow-card mb-6"
                 >
                     <div className="flex items-center justify-between mb-3">
-                        <h2 className="text-lg font-bold text-gray-900">תשלומים קרובים</h2>
-                        <span className="text-xs font-semibold text-gray-400">30 ימים</span>
+                        <h2 className="text-lg font-bold text-ios-text dark:text-ios-dark-text">תשלומים קרובים</h2>
+                        <span className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle">30 ימים</span>
                     </div>
                     {upcomingRecurring.length === 0 ? (
-                        <p className="text-sm text-gray-400 py-2">אין חיובים קבועים בקרוב</p>
+                        <p className="text-sm text-ios-subtle dark:text-ios-dark-subtle py-2">אין חיובים קבועים בקרוב</p>
                     ) : (
                         <div className="space-y-2">
                             {upcomingRecurring.map(({ item, nextRun, isDue }) => (
-                                <div key={item.id} className="flex items-center justify-between bg-ios-gray-6 rounded-xl px-3.5 py-3">
+                                <div key={item.id} className="flex items-center justify-between bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-3.5 py-3">
                                     <div className="min-w-0">
-                                        <p className="text-sm font-semibold text-gray-900 truncate">{item.description || item.category}</p>
-                                        <p className="text-xs text-gray-400 truncate">
+                                        <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text truncate">{item.description || item.category}</p>
+                                        <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle truncate">
                                             {item.account.name} · {format(nextRun, 'd MMM', { locale: he })}
                                         </p>
                                     </div>
                                     <div className="text-left">
-                                        <p className="text-sm font-bold text-gray-900 tabular-nums">₪{item.amount.toLocaleString()}</p>
+                                        <p className="text-sm font-bold text-ios-text dark:text-ios-dark-text tabular-nums">₪{item.amount.toLocaleString()}</p>
                                         <p className={`text-[11px] font-semibold ${isDue ? 'text-ios-red' : 'text-ios-blue'}`}>
                                             {isDue ? 'לביצוע' : 'מתקרב'}
                                         </p>
@@ -296,9 +311,9 @@ export default function Dashboard({ initialTransactions = [], budgetSettings, ca
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.35 }}
-                        className="bg-white rounded-3xl p-5 shadow-card mb-6"
+                        className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 shadow-card mb-6"
                     >
-                        <h2 className="text-lg font-bold text-gray-900 mb-3">התפלגות הוצאות</h2>
+                        <h2 className="text-lg font-bold text-ios-text dark:text-ios-dark-text mb-3">התפלגות הוצאות</h2>
                         <PieChart data={chartData} />
                     </motion.div>
                 )}
@@ -309,6 +324,38 @@ export default function Dashboard({ initialTransactions = [], budgetSettings, ca
                     categories={categories}
                     onTransactionClick={handleTransactionClick}
                 />
+
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4 }}
+                    className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 shadow-card mt-3"
+                >
+                    <div className="flex items-center justify-between mb-3">
+                        <h2 className="text-lg font-bold text-ios-text dark:text-ios-dark-text">ריכוז הוצאות חוזרות</h2>
+                        <span className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle">{recurringTransactions.length} סה״כ</span>
+                    </div>
+                    {recurringTransactions.length === 0 ? (
+                        <p className="text-sm text-ios-subtle dark:text-ios-dark-subtle py-2">אין הוצאות חוזרות כרגע</p>
+                    ) : (
+                        <div className="space-y-2">
+                            {recurringTransactions.map((item) => {
+                                const nextRun = new Date(item.nextRun);
+                                return (
+                                    <div key={item.id} className="flex items-center justify-between bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-3.5 py-3">
+                                        <div className="min-w-0">
+                                            <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text truncate">{item.description || item.category}</p>
+                                            <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle truncate">
+                                                {item.account.name} · חיוב הבא {format(nextRun, 'd MMM yyyy', { locale: he })}
+                                            </p>
+                                        </div>
+                                        <p className="text-sm font-bold text-ios-text dark:text-ios-dark-text tabular-nums">₪{item.amount.toLocaleString()}</p>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </motion.div>
             </div>
 
             {/* Quick Add Sheet */}

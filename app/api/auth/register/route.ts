@@ -35,21 +35,7 @@ export async function POST(request: Request) {
         email,
         name: name || null,
         passwordHash,
-      },
-    });
-
-    const account = await prisma.account.create({
-      data: {
-        name: 'Main Account',
-        type: 'PRIVATE',
-      },
-    });
-
-    await prisma.accountMember.create({
-      data: {
-        userId: user.id,
-        accountId: account.id,
-        role: 'OWNER',
+        onboardingCompletedAt: null,
       },
     });
 

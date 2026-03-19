@@ -53,9 +53,9 @@ export default function SignUpPage() {
   };
 
   return (
-    <main className="min-h-screen bg-ios-bg flex items-center justify-center px-5">
-      <form onSubmit={onSubmit} className="w-full max-w-sm bg-white rounded-2xl shadow-card p-6 space-y-4">
-        <h1 className="text-2xl font-bold text-gray-900">יצירת חשבון חדש</h1>
+    <main className="min-h-screen bg-ios-bg dark:bg-ios-dark-bg flex items-center justify-center px-5 transition-colors">
+      <form onSubmit={onSubmit} className="w-full max-w-sm bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card p-6 space-y-4">
+        <h1 className="text-2xl font-bold text-ios-text dark:text-ios-dark-text">יצירת חשבון חדש</h1>
         <div className="space-y-2">
           <button type="button" onClick={() => signUpWithProvider('google')} className="w-full py-2.5 rounded-xl bg-ios-gray-6 text-sm font-medium">המשך עם Google</button>
         </div>
@@ -102,7 +102,7 @@ export default function SignUpPage() {
         >
           {loading ? 'יוצר...' : 'צור חשבון'}
         </button>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-ios-subtle dark:text-ios-dark-subtle">
           כבר יש לך חשבון?{' '}
           <Link
             href={`/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`}
