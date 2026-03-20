@@ -40,6 +40,26 @@ function endOfMonth(year: number, month: number) {
   return new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999));
 }
 
+function startOfUtcDay(date: Date) {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 0, 0, 0, 0));
+}
+
+function resolveNextRecurringRun(startDate: Date, dayOfMonth: number, monthPolicy: RecurringMonthPolicy, fromDate = new Date()) {
+  const threshold = startOfUtcDay(fromDate);
+  const firstAllowed = startOfUtcDay(startDate);
+  const baseYear = threshold.getUTCFullYear();
+  const baseMonth = threshold.getUTCMonth();
+  for (let offset = 0; offset < 24; offset += 1) {
+    const candidate = resolveMonthlyDate(baseYear, baseMonth + offset, dayOfMonth, monthPolicy);
+    if (!candidate) continue;
+    if (candidate >= threshold && candidate >= firstAllowed) {
+      return candidate;
+    }
+  }
+
+  return new Date(Date.UTC(baseYear, baseMonth + 1, Math.min(dayOfMonth, 28)));
+}
+
 function isSameDay(a: Date, b: Date) {
   return (
     a.getUTCFullYear() === b.getUTCFullYear() &&
@@ -93,9 +113,11 @@ async function assertUserHasAccount(userId: string, accountId: string) {
 }
 
 function refreshAllViews() {
-  revalidatePath('/');
+  revalidatePath('/', 'layout');
+  revalidatePath('/', 'page');
   revalidatePath('/history');
   revalidatePath('/settings');
+  revalidatePath('/insights');
 }
 
 async function logActionMetric(eventName: string, userId: string, payload: Record<string, unknown> = {}) {
@@ -1076,6 +1098,58 @@ export async function deleteRecurringTransaction(id: string) {
   }
 }
 
+export async function updateRecurringTransaction(id: string, formData: FormData) {
+  try {
+    const userId = await requireUserId();
+    const recurring = await prisma.recurringTransaction.findUnique({
+      where: { id },
+      include: { account: { include: { members: true } } },
+    });
+    if (!recurring) return { success: false, error: 'Not found' };
+    if (!recurring.account.members.some((m) => m.userId === userId)) return { success: false, error: 'Forbidden' };
+
+    const amount = parseFloat(String(formData.get('amount') ?? '0'));
+    const description = String(formData.get('description') ?? '').trim();
+    const rawDate = String(formData.get('date') ?? '');
+    const date = parseDateInputToUtc(rawDate);
+    const accountId = String(formData.get('accountId') ?? '').trim();
+    const category = String(formData.get('category') ?? '').trim();
+    const monthPolicy = (formData.get('monthPolicy') as RecurringMonthPolicy | null) ?? 'ROLL_TO_LAST_DAY';
+    if (!date || !accountId || !category || !Number.isFinite(amount) || amount <= 0) {
+      return { success: false, error: 'Missing required fields' };
+    }
+
+    await assertUserHasAccount(userId, accountId);
+    const dayOfMonth = date.getUTCDate();
+    const nextRun = resolveNextRecurringRun(date, dayOfMonth, monthPolicy);
+
+    await prisma.recurringTransaction.update({
+      where: { id },
+      data: {
+        amount,
+        description: description || null,
+        category,
+        accountId,
+        startDate: date,
+        dayOfMonth,
+        monthPolicy,
+        nextRun,
+        active: true,
+      },
+    });
+
+    await logActionMetric('recurring_transaction_updated', userId, {
+      recurringTransactionId: id,
+      accountId,
+      category,
+    });
+    refreshAllViews();
+    return { success: true };
+  } catch {
+    return { success: false, error: 'Failed to update recurring transaction' };
+  }
+}
+
 export async function getMonthlyStats(year: number, month: number) {
   try {
     const userId = await requireUserId();
@@ -1083,6 +1157,18 @@ export async function getMonthlyStats(year: number, month: number) {
     if (accountIds.length === 0) {
       return { total: 0, accountTotals: [], transactions: [] };
     }
+
+    const userAccounts = await prisma.account.findMany({
+      where: {
+        id: { in: accountIds },
+        isArchived: false,
+      },
+      select: {
+        id: true,
+        name: true,
+      },
+      orderBy: { name: 'asc' },
+    });
 
     const from = startOfMonth(year, month);
     const to = endOfMonth(year, month);
@@ -1146,6 +1232,14 @@ export async function getMonthlyStats(year: number, month: number) {
     );
 
     const totalsMap = new Map<string, { accountId: string; accountName: string; total: number }>();
+    userAccounts.forEach((account) => {
+      totalsMap.set(account.id, {
+        accountId: account.id,
+        accountName: account.name,
+        total: 0,
+      });
+    });
+
     all.forEach((t) => {
       const current = totalsMap.get(t.accountId) ?? {
         accountId: t.accountId,
@@ -1158,7 +1252,10 @@ export async function getMonthlyStats(year: number, month: number) {
 
     return {
       total: all.reduce((sum, row) => sum + row.amount, 0),
-      accountTotals: Array.from(totalsMap.values()).sort((a, b) => b.total - a.total),
+      accountTotals: Array.from(totalsMap.values()).sort((a, b) => {
+        if (b.total !== a.total) return b.total - a.total;
+        return a.accountName.localeCompare(b.accountName, 'he');
+      }),
       transactions: all,
     };
   } catch {

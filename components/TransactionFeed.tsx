@@ -4,36 +4,31 @@ import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft } from 'lucide-react';
 import { formatIlsAmount, formatUtcDateLabel, getUtcDateKey } from '@/lib/formatters';
-import type { TransactionListItem, Category } from '@/lib/types';
+import type { TransactionListItem, Category, Account } from '@/lib/types';
 
 interface TransactionFeedProps {
     transactions: TransactionListItem[];
+    accounts?: Account[];
     categories?: Category[];
     onTransactionClick?: (transaction: TransactionListItem) => void;
 }
 
-export default function TransactionFeed({ transactions = [], categories = [], onTransactionClick }: TransactionFeedProps) {
+export default function TransactionFeed({ transactions = [], accounts = [], categories = [], onTransactionClick }: TransactionFeedProps) {
     const [filter, setFilter] = useState('All');
 
     const accountFilters = useMemo(() => {
-        const map = new Map<string, { id: string; label: string; isShared: boolean }>();
-        transactions.forEach((t) => {
-            if (!map.has(t.accountId)) {
-                map.set(t.accountId, {
-                    id: t.accountId,
-                    label: t.account?.name || 'חשבון',
-                    isShared: t.account?.type === 'SHARED',
-                });
-            }
-        });
-
-        return Array.from(map.values()).sort((a, b) => {
+        return accounts.map((account) => ({
+            id: account.id,
+            label: account.name || 'חשבון',
+            isShared: account.type === 'SHARED',
+        })).sort((a, b) => {
             if (a.isShared === b.isShared) return a.label.localeCompare(b.label, 'he');
             return a.isShared ? -1 : 1;
         });
-    }, [transactions]);
+    }, [accounts]);
 
     const filters = [{ id: 'All', label: 'הכל' }, ...accountFilters];
+    const activeFilterLabel = filters.find((f) => f.id === filter)?.label || 'החשבון שנבחר';
 
     const filteredTransactions = transactions.filter((t) => {
         if (filter === 'All') return true;
@@ -94,7 +89,9 @@ export default function TransactionFeed({ transactions = [], categories = [], on
                         <div className="w-14 h-14 bg-gray-100 dark:bg-ios-dark-fill rounded-full flex items-center justify-center mb-3">
                             <span className="text-2xl opacity-60">💸</span>
                         </div>
-                        <p className="text-sm font-medium">אין הוצאות להצגה</p>
+                        <p className="text-sm font-medium">
+                            {filter === 'All' ? 'לא נוספו עדיין הוצאות לחשבונות' : `לא נוספו עדיין הוצאות לחשבון ${activeFilterLabel}`}
+                        </p>
                     </motion.div>
                 ) : (
                     <div className="space-y-5">
