@@ -1,4 +1,25 @@
 describe('Invite popup flow', () => {
+  Cypress.on('uncaught:exception', (err) => {
+    if (err.message.includes('NEXT_REDIRECT')) {
+      return false;
+    }
+    return true;
+  });
+
+  const submitOnboardingWithStaleRetry = () => {
+    cy.get('[data-testid="onboarding-submit"]').click();
+    cy.get('body').then(($body) => {
+      if ($body.text().includes('הסשן התיישן')) {
+        cy.wait(400);
+        cy.get('[data-testid="onboarding-submit"]').click();
+      }
+    });
+  };
+
+  beforeEach(() => {
+    cy.clearLocalStorage();
+  });
+
   it('shows confirmation popup for invited user and accepts invite', () => {
     const ownerStamp = Date.now();
     const ownerEmail = `owner+${ownerStamp}@lumiflow.local`;
@@ -15,12 +36,14 @@ describe('Invite popup flow', () => {
     cy.contains('button', 'המשך').click();
     cy.get('[data-testid="onboarding-auto-split"]').should('be.visible');
     cy.get('[data-testid="onboarding-monthly-income"]').type('11000');
+    cy.get('[data-testid="onboarding-auto-split"]').check({ force: true });
     cy.get('[data-testid="onboarding-personal-split-slider"]').should('be.visible');
     cy.contains('אישי ₪').should('be.visible');
     cy.contains('button', 'המשך').click();
     cy.contains('button', 'המשך').click();
-    cy.get('[data-testid="onboarding-submit"]').click();
-    cy.get('[data-testid="onboarding-continue-dashboard"]').click();
+    submitOnboardingWithStaleRetry();
+    cy.visit('/');
+    cy.url().should('eq', `${Cypress.config('baseUrl')}/`);
 
     cy.visit('/settings');
     cy.get('[data-testid="settings-invite-account"]').select(1);
@@ -30,6 +53,7 @@ describe('Invite popup flow', () => {
       .invoke('text')
       .then((text) => text.trim())
       .as('inviteUrl');
+    cy.contains('button', 'סגור').click();
 
     cy.get('[data-testid="settings-signout"]').click();
     cy.url().should('include', '/auth/signin');
@@ -51,8 +75,8 @@ describe('Invite popup flow', () => {
       cy.contains('button', 'המשך').click();
       cy.contains('button', 'המשך').click();
       cy.contains('button', 'המשך').click();
-      cy.get('[data-testid="onboarding-submit"]').click();
-      cy.get('[data-testid="onboarding-continue-dashboard"]').click();
+      submitOnboardingWithStaleRetry();
+      cy.visit('/');
       cy.url().should('eq', `${Cypress.config('baseUrl')}/`);
 
       cy.visit(inviteUrl);

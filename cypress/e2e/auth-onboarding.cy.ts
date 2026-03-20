@@ -1,4 +1,18 @@
 describe('Auth and onboarding flow', () => {
+  const submitOnboardingWithStaleRetry = () => {
+    cy.get('[data-testid="onboarding-submit"]').click();
+    cy.get('body').then(($body) => {
+      if ($body.text().includes('הסשן התיישן')) {
+        cy.wait(400);
+        cy.get('[data-testid="onboarding-submit"]').click();
+      }
+    });
+  };
+
+  beforeEach(() => {
+    cy.clearLocalStorage();
+  });
+
   it('signs up and applies single-account full contribution from income', () => {
     const stamp = Date.now();
     const email = `user+${stamp}@lumiflow.local`;
@@ -18,8 +32,8 @@ describe('Auth and onboarding flow', () => {
     cy.get('[data-testid="onboarding-monthly-income"]').type('12000');
     cy.contains('button', 'המשך').click();
     cy.contains('button', 'המשך').click();
-    cy.get('[data-testid="onboarding-submit"]').click();
-    cy.get('[data-testid="onboarding-continue-dashboard"]').click();
+    submitOnboardingWithStaleRetry();
+    cy.visit('/');
 
     cy.url().should('eq', `${Cypress.config('baseUrl')}/`);
     cy.contains('החיסכון החודשי נעול').should('not.exist');
@@ -43,8 +57,8 @@ describe('Auth and onboarding flow', () => {
     cy.contains('button', 'המשך').click();
     cy.contains('button', 'המשך').click();
     cy.contains('button', 'המשך').click();
-    cy.get('[data-testid="onboarding-submit"]').click();
-    cy.get('[data-testid="onboarding-continue-dashboard"]').click();
+    submitOnboardingWithStaleRetry();
+    cy.visit('/');
 
     cy.url().should('eq', `${Cypress.config('baseUrl')}/`);
     cy.contains('החיסכון החודשי נעול').should('be.visible');

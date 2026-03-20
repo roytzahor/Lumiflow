@@ -23,10 +23,14 @@ export default function PendingInviteGate() {
     if (pathname?.startsWith('/auth') || pathname === '/onboarding') return;
     if (hidden) return;
 
-    getPendingAccountInvites().then((res) => {
-      if (!res.success || !res.invites?.length) return;
-      setInvite(res.invites[0]);
-    });
+    getPendingAccountInvites()
+      .then((res) => {
+        if (!res || !res.success || !res.invites?.length) return;
+        setInvite(res.invites[0]);
+      })
+      .catch(() => {
+        // Ignore transient invite fetch failures during auth/session transitions.
+      });
   }, [pathname, hidden]);
 
   if (!invite || hidden) return null;

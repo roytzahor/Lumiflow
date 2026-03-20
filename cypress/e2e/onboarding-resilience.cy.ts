@@ -5,10 +5,15 @@ function completePersonalOnlyOnboarding() {
   cy.contains('button', 'המשך').click();
   cy.contains('button', 'המשך').click();
   cy.get('[data-testid="onboarding-submit"]').click();
-  cy.get('[data-testid="onboarding-continue-dashboard"]').click();
+  cy.contains('מוכן! החשבונות נוצרו בהצלחה').should('be.visible');
+  cy.visit('/');
 }
 
 describe('Onboarding resilience', () => {
+  beforeEach(() => {
+    cy.clearLocalStorage();
+  });
+
   it('shows split controls only when additional account is selected', () => {
     const stamp = Date.now();
     const email = `split-visibility+${stamp}@lumiflow.local`;
@@ -31,6 +36,7 @@ describe('Onboarding resilience', () => {
     cy.get('[data-testid="onboarding-auto-split"]').should('be.visible');
     cy.get('[data-testid="onboarding-personal-split-slider"]').should('not.exist');
     cy.get('[data-testid="onboarding-monthly-income"]').type('9000');
+    cy.get('[data-testid="onboarding-auto-split"]').check({ force: true });
     cy.get('[data-testid="onboarding-personal-split-slider"]').should('be.visible');
     cy.contains('אישי ₪').should('be.visible');
     cy.get('[data-testid="onboarding-auto-split"]').uncheck();
@@ -58,6 +64,7 @@ describe('Onboarding resilience', () => {
     cy.reload();
 
     cy.contains('מצאנו טיוטת אשף קודמת').should('be.visible');
+    cy.contains('button', 'המשך').click();
     cy.get('[data-testid="onboarding-shared-name"]').should('have.value', 'בית חכם');
   });
 

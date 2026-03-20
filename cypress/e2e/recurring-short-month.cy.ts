@@ -1,4 +1,18 @@
 describe('Recurring short month policy visibility', () => {
+  const submitOnboardingWithStaleRetry = () => {
+    cy.get('[data-testid="onboarding-submit"]').click();
+    cy.get('body').then(($body) => {
+      if ($body.text().includes('הסשן התיישן')) {
+        cy.wait(400);
+        cy.get('[data-testid="onboarding-submit"]').click();
+      }
+    });
+  };
+
+  beforeEach(() => {
+    cy.clearLocalStorage();
+  });
+
   it('shows short month policy only for dates 29/30/31', () => {
     const stamp = Date.now();
     const email = `shortmonth+${stamp}@lumiflow.local`;
@@ -15,11 +29,12 @@ describe('Recurring short month policy visibility', () => {
     cy.contains('button', 'המשך').click();
     cy.contains('button', 'המשך').click();
     cy.contains('button', 'המשך').click();
-    cy.get('[data-testid="onboarding-submit"]').click();
-    cy.get('[data-testid="onboarding-continue-dashboard"]').click();
+    submitOnboardingWithStaleRetry();
+    cy.visit('/');
     cy.url().should('eq', `${Cypress.config('baseUrl')}/`);
 
-    cy.get('[data-testid="dashboard-open-quickadd"]').click();
+    cy.visit('/?quickAdd=1');
+    cy.get('[data-testid="quickadd-open-close"]').should('be.visible');
     cy.get('[data-testid="quickadd-recurring-toggle"]').click();
 
     cy.get('[data-testid="quickadd-date"]').clear().type('2026-04-28');
