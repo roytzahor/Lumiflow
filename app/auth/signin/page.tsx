@@ -31,7 +31,7 @@ export default function SignInPage() {
       setError('אימייל או סיסמה לא נכונים');
       return;
     }
-    window.location.href = res.url ?? '/';
+    window.location.href = callbackUrl;
   };
 
   const inputClassName =

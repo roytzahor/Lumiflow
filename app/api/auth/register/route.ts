@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { NextResponse } from 'next/server';
 
@@ -30,35 +31,53 @@ export async function POST(request: Request) {
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const user = await prisma.user.create({
-      data: {
-        email,
-        name: name || null,
-        passwordHash,
-        onboardingCompletedAt: null,
-      },
-    });
+    await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          email,
+          name: name || null,
+          passwordHash,
+          onboardingCompletedAt: null,
+          themePreference: 'SYSTEM',
+          isPremiumMock: false,
+        },
+      });
 
-    await prisma.budgetSettings.create({
-      data: {
-        userId: user.id,
-        monthlyIncome: 0,
-        needsPercent: 50,
-        wantsPercent: 30,
-        savingsPercent: 20,
-      },
-    });
+      await tx.budgetSettings.create({
+        data: {
+          userId: user.id,
+          monthlyIncome: 0,
+          needsPercent: 50,
+          wantsPercent: 30,
+          savingsPercent: 20,
+        },
+      });
 
-    await prisma.category.createMany({
-      data: DEFAULT_CATEGORIES.map((category) => ({
-        ...category,
-        userId: user.id,
-        isCustom: false,
-      })),
+      await tx.category.createMany({
+        data: DEFAULT_CATEGORIES.map((category) => ({
+          ...category,
+          userId: user.id,
+          isCustom: false,
+        })),
+      });
     });
 
     return NextResponse.json({ success: true });
-  } catch {
+  } catch (error) {
+    console.error('Registration failed', error);
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2002') {
+        return NextResponse.json({ error: 'User already exists' }, { status: 409 });
+      }
+      if (error.code === 'P2021' || error.code === 'P2022') {
+        return NextResponse.json(
+          { error: 'Database schema is outdated. Run prisma migrate deploy on production DB.' },
+          { status: 500 }
+        );
+      }
+    }
+
     return NextResponse.json({ error: 'Registration failed' }, { status: 500 });
   }
 }

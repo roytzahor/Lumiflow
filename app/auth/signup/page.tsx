@@ -44,7 +44,7 @@ export default function SignUpPage() {
       return;
     }
 
-    window.location.href = signInResult.url ?? '/';
+    window.location.href = callbackUrl;
   };
 
   const inputClassName =
