@@ -12,7 +12,6 @@ type OnboardingAccountDraft = {
   id: string;
   type: AccountType;
   name: string;
-  income: string;
 };
 
 type OnboardingDraft = {
@@ -37,7 +36,6 @@ function createDraftAccount(type: AccountType = 'PRIVATE', partial?: Partial<Onb
     id: partial?.id ?? `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     type,
     name: partial?.name ?? (type === 'PRIVATE' ? 'החשבון האישי שלי' : 'חשבון משותף'),
-    income: partial?.income ?? '',
   };
 }
 
@@ -95,7 +93,6 @@ export default function OnboardingClient() {
           .map((account) => createDraftAccount(account.type, {
             id: typeof account.id === 'string' && account.id ? account.id : undefined,
             name: typeof account.name === 'string' && account.name.trim() ? account.name.trim() : undefined,
-            income: typeof account.income === 'string' ? account.income : '',
           }))
         : (() => {
             const migratedAccounts: OnboardingAccountDraft[] = [];
@@ -242,11 +239,6 @@ export default function OnboardingClient() {
           setError(`יש להזין שם עבור ${accountLabel}.`);
           return;
         }
-        const incomeInput = account.income.trim();
-        if (incomeInput && parseOptionalNonNegativeNumber(incomeInput) == null) {
-          setError(`יש להזין הכנסה תקינה עבור ${accountLabel}.`);
-          return;
-        }
         const duplicateKey = `${account.type}:${account.name.trim().toLowerCase()}`;
         if (duplicateKeys.has(duplicateKey)) {
           setError('נמצאו חשבונות כפולים עם אותו סוג ושם. נא לעדכן לפני המשך.');
@@ -286,7 +278,6 @@ export default function OnboardingClient() {
         draftId: account.id,
         name: account.name.trim(),
         type: account.type,
-        income: parseOptionalNonNegativeNumber(account.income),
       })),
       inviteAccountDraftId: draft.inviteAccountDraftId,
       invitedEmail: draft.invitedEmail,
@@ -453,27 +444,6 @@ export default function OnboardingClient() {
                       }))}
                       className="w-full bg-white dark:bg-ios-dark-card rounded-xl px-3 py-2.5 text-sm text-ios-text dark:text-ios-dark-text"
                       placeholder={account.type === 'PRIVATE' ? 'למשל: חשבון אישי' : 'למשל: חשבון בית'}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle">הכנסה חודשית לחשבון</label>
-                    <input
-                      data-testid="onboarding-account-income"
-                      value={account.income}
-                      onChange={(e) => setDraft((prev) => ({
-                        ...prev,
-                        template: 'custom',
-                        accounts: prev.accounts.map((entry) => (
-                          entry.id === account.id
-                            ? { ...entry, income: e.target.value }
-                            : entry
-                        )),
-                      }))}
-                      className="w-full bg-white dark:bg-ios-dark-card rounded-xl px-3 py-2.5 text-sm text-ios-text dark:text-ios-dark-text"
-                      placeholder="0"
-                      type="number"
-                      min={0}
-                      dir="ltr"
                     />
                   </div>
                 </div>
@@ -648,9 +618,6 @@ export default function OnboardingClient() {
               {draft.accounts.map((account) => (
                 <p key={account.id} className="text-ios-subtle dark:text-ios-dark-subtle">
                   {account.type === 'PRIVATE' ? 'פרטי' : 'משותף'}: <span className="font-semibold text-ios-text dark:text-ios-dark-text">{account.name}</span>
-                  {' '}· הכנסה: <span className="font-semibold text-ios-text dark:text-ios-dark-text">
-                    {parseOptionalNonNegativeNumber(account.income) != null ? `₪${Math.round(parseOptionalNonNegativeNumber(account.income) ?? 0).toLocaleString('he-IL')}` : 'לא הוגדרה'}
-                  </span>
                 </p>
               ))}
               <p className="text-ios-subtle dark:text-ios-dark-subtle">

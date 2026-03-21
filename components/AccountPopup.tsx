@@ -8,7 +8,6 @@ import type { Account, AccountType } from '@/lib/types';
 type AccountFormValues = {
   name: string;
   type: AccountType;
-  income: number;
   monthlyContribution: number;
 };
 
@@ -27,7 +26,6 @@ interface AccountPopupProps {
 const INITIAL_VALUES: AccountFormValues = {
   name: '',
   type: 'PRIVATE',
-  income: 0,
   monthlyContribution: 0,
 };
 
@@ -51,7 +49,6 @@ export default function AccountPopup({
     setValues(account ? {
       name: account.name,
       type: account.type,
-      income: Number.isFinite(account.income) ? account.income : 0,
       monthlyContribution: Number.isFinite(initialMonthlyContribution) ? initialMonthlyContribution : 0,
     } : INITIAL_VALUES);
     setShowDeleteConfirm(false);
@@ -72,14 +69,9 @@ export default function AccountPopup({
 
   const handleSubmit = async () => {
     const normalizedName = values.name.trim();
-    const normalizedIncome = Number(values.income);
     const normalizedContribution = Number(values.monthlyContribution);
     if (!normalizedName) {
       setError('יש להזין שם חשבון');
-      return;
-    }
-    if (!Number.isFinite(normalizedIncome) || normalizedIncome < 0) {
-      setError('יש להזין הכנסה חודשית תקינה (0 ומעלה)');
       return;
     }
     if (!Number.isFinite(normalizedContribution) || normalizedContribution < 0) {
@@ -90,7 +82,6 @@ export default function AccountPopup({
     await onSubmit({
       name: normalizedName,
       type: values.type,
-      income: normalizedIncome,
       monthlyContribution: normalizedContribution,
     });
   };
@@ -161,19 +152,6 @@ export default function AccountPopup({
                 </label>
 
                 <label className="block space-y-1">
-                  <span className="text-xs text-ios-subtle dark:text-ios-dark-subtle">הכנסה חודשית לחשבון (₪)</span>
-                  <input
-                    type="number"
-                    min={0}
-                    inputMode="decimal"
-                    value={values.income}
-                    onChange={(e) => setValues((prev) => ({ ...prev, income: Number(e.target.value) }))}
-                    className="w-full bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-3 py-2.5 text-sm text-ios-text dark:text-ios-dark-text"
-                    dir="ltr"
-                  />
-                </label>
-
-                <label className="block space-y-1">
                   <span className="text-xs text-ios-subtle dark:text-ios-dark-subtle">תרומה חודשית לחשבון (₪)</span>
                   <input
                     type="number"
@@ -184,6 +162,9 @@ export default function AccountPopup({
                     className="w-full bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-3 py-2.5 text-sm text-ios-text dark:text-ios-dark-text"
                     dir="ltr"
                   />
+                  <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">
+                    ההכנסה החודשית של החשבון מחושבת אוטומטית מסכום התרומות של כל חברי החשבון.
+                  </p>
                 </label>
               </div>
 

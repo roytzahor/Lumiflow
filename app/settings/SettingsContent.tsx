@@ -27,6 +27,8 @@ import AccountPopup from '@/components/AccountPopup';
 import ProfileEditSheet from '@/components/ProfileEditSheet';
 import AccountShareSheet from '@/components/AccountShareSheet';
 
+type SettingsAccount = Account & { income?: number };
+
 const DEFAULT_BUDGET: BudgetSettings = {
   id: '',
   userId: '',
@@ -49,7 +51,7 @@ function mapThemePreferenceToClientTheme(theme: 'LIGHT' | 'DARK' | 'SYSTEM'): 'l
 interface SettingsContentProps {
   initialBudget: BudgetSettings | null;
   initialCategories: Category[];
-  initialAccounts: Account[];
+  initialAccounts: SettingsAccount[];
   initialContributionPlans: Array<{ accountId: string; monthlyAmount: number }>;
   currentUser: { id: string; name: string | null; email: string; themePreference: 'LIGHT' | 'DARK' | 'SYSTEM' } | null;
 }
@@ -67,7 +69,7 @@ export default function SettingsContent({
 
   const [budget, setBudget] = useState<BudgetSettings>(initialBudget ?? DEFAULT_BUDGET);
   const [categories, setCategories] = useState<Category[]>(initialCategories);
-  const [accounts, setAccounts] = useState<Account[]>(initialAccounts);
+  const [accounts, setAccounts] = useState<SettingsAccount[]>(initialAccounts);
   const [newCatName, setNewCatName] = useState('');
   const [newCatEmojiInput, setNewCatEmojiInput] = useState('');
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
@@ -75,7 +77,7 @@ export default function SettingsContent({
   const [editingCategoryEmojiInput, setEditingCategoryEmojiInput] = useState('✨');
   const [isAccountPopupOpen, setIsAccountPopupOpen] = useState(false);
   const [accountPopupMode, setAccountPopupMode] = useState<'create' | 'edit'>('create');
-  const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
+  const [selectedAccount, setSelectedAccount] = useState<SettingsAccount | null>(null);
   const [accountSaving, setAccountSaving] = useState(false);
   const [accountDeleting, setAccountDeleting] = useState(false);
   const [inviteUrl, setInviteUrl] = useState('');
@@ -162,7 +164,7 @@ export default function SettingsContent({
     setIsAccountPopupOpen(true);
   };
 
-  const openEditAccountPopup = (account: Account) => {
+  const openEditAccountPopup = (account: SettingsAccount) => {
     setAccountPopupMode('edit');
     setSelectedAccount(account);
     setIsAccountPopupOpen(true);
@@ -174,7 +176,7 @@ export default function SettingsContent({
     setSelectedAccount(null);
   };
 
-  const handleAccountSubmit = async (payload: { name: string; type: 'PRIVATE' | 'SHARED'; income: number; monthlyContribution: number }) => {
+  const handleAccountSubmit = async (payload: { name: string; type: 'PRIVATE' | 'SHARED'; monthlyContribution: number }) => {
     setAccountSaving(true);
     const res = accountPopupMode === 'create'
       ? await createAccount(payload)
@@ -241,7 +243,7 @@ export default function SettingsContent({
     }
   };
 
-  const handleAccountDeleteFromCard = async (account: Account) => {
+  const handleAccountDeleteFromCard = async (account: SettingsAccount) => {
     if (!window.confirm(`למחוק את החשבון "${account.name}"? החשבון יועבר לארכיון.`)) return;
     setAccountDeleting(true);
     const res = await archiveAccount(account.id);
@@ -254,7 +256,7 @@ export default function SettingsContent({
     }
   };
 
-  const openAccountShareSheet = (account: Account) => {
+  const openAccountShareSheet = (account: SettingsAccount) => {
     setShareSheetAccount({ id: account.id, name: account.name });
     setShareSheetMethod('link');
     setShareSheetEmail('');

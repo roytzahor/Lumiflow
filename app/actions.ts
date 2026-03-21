@@ -405,24 +405,25 @@ export async function updateAccountNames(updates: { id: string; name: string }[]
   }
 }
 
-function normalizeAccountIncome(income: number | null | undefined) {
-  if (income == null) return 0;
-  if (!Number.isFinite(income) || income < 0) return null;
-  return Number(income);
+async function recalculateAccountIncome(accountId: string) {
+  const aggregate = await prisma.accountContributionPlan.aggregate({
+    where: { accountId },
+    _sum: { monthlyAmount: true },
+  });
+  await prisma.account.update({
+    where: { id: accountId },
+    data: { income: aggregate._sum.monthlyAmount ?? 0 },
+  });
 }
 
-export async function createAccount(input: { name: string; type: AccountType; income?: number | null; color?: string; icon?: string }) {
+export async function createAccount(input: { name: string; type: AccountType; color?: string; icon?: string }) {
   try {
     const userId = await requireUserId();
-    const normalizedIncome = normalizeAccountIncome(input.income);
-    if (normalizedIncome == null) {
-      return { success: false, error: 'Monthly income must be a valid non-negative number' };
-    }
     const account = await prisma.account.create({
       data: {
         name: input.name.trim() || 'New account',
         type: input.type,
-        income: normalizedIncome,
+        income: 0,
         color: input.color ?? null,
         icon: input.icon ?? null,
       },
@@ -443,21 +444,14 @@ export async function createAccount(input: { name: string; type: AccountType; in
   }
 }
 
-export async function updateAccount(accountId: string, input: { name?: string; type?: AccountType; income?: number | null; color?: string; icon?: string }) {
+export async function updateAccount(accountId: string, input: { name?: string; type?: AccountType; color?: string; icon?: string }) {
   try {
     const userId = await requireUserId();
-    const member = await assertUserHasAccount(userId, accountId);
-    if (member.role !== 'OWNER') return { success: false, error: 'Only owner can edit this account' };
-    const shouldUpdateIncome = input.income !== undefined;
-    const normalizedIncome = shouldUpdateIncome ? normalizeAccountIncome(input.income) : undefined;
-    if (shouldUpdateIncome && normalizedIncome == null) {
-      return { success: false, error: 'Monthly income must be a valid non-negative number' };
-    }
+    await assertUserHasAccount(userId, accountId);
 
     const updateData: {
       name?: string;
       type?: AccountType;
-      income?: number;
       color?: string;
       icon?: string;
     } = {
@@ -466,9 +460,6 @@ export async function updateAccount(accountId: string, input: { name?: string; t
       color: input.color,
       icon: input.icon,
     };
-    if (shouldUpdateIncome && normalizedIncome != null) {
-      updateData.income = normalizedIncome;
-    }
 
     await prisma.account.update({
       where: { id: accountId },
@@ -560,6 +551,7 @@ export async function upsertContributionPlan(input: { accountId: string; monthly
         monthlyAmount: input.monthlyAmount,
       },
     });
+    await recalculateAccountIncome(input.accountId);
 
     revalidatePath('/');
     revalidatePath('/settings');
@@ -1493,7 +1485,6 @@ export async function completeOnboarding(input: {
     draftId?: string;
     name: string;
     type: AccountType;
-    income?: number | null;
   }>;
   inviteAccountDraftId?: string | null;
   invitedEmail?: string;
@@ -1512,14 +1503,10 @@ export async function completeOnboarding(input: {
       ? input.accounts
         .filter((account) => account && (account.type === 'PRIVATE' || account.type === 'SHARED'))
         .map((account) => {
-          const normalizedIncome = account.income != null && Number.isFinite(account.income) && account.income >= 0
-            ? Number(account.income)
-            : 0;
           return {
             draftId: typeof account.draftId === 'string' && account.draftId ? account.draftId : null,
             name: account.name.trim(),
             type: account.type as AccountType,
-            income: normalizedIncome,
           };
         })
         .filter((account) => account.name.length > 0)
@@ -1579,13 +1566,8 @@ export async function completeOnboarding(input: {
               data: {
                 name: accountInput.name,
                 type: accountInput.type,
-                income: accountInput.income,
+                income: 0,
               },
-            });
-          } else if (account.income !== accountInput.income) {
-            account = await tx.account.update({
-              where: { id: account.id },
-              data: { income: accountInput.income },
             });
           }
 
@@ -1786,6 +1768,8 @@ export async function completeOnboarding(input: {
         code: 'INVALID_INPUT' as const,
       };
     }
+
+    await Promise.all(result.createdAccounts.map((account) => recalculateAccountIncome(account.id)));
 
     refreshAllViews();
     return {

@@ -20,11 +20,18 @@ export async function redirectToOnboardingIfNeeded() {
   const session = await getServerSession(authOptions);
   if (!session?.user) return;
 
-  const userId = await resolveOrRestoreSessionUserId({
-    userId: session.user.id,
-    email: session.user.email,
-    name: session.user.name,
-  });
+  let userId: string;
+  try {
+    userId = await resolveOrRestoreSessionUserId({
+      userId: session.user.id,
+      email: session.user.email,
+      name: session.user.name,
+    });
+  } catch {
+    // During fresh sign-in, session identity can be briefly stale.
+    // Avoid flashing route-level error UI; next request resolves normally.
+    return;
+  }
 
   const onboarded = await isUserOnboarded(userId);
   if (!onboarded) redirect('/onboarding');
@@ -34,11 +41,17 @@ export async function redirectToHomeIfAlreadyOnboarded() {
   const session = await getServerSession(authOptions);
   if (!session?.user) return;
 
-  const userId = await resolveOrRestoreSessionUserId({
-    userId: session.user.id,
-    email: session.user.email,
-    name: session.user.name,
-  });
+  let userId: string;
+  try {
+    userId = await resolveOrRestoreSessionUserId({
+      userId: session.user.id,
+      email: session.user.email,
+      name: session.user.name,
+    });
+  } catch {
+    // Keep onboarding page rendering instead of tripping error boundaries.
+    return;
+  }
 
   const onboarded = await isUserOnboarded(userId);
   if (onboarded) redirect('/');

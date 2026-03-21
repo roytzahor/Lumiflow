@@ -3,18 +3,7 @@ import bcrypt from 'bcryptjs';
 import type { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 
-const normalizeEnv = (value?: string) => {
-  if (!value) return undefined;
-  const trimmed = value.trim();
-  const unquoted =
-    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
-    (trimmed.startsWith("'") && trimmed.endsWith("'"))
-      ? trimmed.slice(1, -1).trim()
-      : trimmed;
-  return unquoted.length > 0 ? unquoted : undefined;
-};
-
-const authSecret = normalizeEnv(process.env.NEXTAUTH_SECRET) ?? normalizeEnv(process.env.AUTH_SECRET);
+const authSecret = process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET;
 
 export const authOptions: NextAuthOptions = {
   secret: authSecret,
