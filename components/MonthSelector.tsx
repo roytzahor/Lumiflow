@@ -1,7 +1,6 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { useLayoutEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { eachMonthOfInterval, format, startOfYear, endOfYear } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -21,12 +20,24 @@ export default function MonthSelector() {
         end: endOfYear(new Date(currentYear, 0, 1))
     });
 
-    const scrollRef = useRef<HTMLDivElement>(null);
+    const monthsViewportRef = useRef<HTMLDivElement | null>(null);
     const selectedMonthRef = useRef<HTMLButtonElement | null>(null);
 
-    useEffect(() => {
-        selectedMonthRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-    }, [currentMonth]);
+    useLayoutEffect(() => {
+        const viewport = monthsViewportRef.current;
+        const selected = selectedMonthRef.current;
+        if (!viewport || !selected) return;
+
+        const viewportRect = viewport.getBoundingClientRect();
+        const selectedRect = selected.getBoundingClientRect();
+        const viewportCenter = viewportRect.left + (viewportRect.width / 2);
+        const selectedCenter = selectedRect.left + (selectedRect.width / 2);
+        const delta = selectedCenter - viewportCenter;
+
+        if (Math.abs(delta) > 1) {
+            viewport.scrollLeft += delta;
+        }
+    }, [currentMonth, currentYear]);
 
     const handleSelect = (date: Date) => {
         const m = date.getMonth();
@@ -38,9 +49,9 @@ export default function MonthSelector() {
     const prevYear = () => router.push(`/history?month=${currentMonth}&year=${currentYear - 1}`);
 
     return (
-        <div className="w-full">
+        <div className="w-full max-w-full min-w-0 overflow-hidden">
             {/* Year selector */}
-            <div className="flex justify-between items-center px-5 mb-3">
+            <div className="flex justify-between items-center mb-3">
                 <button onClick={nextYear} className="w-8 h-8 rounded-full bg-gray-100 dark:bg-ios-dark-fill flex items-center justify-center active:bg-gray-200 dark:active:bg-ios-dark-card transition">
                     <ChevronRight className="w-4 h-4 text-gray-500 dark:text-ios-dark-subtle" />
                 </button>
@@ -51,37 +62,31 @@ export default function MonthSelector() {
             </div>
 
             {/* Month pills */}
-            <div
-                ref={scrollRef}
-                className="flex gap-2 overflow-x-auto no-scrollbar px-5 pb-2"
-            >
-                {months.map((date, index) => {
-                    const isSelected = date.getMonth() === currentMonth;
-                    return (
-                        <button
-                            key={index}
-                            ref={isSelected ? selectedMonthRef : undefined}
-                            type="button"
-                            onClick={() => handleSelect(date)}
-                            className="relative flex flex-col items-center justify-center min-w-[3.5rem] py-2.5 rounded-xl transition-all"
-                            aria-pressed={isSelected}
-                            aria-label={format(date, 'MMMM yyyy', { locale: he })}
-                        >
-                            {isSelected && (
-                                <motion.div
-                                    layoutId="selectedMonth"
-                                    className="absolute inset-0 bg-ios-blue rounded-xl"
-                                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                                />
-                            )}
-                            <span className={`relative z-10 text-xs font-semibold ${
-                                isSelected ? 'text-white' : 'text-gray-500 dark:text-ios-dark-subtle'
-                            }`}>
-                                {format(date, 'MMM', { locale: he })}
-                            </span>
-                        </button>
-                    );
-                })}
+            <div ref={monthsViewportRef} className="w-full max-w-full min-w-0 overflow-x-auto no-scrollbar pb-2 [direction:ltr]">
+                <div className="flex w-max min-w-full flex-row-reverse gap-2">
+                    {months.map((date, index) => {
+                        const isSelected = date.getMonth() === currentMonth;
+                        return (
+                            <button
+                                key={index}
+                                ref={isSelected ? selectedMonthRef : undefined}
+                                type="button"
+                                onClick={() => handleSelect(date)}
+                                className={`relative shrink-0 flex flex-col items-center justify-center min-w-[3.5rem] py-2.5 rounded-xl transition-colors ${
+                                    isSelected ? 'bg-ios-blue' : ''
+                                }`}
+                                aria-pressed={isSelected}
+                                aria-label={format(date, 'MMMM yyyy', { locale: he })}
+                            >
+                                <span className={`text-xs font-semibold ${
+                                    isSelected ? 'text-white' : 'text-gray-500 dark:text-ios-dark-subtle'
+                                }`}>
+                                    {format(date, 'MMM', { locale: he })}
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
             </div>
         </div>
     );

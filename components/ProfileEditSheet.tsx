@@ -11,9 +11,10 @@ interface ProfileEditSheetProps {
   mode: ProfileSheetMode;
   initialName: string;
   initialEmail: string;
+  initialMonthlyIncome: number;
   isSaving: boolean;
   onClose: () => void;
-  onSaveDetails: (payload: { name: string; email: string }) => Promise<boolean>;
+  onSaveDetails: (payload: { name: string; email: string; monthlyIncome: number }) => Promise<boolean>;
   onSavePassword: (payload: { currentPassword: string; newPassword: string }) => Promise<boolean>;
 }
 
@@ -22,6 +23,7 @@ export default function ProfileEditSheet({
   mode,
   initialName,
   initialEmail,
+  initialMonthlyIncome,
   isSaving,
   onClose,
   onSaveDetails,
@@ -30,6 +32,7 @@ export default function ProfileEditSheet({
   const sheetRef = useRef<HTMLDivElement>(null);
   const [name, setName] = useState(initialName);
   const [email, setEmail] = useState(initialEmail);
+  const [monthlyIncome, setMonthlyIncome] = useState(initialMonthlyIncome.toString());
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
 
@@ -37,9 +40,10 @@ export default function ProfileEditSheet({
     if (!isOpen) return;
     setName(initialName);
     setEmail(initialEmail);
+    setMonthlyIncome(String(initialMonthlyIncome ?? 0));
     setCurrentPassword("");
     setNewPassword("");
-  }, [isOpen, initialName, initialEmail, mode]);
+  }, [isOpen, initialName, initialEmail, initialMonthlyIncome, mode]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -63,7 +67,12 @@ export default function ProfileEditSheet({
   }, [isOpen, isSaving, onClose]);
 
   const handleDetailsSubmit = async () => {
-    const success = await onSaveDetails({ name, email });
+    const parsedIncome = Number(monthlyIncome);
+    const success = await onSaveDetails({
+      name,
+      email,
+      monthlyIncome: Number.isFinite(parsedIncome) && parsedIncome >= 0 ? parsedIncome : 0,
+    });
     if (success) onClose();
   };
 
@@ -138,6 +147,17 @@ export default function ProfileEditSheet({
                       value={email}
                       onChange={(event) => setEmail(event.target.value)}
                       placeholder="name@example.com"
+                      dir="ltr"
+                      className="w-full rounded-xl bg-ios-gray-6 px-3 py-2.5 text-sm text-ios-text focus:outline-none focus:ring-2 focus:ring-ios-blue/30 dark:bg-ios-dark-fill dark:text-ios-dark-text"
+                    />
+
+                    <label className="mb-1.5 mt-3 block text-xs font-medium text-ios-subtle dark:text-ios-dark-subtle">הכנסה חודשית</label>
+                    <input
+                      type="number"
+                      min={0}
+                      inputMode="decimal"
+                      value={monthlyIncome}
+                      onChange={(event) => setMonthlyIncome(event.target.value)}
                       dir="ltr"
                       className="w-full rounded-xl bg-ios-gray-6 px-3 py-2.5 text-sm text-ios-text focus:outline-none focus:ring-2 focus:ring-ios-blue/30 dark:bg-ios-dark-fill dark:text-ios-dark-text"
                     />

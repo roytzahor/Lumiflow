@@ -21,10 +21,11 @@ import {
   getInvitePreview,
   upsertContributionPlan,
 } from '../actions';
-import { User, MoonStar, Pencil, Check, X, Trash2, Save, Plus, Wallet, Share2, LogOut, Link2, Mail, Copy, SendHorizontal } from 'lucide-react';
+import { User, MoonStar, Pencil, Check, X, Trash2, Plus, Wallet, Share2, LogOut, Copy, SendHorizontal } from 'lucide-react';
 import type { BudgetSettings, Account, Category } from '@/lib/types';
 import AccountPopup from '@/components/AccountPopup';
 import ProfileEditSheet from '@/components/ProfileEditSheet';
+import AccountShareSheet from '@/components/AccountShareSheet';
 
 const DEFAULT_BUDGET: BudgetSettings = {
   id: '',
@@ -37,7 +38,7 @@ const DEFAULT_BUDGET: BudgetSettings = {
   savingsGoalAmount: null,
 };
 
-const CATEGORY_EMOJIS = ['🍕', '🛒', '🚗', '🏠', '💡', '🍽️', '☕', '🎁', '🎉', '💊', '🧾', '✈️', '📦', '🧒', '🐶', '💸', '✨'];
+const CATEGORY_EMOJIS = ['🍕', '🛒', '🚗', '🏠', '💡', '🍽️', '☕', '🎁', '🎉', '💊', '🧾', '✈️', '📦', '🧒', '🐶', '💸', '✨', '🏖️', '🍔', '🎮', '📱', '🎬', '🧑‍🍳', '🏋️', '🧹', '🐱', '🌿', '📚', '💼', '🛍️', '🚕', '🏥', '🧠', '❤️', '🎵', '🎯', '🔧', '🛠️'];
 
 function mapThemePreferenceToClientTheme(theme: 'LIGHT' | 'DARK' | 'SYSTEM'): 'light' | 'dark' | 'system' {
   if (theme === 'LIGHT') return 'light';
@@ -67,24 +68,23 @@ export default function SettingsContent({
   const [budget, setBudget] = useState<BudgetSettings>(initialBudget ?? DEFAULT_BUDGET);
   const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [accounts, setAccounts] = useState<Account[]>(initialAccounts);
-  const [loading, setLoading] = useState(false);
   const [newCatName, setNewCatName] = useState('');
-  const [newCatIcon, setNewCatIcon] = useState('🍕');
+  const [newCatEmojiInput, setNewCatEmojiInput] = useState('');
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
   const [editingCategoryName, setEditingCategoryName] = useState('');
-  const [editingCategoryIcon, setEditingCategoryIcon] = useState('✨');
+  const [editingCategoryEmojiInput, setEditingCategoryEmojiInput] = useState('✨');
   const [isAccountPopupOpen, setIsAccountPopupOpen] = useState(false);
   const [accountPopupMode, setAccountPopupMode] = useState<'create' | 'edit'>('create');
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [accountSaving, setAccountSaving] = useState(false);
   const [accountDeleting, setAccountDeleting] = useState(false);
-  const [inviteAccountId, setInviteAccountId] = useState('');
-  const [inviteMethod, setInviteMethod] = useState<'link' | 'email'>('link');
-  const [inviteEmail, setInviteEmail] = useState('');
   const [inviteUrl, setInviteUrl] = useState('');
   const [inviteExpiresInMinutes, setInviteExpiresInMinutes] = useState<number | null>(null);
   const [showInviteLinkPopup, setShowInviteLinkPopup] = useState(false);
-  const [inviteLoading, setInviteLoading] = useState(false);
+  const [shareSheetAccount, setShareSheetAccount] = useState<{ id: string; name: string } | null>(null);
+  const [shareSheetMethod, setShareSheetMethod] = useState<'link' | 'email'>('link');
+  const [shareSheetEmail, setShareSheetEmail] = useState('');
+  const [shareSheetLoading, setShareSheetLoading] = useState(false);
   const [pendingInviteToken, setPendingInviteToken] = useState<string | null>(null);
   const [invitePreview, setInvitePreview] = useState<{
     accountName: string;
@@ -100,9 +100,7 @@ export default function SettingsContent({
   const [isThemeSaving, setIsThemeSaving] = useState(false);
   const [contributionPlansByAccount, setContributionPlansByAccount] = useState<Record<string, number>>({});
   const themeInitializedRef = useRef(false);
-  const sharedAccounts = accounts.filter((a) => a.type === 'SHARED');
-  const selectedInviteAccountName = sharedAccounts.find((a) => a.id === inviteAccountId)?.name ?? '';
-  const inviteEmailIsValid = inviteMethod !== 'email' || !inviteEmail.trim() || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inviteEmail.trim());
+  const shareSheetEmailIsValid = shareSheetMethod !== 'email' || !shareSheetEmail.trim() || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(shareSheetEmail.trim());
 
   useEffect(() => {
     setCategories(initialCategories);
@@ -156,21 +154,6 @@ export default function SettingsContent({
     } else {
       toast.error(res.error ?? 'אישור ההזמנה נכשל');
     }
-  };
-
-  const saveBudget = async () => {
-    setLoading(true);
-    const res = await updateBudgetSettings({
-      monthlyIncome: Number(budget.monthlyIncome),
-      needsPercent: budget.needsPercent,
-      wantsPercent: budget.wantsPercent,
-      savingsPercent: budget.savingsPercent,
-      savingsGoal: budget.savingsGoal ?? undefined,
-      savingsGoalAmount: budget.savingsGoalAmount ?? undefined,
-    });
-    setLoading(false);
-    if (res.success) toast.success('נשמר בהצלחה');
-    else toast.error(res.error ?? 'השמירה נכשלה');
   };
 
   const openCreateAccountPopup = () => {
@@ -271,12 +254,27 @@ export default function SettingsContent({
     }
   };
 
+  const openAccountShareSheet = (account: Account) => {
+    setShareSheetAccount({ id: account.id, name: account.name });
+    setShareSheetMethod('link');
+    setShareSheetEmail('');
+  };
+
+  const closeAccountShareSheet = () => {
+    if (shareSheetLoading) return;
+    setShareSheetAccount(null);
+    setShareSheetEmail('');
+    setShareSheetMethod('link');
+  };
+
   const handleAddCategory = async () => {
     if (!newCatName.trim()) return;
-    const res = await addCategory(newCatName.trim(), newCatIcon, 'expense');
+    const resolvedIcon = newCatEmojiInput.trim() || '✨';
+    const res = await addCategory(newCatName.trim(), resolvedIcon, 'expense');
     if (res.success) {
       toast.success('קטגוריה נוספה');
       setNewCatName('');
+      setNewCatEmojiInput('');
       router.refresh();
     } else {
       toast.error(res.error ?? 'הוספת קטגוריה נכשלה');
@@ -296,21 +294,22 @@ export default function SettingsContent({
   const startEditCategory = (cat: Category) => {
     setEditingCategoryId(cat.id);
     setEditingCategoryName(cat.name);
-    setEditingCategoryIcon(cat.icon);
+    setEditingCategoryEmojiInput(cat.icon || '✨');
   };
 
   const cancelEditCategory = () => {
     setEditingCategoryId(null);
     setEditingCategoryName('');
-    setEditingCategoryIcon('✨');
+    setEditingCategoryEmojiInput('✨');
   };
 
   const handleSaveCategory = async () => {
     if (!editingCategoryId || !editingCategoryName.trim()) return;
+    const resolvedIcon = editingCategoryEmojiInput.trim() || '✨';
     const res = await updateCategory({
       id: editingCategoryId,
       name: editingCategoryName.trim(),
-      icon: editingCategoryIcon || '✨',
+      icon: resolvedIcon,
       type: 'expense',
     });
     if (!res.success) {
@@ -319,11 +318,43 @@ export default function SettingsContent({
     }
     setCategories((prev) => prev.map((cat) => (
       cat.id === editingCategoryId
-        ? { ...cat, name: editingCategoryName.trim(), icon: editingCategoryIcon || '✨' }
+        ? { ...cat, name: editingCategoryName.trim(), icon: resolvedIcon }
         : cat
     )));
     toast.success('הקטגוריה עודכנה');
     cancelEditCategory();
+  };
+
+  const createInviteForAccount = async (payload: { accountId: string; method: 'link' | 'email'; email: string }) => {
+    if (payload.method === 'email' && !payload.email.trim()) {
+      toast.error('יש להזין אימייל לקבלת הזמנה אישית');
+      return false;
+    }
+    if (payload.method === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email.trim())) {
+      toast.error('נראה שכתובת האימייל אינה תקינה');
+      return false;
+    }
+
+    const response = await createAccountInvite({
+      accountId: payload.accountId,
+      invitedEmail: payload.method === 'email' ? payload.email.trim() : undefined,
+    });
+
+    if (!response.success || !response.inviteUrl) {
+      toast.error(response.error ?? 'יצירת הזמנה נכשלה');
+      return false;
+    }
+
+    setInviteUrl(response.inviteUrl);
+    setInviteExpiresInMinutes(response.expiresInMinutes ?? null);
+    setShowInviteLinkPopup(true);
+    if (payload.method === 'email' && payload.email.trim()) {
+      const subject = encodeURIComponent(`הזמנה להצטרף לחשבון: ${response.accountName ?? 'חשבון משותף'}`);
+      const body = encodeURIComponent(`היי,\n\nהזמנתי אותך להצטרף לחשבון בלומיפלו:\n${response.inviteUrl}\n\nנתראה!`);
+      window.location.href = `mailto:${payload.email.trim()}?subject=${subject}&body=${body}`;
+    }
+    toast.success(payload.method === 'email' ? 'נוצרה הזמנה אישית לפי אימייל' : 'לינק הזמנה נוצר');
+    return true;
   };
 
   const saveProfile = async () => {
@@ -339,21 +370,36 @@ export default function SettingsContent({
     setProfileSheetMode(null);
   };
 
-  const saveProfileDetails = async (payload: { name: string; email: string }) => {
+  const saveProfileDetails = async (payload: { name: string; email: string; monthlyIncome: number }) => {
     setIsProfileSaving(true);
-    const res = await updateCurrentUserProfile({
+    const profileRes = await updateCurrentUserProfile({
       name: payload.name,
       email: payload.email,
     });
-    setIsProfileSaving(false);
-    if (res.success) {
-      toast.success('הפרופיל עודכן בהצלחה');
-      router.refresh();
-      return true;
-    } else {
-      toast.error(res.error ?? 'עדכון פרופיל נכשל');
+
+    if (!profileRes.success) {
+      setIsProfileSaving(false);
+      toast.error(profileRes.error ?? 'עדכון פרופיל נכשל');
       return false;
     }
+
+    const budgetRes = await updateBudgetSettings({
+      monthlyIncome: Number(payload.monthlyIncome),
+      needsPercent: budget.needsPercent,
+      wantsPercent: budget.wantsPercent,
+      savingsPercent: budget.savingsPercent,
+      savingsGoal: budget.savingsGoal ?? undefined,
+      savingsGoalAmount: budget.savingsGoalAmount ?? undefined,
+    });
+    setIsProfileSaving(false);
+    if (!budgetRes.success) {
+      toast.error(budgetRes.error ?? 'עדכון תקציב נכשל');
+      return false;
+    }
+    setBudget((prev) => ({ ...prev, monthlyIncome: Number(payload.monthlyIncome) || 0 }));
+    toast.success('הפרופיל עודכן בהצלחה');
+    router.refresh();
+    return true;
   };
 
   const savePasswordDetails = async (payload: { currentPassword: string; newPassword: string }) => {
@@ -388,34 +434,17 @@ export default function SettingsContent({
     }
   };
 
-  const createInvite = async () => {
-    if (!inviteAccountId) return;
-    if (inviteMethod === 'email' && !inviteEmail.trim()) {
-      toast.error('יש להזין אימייל לקבלת הזמנה אישית');
-      return;
-    }
-    if (inviteMethod === 'email' && !inviteEmailIsValid) {
-      toast.error('נראה שכתובת האימייל אינה תקינה');
-      return;
-    }
-    setInviteLoading(true);
-    const res = await createAccountInvite({
-      accountId: inviteAccountId,
-      invitedEmail: inviteMethod === 'email' ? inviteEmail : undefined,
+  const createInviteFromShareSheet = async () => {
+    if (!shareSheetAccount) return;
+    setShareSheetLoading(true);
+    const success = await createInviteForAccount({
+      accountId: shareSheetAccount.id,
+      method: shareSheetMethod,
+      email: shareSheetEmail,
     });
-    setInviteLoading(false);
-    if (res.success && res.inviteUrl) {
-      setInviteUrl(res.inviteUrl);
-      setInviteExpiresInMinutes(res.expiresInMinutes ?? null);
-      setShowInviteLinkPopup(true);
-      if (inviteMethod === 'email' && inviteEmail.trim()) {
-        const subject = encodeURIComponent(`הזמנה להצטרף לחשבון: ${res.accountName ?? 'חשבון משותף'}`);
-        const body = encodeURIComponent(`היי,\n\nהזמנתי אותך להצטרף לחשבון בלומיפלו:\n${res.inviteUrl}\n\nנתראה!`);
-        window.location.href = `mailto:${inviteEmail.trim()}?subject=${subject}&body=${body}`;
-      }
-      toast.success(inviteMethod === 'email' ? 'נוצרה הזמנה אישית לפי אימייל' : 'לינק הזמנה נוצר');
-    } else {
-      toast.error(res.error ?? 'יצירת הזמנה נכשלה');
+    setShareSheetLoading(false);
+    if (success) {
+      closeAccountShareSheet();
     }
   };
 
@@ -435,6 +464,16 @@ export default function SettingsContent({
             <div className="my-2 border-t border-gray-200/70 dark:border-white/10" />
             <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle">אימייל</p>
             <p dir="ltr" className="text-[13px] text-ios-text dark:text-ios-dark-text">{currentUser?.email ?? '—'}</p>
+          </div>
+
+          <div className="rounded-xl bg-ios-gray-6 dark:bg-ios-dark-fill px-4 py-3 space-y-3">
+            <div className="flex items-center gap-2 text-ios-text dark:text-ios-dark-text">
+              <Wallet className="w-4 h-4 text-ios-blue" />
+              <p className="text-sm font-semibold">תקציב</p>
+            </div>
+            <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle">הכנסה חודשית (נטו)</p>
+            <p dir="ltr" className="text-lg font-bold text-ios-text dark:text-ios-dark-text">₪{Math.round(budget.monthlyIncome || 0).toLocaleString('he-IL')}</p>
+            <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">ניתן לערוך את הסכום מתוך ״עריכת פרטים״.</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -506,32 +545,6 @@ export default function SettingsContent({
       </section>
 
       <section className="bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card overflow-hidden">
-        <div className="px-5 pt-5 pb-3 flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-ios-blue/10 rounded-lg flex items-center justify-center">
-            <Wallet className="w-4 h-4 text-ios-blue" />
-          </div>
-          <h2 className="text-base font-bold text-ios-text dark:text-ios-dark-text">תקציב</h2>
-        </div>
-        <div className="px-5 pb-5 space-y-4">
-          <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle">מומלץ להזין סכומי הכנסה נטו.</p>
-          <input
-            type="number"
-            value={budget.monthlyIncome}
-            onChange={(e) => setBudget({ ...budget, monthlyIncome: parseFloat(e.target.value) || 0 })}
-            className="w-full bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-4 py-3 text-lg font-bold text-ios-text dark:text-ios-dark-text focus:outline-none focus:ring-2 focus:ring-ios-blue/30"
-          />
-          <button
-            onClick={saveBudget}
-            disabled={loading}
-            className="w-full py-3.5 bg-ios-blue text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
-          >
-            <Save className="w-4 h-4" />
-            {loading ? 'שומר...' : 'שמור תקציב'}
-          </button>
-        </div>
-      </section>
-
-      <section className="bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card overflow-hidden">
         <div className="px-5 pt-5 pb-3 flex items-center justify-between gap-2">
           <h2 className="text-base font-bold text-ios-text dark:text-ios-dark-text">חשבונות</h2>
           <button
@@ -553,19 +566,30 @@ export default function SettingsContent({
                     {account.type === 'PRIVATE' ? 'פרטי' : 'משותף'} · הכנסה חודשית: ₪{Math.round(account.income ?? 0).toLocaleString('he-IL')}
                   </p>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-1 shrink-0">
+                  {account.type === 'SHARED' ? (
+                    <button
+                      type="button"
+                      onClick={() => openAccountShareSheet(account)}
+                      className="text-ios-indigo/80 hover:text-ios-indigo p-1"
+                      aria-label={`שיתוף חשבון ${account.name}`}
+                    >
+                      <Share2 className="w-4 h-4" />
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     onClick={() => openEditAccountPopup(account)}
-                    className="px-3 py-2 rounded-lg bg-white dark:bg-ios-dark-card text-ios-blue text-sm font-medium"
+                    className="text-ios-blue/80 hover:text-ios-blue p-1"
+                    aria-label={`עריכת חשבון ${account.name}`}
                   >
-                    עריכה
+                    <Pencil className="w-4 h-4" />
                   </button>
                   <button
                     type="button"
                     onClick={() => handleAccountDeleteFromCard(account)}
                     disabled={accountDeleting}
-                    className="px-2.5 py-2 rounded-lg bg-white dark:bg-ios-dark-card text-ios-red disabled:opacity-60"
+                    className="text-ios-red/70 hover:text-ios-red p-1 disabled:opacity-60"
                     aria-label={`מחיקת חשבון ${account.name}`}
                   >
                     <Trash2 className="w-4 h-4" />
@@ -574,100 +598,6 @@ export default function SettingsContent({
               </div>
             </div>
           ))}
-        </div>
-      </section>
-
-      <section className="bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card overflow-hidden">
-        <div className="px-5 pt-5 pb-3">
-          <h2 className="text-base font-bold text-ios-text dark:text-ios-dark-text">שיתוף חשבון</h2>
-        </div>
-        <div className="px-5 pb-5 space-y-4">
-          <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle">
-            בחר/י איך להזמין שותף לחשבון משותף. כל הזמנה תקפה לזמן מוגבל.
-          </p>
-
-          {sharedAccounts.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-gray-300 dark:border-white/20 px-4 py-3 text-sm text-ios-subtle dark:text-ios-dark-subtle">
-              עדיין אין לך חשבון משותף. אפשר ליצור חשבון חדש מסוג &quot;משותף&quot; ואז לשלוח הזמנה.
-            </div>
-          ) : null}
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setInviteMethod('link')}
-              className={`rounded-xl px-3 py-2.5 text-sm font-semibold transition flex items-center justify-center gap-2 ${inviteMethod === 'link'
-                ? 'bg-ios-blue text-white'
-                : 'bg-ios-gray-6 dark:bg-ios-dark-fill text-ios-text dark:text-ios-dark-text'
-                }`}
-            >
-              <Link2 className="w-4 h-4" />
-              שיתוף בקישור
-            </button>
-            <button
-              type="button"
-              onClick={() => setInviteMethod('email')}
-              className={`rounded-xl px-3 py-2.5 text-sm font-semibold transition flex items-center justify-center gap-2 ${inviteMethod === 'email'
-                ? 'bg-ios-blue text-white'
-                : 'bg-ios-gray-6 dark:bg-ios-dark-fill text-ios-text dark:text-ios-dark-text'
-                }`}
-            >
-              <Mail className="w-4 h-4" />
-              הזמנה במייל
-            </button>
-          </div>
-
-          <div className="space-y-2">
-            <label className="block text-xs font-medium text-ios-subtle dark:text-ios-dark-subtle">חשבון לשיתוף</label>
-            <select
-              data-testid="settings-invite-account"
-              value={inviteAccountId}
-              onChange={(e) => setInviteAccountId(e.target.value)}
-              className="w-full bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-3 py-2.5 text-sm text-ios-text dark:text-ios-dark-text border border-transparent dark:border-white/10"
-            >
-              <option value="">בחר חשבון משותף</option>
-              {sharedAccounts.map((a) => (
-                <option key={a.id} value={a.id}>{a.name}</option>
-              ))}
-            </select>
-          </div>
-
-          {inviteMethod === 'email' ? (
-            <div className="space-y-2">
-              <label className="block text-xs font-medium text-ios-subtle dark:text-ios-dark-subtle">אימייל מוזמן</label>
-              <input
-                data-testid="settings-invite-email"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-                placeholder="name@example.com"
-                className="w-full bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-3 py-2.5 text-sm text-ios-text dark:text-ios-dark-text border border-transparent dark:border-white/10"
-                dir="ltr"
-              />
-              {!inviteEmailIsValid ? (
-                <p className="text-xs text-ios-red">נראה שכתובת האימייל אינה תקינה.</p>
-              ) : null}
-            </div>
-          ) : (
-            <div className="rounded-xl bg-ios-gray-6 dark:bg-ios-dark-fill px-3 py-2.5 text-xs text-ios-subtle dark:text-ios-dark-subtle">
-              ייווצר קישור חד-פעמי לשיתוף ידני דרך וואטסאפ, מייל או כל ערוץ אחר.
-            </div>
-          )}
-
-          <button
-            data-testid="settings-create-invite"
-            onClick={createInvite}
-            disabled={inviteLoading || !inviteAccountId || (inviteMethod === 'email' && (!inviteEmail.trim() || !inviteEmailIsValid))}
-            className="w-full px-3 py-3 rounded-xl bg-ios-indigo text-white text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Share2 className="w-4 h-4" />
-            {inviteLoading ? 'יוצר הזמנה...' : inviteMethod === 'email' ? 'צור הזמנה אישית במייל' : 'צור קישור הזמנה'}
-          </button>
-
-          {selectedInviteAccountName ? (
-            <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">
-              ההזמנה תישלח עבור החשבון: <span className="font-semibold">{selectedInviteAccountName}</span>
-            </p>
-          ) : null}
         </div>
       </section>
 
@@ -684,14 +614,18 @@ export default function SettingsContent({
               onChange={(e) => setNewCatName(e.target.value)}
               className="flex-1 bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-3.5 py-2.5 text-sm text-ios-text dark:text-ios-dark-text"
             />
-            <select
-              value={newCatIcon}
-              onChange={(e) => setNewCatIcon(e.target.value)}
-              className="w-16 text-center bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-1 py-2.5 text-sm text-ios-text dark:text-ios-dark-text"
-              aria-label="בחירת אמוג׳י"
-            >
+            <input
+              type="text"
+              value={newCatEmojiInput}
+              onChange={(e) => setNewCatEmojiInput(e.target.value)}
+              placeholder="בחר/י או הקלד/י 😀"
+              list="settings-category-emoji-list"
+              className="w-20 text-center bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-1 py-2.5 text-sm text-ios-text dark:text-ios-dark-text"
+              aria-label="בחירת אימוג׳י לקטגוריה"
+            />
+            <datalist id="settings-category-emoji-list">
               {CATEGORY_EMOJIS.map((emoji) => <option key={emoji} value={emoji}>{emoji}</option>)}
-            </select>
+            </datalist>
             <button onClick={handleAddCategory} className="w-11 bg-ios-blue text-white rounded-xl flex items-center justify-center">
               <Plus className="w-5 h-5" />
             </button>
@@ -702,13 +636,15 @@ export default function SettingsContent({
               <div key={cat.id} className="flex items-center justify-between px-4 py-3">
                 {editingCategoryId === cat.id ? (
                   <div className="flex items-center gap-2 flex-1">
-                    <select
-                      value={editingCategoryIcon}
-                      onChange={(e) => setEditingCategoryIcon(e.target.value)}
-                      className="w-14 text-center bg-white dark:bg-ios-dark-card rounded-lg px-1 py-2 text-sm text-ios-text dark:text-ios-dark-text"
-                    >
-                      {CATEGORY_EMOJIS.map((emoji) => <option key={emoji} value={emoji}>{emoji}</option>)}
-                    </select>
+                    <input
+                      type="text"
+                      value={editingCategoryEmojiInput}
+                      onChange={(e) => setEditingCategoryEmojiInput(e.target.value)}
+                      placeholder="אימוג׳י"
+                      list="settings-category-emoji-list"
+                      className="w-20 text-center bg-white dark:bg-ios-dark-card rounded-lg px-1 py-2 text-sm text-ios-text dark:text-ios-dark-text"
+                      aria-label="בחירת אימוג׳י לעריכת קטגוריה"
+                    />
                     <input
                       value={editingCategoryName}
                       onChange={(e) => setEditingCategoryName(e.target.value)}
@@ -856,10 +792,23 @@ export default function SettingsContent({
         mode={profileSheetMode ?? 'details'}
         initialName={currentUser?.name ?? ''}
         initialEmail={currentUser?.email ?? ''}
+        initialMonthlyIncome={budget.monthlyIncome ?? 0}
         isSaving={profileSheetMode === 'details' ? isProfileSaving : isPasswordSaving}
         onClose={closeProfileSheet}
         onSaveDetails={saveProfileDetails}
         onSavePassword={savePasswordDetails}
+      />
+      <AccountShareSheet
+        isOpen={shareSheetAccount !== null}
+        accountName={shareSheetAccount?.name ?? ''}
+        inviteMethod={shareSheetMethod}
+        inviteEmail={shareSheetEmail}
+        inviteEmailIsValid={shareSheetEmailIsValid}
+        isLoading={shareSheetLoading}
+        onClose={closeAccountShareSheet}
+        onMethodChange={setShareSheetMethod}
+        onEmailChange={setShareSheetEmail}
+        onSubmit={createInviteFromShareSheet}
       />
     </div>
   );

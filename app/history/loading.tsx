@@ -1,7 +1,7 @@
 export default function HistoryLoading() {
     return (
-        <main className="min-h-screen pb-28 pt-safe bg-ios-bg dark:bg-ios-dark-bg">
-            <div className="w-full max-w-md mx-auto animate-pulse">
+        <main className="min-h-screen pb-28 pt-safe overflow-x-hidden bg-ios-bg dark:bg-ios-dark-bg">
+            <div className="w-full max-w-md mx-auto overflow-x-hidden animate-pulse">
                 {/* Header */}
                 <div className="px-5 pt-8 pb-4">
                     <div className="h-8 w-28 bg-gray-200 dark:bg-ios-dark-fill rounded-lg mb-1.5" />
@@ -16,10 +16,14 @@ export default function HistoryLoading() {
                 </div>
 
                 {/* Month pills */}
-                <div className="flex gap-2 px-5 mb-4">
-                    {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                        <div key={i} className="min-w-[3.5rem] h-9 rounded-xl bg-gray-100 dark:bg-ios-dark-fill" />
-                    ))}
+                <div className="px-5 mb-4">
+                    <div className="w-full max-w-full min-w-0 overflow-x-auto no-scrollbar">
+                        <div className="flex w-max min-w-full flex-row-reverse gap-2">
+                            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                                <div key={i} className="min-w-[3.5rem] h-9 rounded-xl bg-gray-100 dark:bg-ios-dark-fill" />
+                            ))}
+                        </div>
+                    </div>
                 </div>
 
                 {/* Summary */}

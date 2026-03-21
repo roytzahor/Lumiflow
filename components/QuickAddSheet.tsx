@@ -56,6 +56,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
     const [showCreateCategory, setShowCreateCategory] = useState(false);
     const [newCategoryName, setNewCategoryName] = useState('');
     const [newCategoryIcon, setNewCategoryIcon] = useState('✨');
+    const [newCategoryCustomIcon, setNewCategoryCustomIcon] = useState('');
     const [isAddingCategory, setIsAddingCategory] = useState(false);
     const [isCategoryTouched, setIsCategoryTouched] = useState(false);
     const [isAccountListExpanded, setIsAccountListExpanded] = useState(false);
@@ -133,6 +134,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
             setShowCreateCategory(false);
             setNewCategoryName('');
             setNewCategoryIcon('✨');
+            setNewCategoryCustomIcon('');
             setIsAccountListExpanded(false);
         }
     }, [isOpen, initialData, accounts]);
@@ -229,7 +231,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
     const shouldPromptAccountChoice = accounts.length > 1 && !hasUserPickedAccount;
 
     const handleCreateCategory = async () => {
-        const candidate = (newCategoryName || categorySearch).trim();
+        const candidate = newCategoryName.trim();
         if (!candidate) {
             toast.error('יש להזין שם קטגוריה');
             return;
@@ -241,13 +243,13 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
         if (existing) {
             setCategory(existing.name);
             setIsCategoryTouched(true);
-            setShowCreateCategory(false);
             toast.success('הקטגוריה כבר קיימת, נבחרה עבורך');
             return;
         }
 
         setIsAddingCategory(true);
-        const res = await addCategory(candidate, newCategoryIcon, 'expense');
+        const resolvedIcon = (newCategoryCustomIcon || newCategoryIcon).trim() || '✨';
+        const res = await addCategory(candidate, resolvedIcon, 'expense');
         setIsAddingCategory(false);
         if (!res.success) {
             toast.error(res.error ?? 'הוספת קטגוריה נכשלה');
@@ -257,7 +259,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
         const createdCategory = {
             id: `local-${Date.now()}`,
             name: candidate,
-            icon: newCategoryIcon,
+            icon: resolvedIcon,
             type: 'expense',
             isCustom: true,
             userId: (availableCategories[0] as { userId?: string } | undefined)?.userId ?? '',
@@ -268,8 +270,10 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
         setCategory(createdCategory.name);
         setIsCategoryTouched(true);
         setCategorySearch('');
-        setNewCategoryName('');
         setShowCreateCategory(false);
+        setNewCategoryName('');
+        setNewCategoryIcon('✨');
+        setNewCategoryCustomIcon('');
         toast.success('קטגוריה נוספה');
         router.refresh();
     };
@@ -364,7 +368,9 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                         onClick={() => {
                                             if (accounts.length > 1) setIsAccountListExpanded((prev) => !prev);
                                         }}
-                                        className="w-full flex items-center justify-between gap-3 px-3.5 py-3 rounded-xl bg-ios-gray-6 dark:bg-ios-dark-fill text-ios-text dark:text-ios-dark-text"
+                                        className={`w-full flex items-center justify-between gap-3 px-3.5 py-3 bg-ios-gray-6 dark:bg-ios-dark-fill text-ios-text dark:text-ios-dark-text transition-[border-radius] focus:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue/35 ${
+                                            isAccountListExpanded && accounts.length > 1 ? 'rounded-t-xl rounded-b-md' : 'rounded-xl'
+                                        }`}
                                         aria-expanded={isAccountListExpanded}
                                         disabled={accounts.length <= 1}
                                     >
@@ -388,7 +394,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                         )}
                                     </button>
                                     {isAccountListExpanded && accounts.length > 1 && (
-                                        <div className="mt-2 max-h-[168px] overflow-y-auto pr-1 space-y-2">
+                                        <div className="mt-1 max-h-[168px] overflow-y-auto rounded-b-xl overflow-hidden bg-ios-gray-6 dark:bg-ios-dark-fill divide-y divide-black/5 dark:divide-white/10">
                                             {accounts.map((acc) => (
                                                 <button
                                                     key={acc.id}
@@ -399,10 +405,10 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                                         setIsAccountListExpanded(false);
                                                         trigger(10);
                                                     }}
-                                                    className={`w-full flex items-center gap-2.5 py-2.5 px-3 rounded-xl text-sm font-semibold transition-all ${
+                                                    className={`w-full flex items-center gap-2.5 py-3 px-3.5 text-sm font-semibold text-right transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue/30 ${
                                                         accountId === acc.id
-                                                            ? 'bg-ios-blue text-white'
-                                                            : 'bg-ios-gray-6 dark:bg-ios-dark-fill text-gray-500 dark:text-ios-dark-subtle'
+                                                            ? 'bg-ios-blue/12 dark:bg-ios-blue/25 text-ios-blue dark:text-white'
+                                                            : 'text-gray-600 dark:text-ios-dark-subtle'
                                                     }`}
                                                     aria-pressed={accountId === acc.id}
                                                 >
@@ -470,7 +476,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                             {/* Category */}
                             <div className="bg-white dark:bg-ios-dark-card rounded-2xl shadow-card mb-4 p-4">
                                 <p className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle uppercase tracking-wider mb-3">קטגוריה</p>
-                                <div className="flex gap-2 mb-3">
+                                <div className="flex gap-2 mb-2">
                                     <div className="flex-1 relative">
                                         <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-ios-subtle dark:text-ios-dark-subtle" />
                                         <input
@@ -485,10 +491,17 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                         type="button"
                                         onClick={() => {
                                             setShowCreateCategory((prev) => !prev);
-                                            setNewCategoryName(categorySearch.trim());
+                                            if (!showCreateCategory) {
+                                                setNewCategoryName(categorySearch.trim());
+                                            }
                                         }}
-                                        className="w-10 h-10 rounded-xl bg-ios-blue text-white flex items-center justify-center"
-                                        aria-label="הוספת קטגוריה חדשה"
+                                        className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+                                            showCreateCategory
+                                                ? 'bg-ios-indigo text-white'
+                                                : 'bg-ios-blue text-white'
+                                        }`}
+                                        aria-label="פתיחת הוספת קטגוריה חדשה"
+                                        aria-expanded={showCreateCategory}
                                     >
                                         <Plus className="w-4 h-4" />
                                     </button>
@@ -503,6 +516,14 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                                 onChange={(e) => setNewCategoryName(e.target.value)}
                                                 placeholder="שם קטגוריה חדשה"
                                                 className="flex-1 bg-white dark:bg-ios-dark-card rounded-lg px-3 py-2 text-sm text-ios-text dark:text-ios-dark-text"
+                                            />
+                                            <input
+                                                type="text"
+                                                value={newCategoryCustomIcon}
+                                                onChange={(e) => setNewCategoryCustomIcon(e.target.value)}
+                                                placeholder="😀"
+                                                className="w-12 text-center bg-white dark:bg-ios-dark-card rounded-lg px-1 py-2 text-sm text-ios-text dark:text-ios-dark-text"
+                                                aria-label="אימוג׳י מותאם אישית"
                                             />
                                             <select
                                                 value={newCategoryIcon}

@@ -52,7 +52,7 @@ export default function HistoryView({ transactions, total, accountTotals, accoun
     };
 
     return (
-        <div className="w-full max-w-md mx-auto min-h-screen pb-28 font-sans text-ios-text dark:text-ios-dark-text">
+        <div className="w-full max-w-md mx-auto min-h-screen pb-28 overflow-x-clip font-sans text-ios-text dark:text-ios-dark-text">
             {/* Header */}
             <header className="pt-safe px-5 pt-8 pb-4">
                 <h1 className="text-3xl font-bold text-ios-text dark:text-ios-dark-text tracking-tight">
@@ -62,7 +62,9 @@ export default function HistoryView({ transactions, total, accountTotals, accoun
             </header>
 
             {/* Month Selector */}
-            <MonthSelector />
+            <div className="px-5">
+                <MonthSelector />
+            </div>
 
             {/* Summary Cards */}
             <div className="px-5 mt-4">
