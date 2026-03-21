@@ -22,7 +22,8 @@ import {
   upsertContributionPlan,
 } from '../actions';
 import { User, MoonStar, Pencil, Check, X, Trash2, Save, Plus, Wallet, Share2, LogOut, Link2, Mail, Copy, SendHorizontal } from 'lucide-react';
-import type { BudgetSettings, Account, Category, AccountType } from '@/lib/types';
+import type { BudgetSettings, Account, Category } from '@/lib/types';
+import AccountPopup from '@/components/AccountPopup';
 
 const DEFAULT_BUDGET: BudgetSettings = {
   id: '',
@@ -71,8 +72,11 @@ export default function SettingsContent({
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
   const [editingCategoryName, setEditingCategoryName] = useState('');
   const [editingCategoryIcon, setEditingCategoryIcon] = useState('✨');
-  const [newAccountName, setNewAccountName] = useState('');
-  const [newAccountType, setNewAccountType] = useState<AccountType>('PRIVATE');
+  const [isAccountPopupOpen, setIsAccountPopupOpen] = useState(false);
+  const [accountPopupMode, setAccountPopupMode] = useState<'create' | 'edit'>('create');
+  const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
+  const [accountSaving, setAccountSaving] = useState(false);
+  const [accountDeleting, setAccountDeleting] = useState(false);
   const [inviteAccountId, setInviteAccountId] = useState('');
   const [inviteMethod, setInviteMethod] = useState<'link' | 'email'>('link');
   const [inviteEmail, setInviteEmail] = useState('');
@@ -172,14 +176,22 @@ export default function SettingsContent({
     else toast.error(res.error ?? 'השמירה נכשלה');
   };
 
-  const updateLocalAccount = (id: string, patch: Partial<Account>) => {
-    setAccounts((prev) => prev.map((acc) => (acc.id === id ? { ...acc, ...patch } : acc)));
+  const openCreateAccountPopup = () => {
+    setAccountPopupMode('create');
+    setSelectedAccount(null);
+    setIsAccountPopupOpen(true);
   };
 
-  const saveAccount = async (account: Account) => {
-    const res = await updateAccount(account.id, { name: account.name, type: account.type });
-    if (res.success) toast.success('החשבון עודכן');
-    else toast.error(res.error ?? 'העדכון נכשל');
+  const openEditAccountPopup = (account: Account) => {
+    setAccountPopupMode('edit');
+    setSelectedAccount(account);
+    setIsAccountPopupOpen(true);
+  };
+
+  const closeAccountPopup = () => {
+    if (accountSaving || accountDeleting) return;
+    setIsAccountPopupOpen(false);
+    setSelectedAccount(null);
   };
 
   const updateContributionDraft = (accountId: string, value: string) => {
@@ -207,26 +219,36 @@ export default function SettingsContent({
     }
   };
 
-  const addNewAccount = async () => {
-    if (!newAccountName.trim()) return;
-    const res = await createAccount({ name: newAccountName.trim(), type: newAccountType });
+  const handleAccountSubmit = async (payload: { name: string; type: 'PRIVATE' | 'SHARED'; income: number }) => {
+    setAccountSaving(true);
+    const res = accountPopupMode === 'create'
+      ? await createAccount(payload)
+      : selectedAccount
+        ? await updateAccount(selectedAccount.id, payload)
+        : { success: false, error: 'לא נמצא חשבון לעריכה' };
+    setAccountSaving(false);
     if (res.success) {
-      toast.success('החשבון נוצר');
-      setNewAccountName('');
+      toast.success(accountPopupMode === 'create' ? 'החשבון נוצר' : 'החשבון עודכן');
+      setIsAccountPopupOpen(false);
+      setSelectedAccount(null);
       router.refresh();
     } else {
-      toast.error(res.error ?? 'יצירת החשבון נכשלה');
+      toast.error(res.error ?? 'שמירת החשבון נכשלה');
     }
   };
 
-  const archiveOneAccount = async (accountId: string) => {
-    const res = await archiveAccount(accountId);
+  const handleAccountDelete = async () => {
+    if (!selectedAccount) return;
+    setAccountDeleting(true);
+    const res = await archiveAccount(selectedAccount.id);
+    setAccountDeleting(false);
     if (res.success) {
       toast.success('החשבון הועבר לארכיון');
-      setAccounts((prev) => prev.filter((acc) => acc.id !== accountId));
+      setIsAccountPopupOpen(false);
+      setSelectedAccount(null);
       router.refresh();
     } else {
-      toast.error(res.error ?? 'הארכוב נכשל');
+      toast.error(res.error ?? 'מחיקת החשבון נכשלה');
     }
   };
 
@@ -493,29 +515,34 @@ export default function SettingsContent({
       </section>
 
       <section className="bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card overflow-hidden">
-        <div className="px-5 pt-5 pb-3">
+        <div className="px-5 pt-5 pb-3 flex items-center justify-between gap-2">
           <h2 className="text-base font-bold text-ios-text dark:text-ios-dark-text">חשבונות</h2>
+          <button
+            type="button"
+            onClick={openCreateAccountPopup}
+            className="px-3 py-2 rounded-xl bg-ios-blue text-white text-sm font-semibold flex items-center gap-1.5"
+          >
+            <Plus className="w-4 h-4" />
+            הוספת חשבון
+          </button>
         </div>
         <div className="px-5 pb-5 space-y-3">
           {accounts.map((account) => (
             <div key={account.id} className="bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl p-3 space-y-2">
-              <input
-                type="text"
-                value={account.name}
-                onChange={(e) => updateLocalAccount(account.id, { name: e.target.value })}
-                className="w-full bg-white dark:bg-ios-dark-card rounded-lg px-3 py-2.5 text-sm text-ios-text dark:text-ios-dark-text"
-              />
-              <div className="flex gap-2">
-                <select
-                  value={account.type}
-                  onChange={(e) => updateLocalAccount(account.id, { type: e.target.value as AccountType })}
-                  className="flex-1 bg-white dark:bg-ios-dark-card rounded-lg px-3 py-2 text-sm text-ios-text dark:text-ios-dark-text"
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text">{account.name}</p>
+                  <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle">
+                    {account.type === 'PRIVATE' ? 'פרטי' : 'משותף'} · הכנסה חודשית: ₪{Math.round(account.income ?? 0).toLocaleString('he-IL')}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => openEditAccountPopup(account)}
+                  className="px-3 py-2 rounded-lg bg-white dark:bg-ios-dark-card text-ios-blue text-sm font-medium"
                 >
-                  <option value="PRIVATE">פרטי</option>
-                  <option value="SHARED">משותף</option>
-                </select>
-                <button onClick={() => saveAccount(account)} className="px-3 py-2 rounded-lg bg-ios-blue text-white text-sm">שמור</button>
-                <button onClick={() => archiveOneAccount(account.id)} className="px-3 py-2 rounded-lg bg-ios-red text-white text-sm">ארכיון</button>
+                  עריכה
+                </button>
               </div>
               <div className="pt-1 border-t border-gray-200/60 dark:border-white/10">
                 <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle mb-2">
@@ -548,26 +575,6 @@ export default function SettingsContent({
               </div>
             </div>
           ))}
-
-          <div className="flex gap-2 pt-2">
-            <input
-              value={newAccountName}
-              onChange={(e) => setNewAccountName(e.target.value)}
-              placeholder="שם חשבון חדש"
-              className="flex-1 bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-3 py-2.5 text-sm text-ios-text dark:text-ios-dark-text"
-            />
-            <select
-              value={newAccountType}
-              onChange={(e) => setNewAccountType(e.target.value as AccountType)}
-              className="bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-3 py-2.5 text-sm text-ios-text dark:text-ios-dark-text"
-            >
-              <option value="PRIVATE">פרטי</option>
-              <option value="SHARED">משותף</option>
-            </select>
-            <button onClick={addNewAccount} className="w-11 bg-ios-blue text-white rounded-xl flex items-center justify-center">
-              <Plus className="w-5 h-5" />
-            </button>
-          </div>
         </div>
       </section>
 
@@ -832,6 +839,17 @@ export default function SettingsContent({
           </div>
         </div>
       )}
+
+      <AccountPopup
+        isOpen={isAccountPopupOpen}
+        mode={accountPopupMode}
+        account={selectedAccount}
+        isSaving={accountSaving}
+        isDeleting={accountDeleting}
+        onClose={closeAccountPopup}
+        onSubmit={handleAccountSubmit}
+        onDelete={accountPopupMode === 'edit' ? handleAccountDelete : undefined}
+      />
     </div>
   );
 }

@@ -361,7 +361,7 @@ export default function Dashboard({
                                                             <Lock className="w-3.5 h-3.5" />
                                                         </div>
                                                         <p className="text-xs text-ios-text dark:text-ios-dark-text leading-relaxed">
-                                                            הוסיפו לחשבון הכנסות או הוצאות כדי לפתוח את המאזן
+                                                            הוסיפו לחשבון &quot;{getAccountLabel(account)}&quot; הכנסות או הוצאות כדי לפתוח את המאזן
                                                         </p>
                                                     </div>
                                                 </div>

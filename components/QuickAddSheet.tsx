@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence, useDragControls, PanInfo } from 'framer-motion';
-import { X, Calendar } from 'lucide-react';
+import { X, Calendar, Plus, Search, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 import LiquidToggle from './ui/LiquidToggle';
-import { addTransaction } from '@/app/actions';
+import { addCategory, addTransaction } from '@/app/actions';
 import { useHaptic } from '@/hooks/useHaptic';
 import { detectCategory } from '@/lib/category-dictionary';
 import { formatDateInputForDisplay, getTodayDateInputValue, toDateInputValueFromUtc } from '@/lib/date-only';
@@ -34,6 +34,8 @@ function getAccountIcon(account: Account): string {
     return '👤';
 }
 
+const CATEGORY_EMOJIS = ['🍕', '🛒', '🚗', '🏠', '💡', '🍽️', '☕', '🎁', '🎉', '💊', '🧾', '✈️', '📦', '🧒', '🐶', '💸', '✨'];
+
 export default function QuickAddSheet({ isOpen, onClose, initialData, categories = [], accounts = [] }: QuickAddSheetProps) {
     const router = useRouter();
     const [amount, setAmount] = useState('');
@@ -49,6 +51,15 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
     const [dateError, setDateError] = useState('');
     const [isDeleting, setIsDeleting] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [availableCategories, setAvailableCategories] = useState<Category[]>(categories);
+    const [categorySearch, setCategorySearch] = useState('');
+    const [showCreateCategory, setShowCreateCategory] = useState(false);
+    const [newCategoryName, setNewCategoryName] = useState('');
+    const [newCategoryIcon, setNewCategoryIcon] = useState('✨');
+    const [isAddingCategory, setIsAddingCategory] = useState(false);
+    const [isCategoryTouched, setIsCategoryTouched] = useState(false);
+    const [isAccountListExpanded, setIsAccountListExpanded] = useState(false);
+    const [hasUserPickedAccount, setHasUserPickedAccount] = useState(false);
 
     const dragControls = useDragControls();
     const { trigger } = useHaptic();
@@ -89,12 +100,17 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
     }, [isOpen, onClose]);
 
     useEffect(() => {
+        setAvailableCategories(categories);
+    }, [categories]);
+
+    useEffect(() => {
         if (isOpen) {
             if (initialData) {
                 setAmount(initialData.amount.toString());
                 setDescription(initialData.description || '');
                 setDate(toDateInputValueFromUtc(new Date(initialData.date)));
                 setAccountId(initialData.account.id);
+                setHasUserPickedAccount(true);
                 setCategory(initialData.category);
                 setIsRecurring(Boolean(initialData.isRecurring));
                 setMonthPolicy('ROLL_TO_LAST_DAY');
@@ -104,30 +120,38 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                 setDate(getTodayDateInputValue());
                 setIsRecurring(false);
                 setMonthPolicy('ROLL_TO_LAST_DAY');
-                setAccountId(getDefaultAccountId(accounts));
+                setAccountId(accounts.length > 1 ? '' : getDefaultAccountId(accounts));
+                setHasUserPickedAccount(accounts.length <= 1);
                 setCategory('כללי');
+                setIsCategoryTouched(false);
             }
             setShowDeleteConfirm(false);
             setAmountError('');
             setAccountError('');
             setDateError('');
+            setCategorySearch('');
+            setShowCreateCategory(false);
+            setNewCategoryName('');
+            setNewCategoryIcon('✨');
+            setIsAccountListExpanded(false);
         }
     }, [isOpen, initialData, accounts]);
 
     useEffect(() => {
-        if (!initialData && description) {
+        if (!initialData && !isCategoryTouched && description) {
             const detected = detectCategory(description);
             if (detected) setCategory(detected.name);
         }
-    }, [description, initialData]);
+    }, [description, initialData, isCategoryTouched]);
 
     useEffect(() => {
         if (!isOpen || accounts.length === 0) return;
         const hasSelectedAccount = accounts.some((acc) => acc.id === accountId);
-        if (!hasSelectedAccount) {
+        if (!hasSelectedAccount && (accounts.length === 1 || initialData)) {
             setAccountId(getDefaultAccountId(accounts));
+            setHasUserPickedAccount(true);
         }
-    }, [isOpen, accountId, accounts]);
+    }, [isOpen, accountId, accounts, initialData]);
 
     const handleSubmit = async () => {
         const num = parseFloat(amount);
@@ -190,6 +214,65 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
     const selectedDate = date ? new Date(`${date}T00:00:00`) : null;
     const selectedDay = selectedDate && !Number.isNaN(selectedDate.getTime()) ? selectedDate.getDate() : null;
     const shouldShowShortMonthPolicy = isRecurring && selectedDay !== null && selectedDay >= 29;
+    const normalizedSearch = categorySearch.trim().toLocaleLowerCase('he');
+    const filteredCategories = useMemo(() => {
+        if (!normalizedSearch) return availableCategories;
+        return availableCategories.filter((cat) =>
+            cat.name.toLocaleLowerCase('he').includes(normalizedSearch) ||
+            cat.icon.toLocaleLowerCase('he').includes(normalizedSearch)
+        );
+    }, [availableCategories, normalizedSearch]);
+    const selectedAccount = useMemo(
+        () => accounts.find((acc) => acc.id === accountId) ?? accounts[0] ?? null,
+        [accountId, accounts]
+    );
+    const shouldPromptAccountChoice = accounts.length > 1 && !hasUserPickedAccount;
+
+    const handleCreateCategory = async () => {
+        const candidate = (newCategoryName || categorySearch).trim();
+        if (!candidate) {
+            toast.error('יש להזין שם קטגוריה');
+            return;
+        }
+
+        const existing = availableCategories.find(
+            (cat) => cat.name.trim().toLocaleLowerCase('he') === candidate.toLocaleLowerCase('he')
+        );
+        if (existing) {
+            setCategory(existing.name);
+            setIsCategoryTouched(true);
+            setShowCreateCategory(false);
+            toast.success('הקטגוריה כבר קיימת, נבחרה עבורך');
+            return;
+        }
+
+        setIsAddingCategory(true);
+        const res = await addCategory(candidate, newCategoryIcon, 'expense');
+        setIsAddingCategory(false);
+        if (!res.success) {
+            toast.error(res.error ?? 'הוספת קטגוריה נכשלה');
+            return;
+        }
+
+        const createdCategory = {
+            id: `local-${Date.now()}`,
+            name: candidate,
+            icon: newCategoryIcon,
+            type: 'expense',
+            isCustom: true,
+            userId: (availableCategories[0] as { userId?: string } | undefined)?.userId ?? '',
+        } as Category;
+        setAvailableCategories((prev) =>
+            [...prev, createdCategory].sort((a, b) => a.name.localeCompare(b.name, 'he'))
+        );
+        setCategory(createdCategory.name);
+        setIsCategoryTouched(true);
+        setCategorySearch('');
+        setNewCategoryName('');
+        setShowCreateCategory(false);
+        toast.success('קטגוריה נוספה');
+        router.refresh();
+    };
 
     return (
         <AnimatePresence>
@@ -275,26 +358,60 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                             {/* Account Selector */}
                             <div className="bg-white dark:bg-ios-dark-card rounded-2xl shadow-card mb-4 overflow-hidden">
                                 <p className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle uppercase tracking-wider px-4 pt-4 pb-2">חשבון</p>
-                                <div className="flex p-1.5 mx-3 mb-3 bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl">
-                                    {accounts.map((acc) => (
-                                        <button
-                                            key={acc.id}
-                                            type="button"
-                                            onClick={() => {
-                                                setAccountId(acc.id);
-                                                trigger(10);
-                                            }}
-                                            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-semibold transition-all ${
-                                                accountId === acc.id
-                                                    ? 'bg-white dark:bg-ios-dark-card shadow-card text-ios-text dark:text-ios-dark-text'
-                                                    : 'text-gray-400 dark:text-ios-dark-subtle'
-                                            }`}
-                                            aria-pressed={accountId === acc.id}
-                                        >
-                                            <span className="text-sm">{getAccountIcon(acc)}</span>
-                                            {getAccountLabel(acc)}
-                                        </button>
-                                    ))}
+                                <div className="px-3 pb-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (accounts.length > 1) setIsAccountListExpanded((prev) => !prev);
+                                        }}
+                                        className="w-full flex items-center justify-between gap-3 px-3.5 py-3 rounded-xl bg-ios-gray-6 dark:bg-ios-dark-fill text-ios-text dark:text-ios-dark-text"
+                                        aria-expanded={isAccountListExpanded}
+                                        disabled={accounts.length <= 1}
+                                    >
+                                        {accounts.length <= 1 ? (
+                                            <span className="flex items-center gap-2 text-sm font-semibold min-w-0">
+                                                <span className="text-sm">{selectedAccount ? getAccountIcon(selectedAccount) : '👤'}</span>
+                                                <span className="truncate">{selectedAccount ? getAccountLabel(selectedAccount) : 'חשבון'}</span>
+                                            </span>
+                                        ) : shouldPromptAccountChoice ? (
+                                            <span className="text-sm text-ios-subtle dark:text-ios-dark-subtle">בחר חשבון...</span>
+                                        ) : (
+                                            <span className="flex items-center gap-2 text-sm font-semibold min-w-0">
+                                                <span className="text-sm">{selectedAccount ? getAccountIcon(selectedAccount) : '👤'}</span>
+                                                <span className="truncate">{selectedAccount ? getAccountLabel(selectedAccount) : 'בחר חשבון'}</span>
+                                            </span>
+                                        )}
+                                        {accounts.length > 1 && (
+                                            isAccountListExpanded
+                                                ? <ChevronUp className="w-4 h-4 text-ios-subtle dark:text-ios-dark-subtle" />
+                                                : <ChevronDown className="w-4 h-4 text-ios-subtle dark:text-ios-dark-subtle" />
+                                        )}
+                                    </button>
+                                    {isAccountListExpanded && accounts.length > 1 && (
+                                        <div className="mt-2 max-h-[168px] overflow-y-auto pr-1 space-y-2">
+                                            {accounts.map((acc) => (
+                                                <button
+                                                    key={acc.id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setAccountId(acc.id);
+                                                        setHasUserPickedAccount(true);
+                                                        setIsAccountListExpanded(false);
+                                                        trigger(10);
+                                                    }}
+                                                    className={`w-full flex items-center gap-2.5 py-2.5 px-3 rounded-xl text-sm font-semibold transition-all ${
+                                                        accountId === acc.id
+                                                            ? 'bg-ios-blue text-white'
+                                                            : 'bg-ios-gray-6 dark:bg-ios-dark-fill text-gray-500 dark:text-ios-dark-subtle'
+                                                    }`}
+                                                    aria-pressed={accountId === acc.id}
+                                                >
+                                                    <span className="text-sm">{getAccountIcon(acc)}</span>
+                                                    <span className="truncate">{getAccountLabel(acc)}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                                 {accountError && (
                                     <p className="text-sm text-ios-red px-4 pb-3" role="alert">
@@ -303,9 +420,8 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                 )}
                             </div>
 
-                            {/* Form Fields Group */}
-                            <div className="bg-white dark:bg-ios-dark-card rounded-2xl shadow-card mb-4 overflow-hidden divide-y divide-gray-100 dark:divide-white/10">
-                                {/* Date */}
+                            {/* Date */}
+                            <div className="bg-white dark:bg-ios-dark-card rounded-2xl shadow-card mb-4 overflow-hidden">
                                 <div className="flex items-center justify-between p-4">
                                     <div className="flex items-center gap-3">
                                         <div className="w-8 h-8 bg-ios-red/10 rounded-lg flex items-center justify-center">
@@ -330,8 +446,10 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                     </p>
                                     {dateError && <p className="text-xs text-ios-red mt-1">{dateError}</p>}
                                 </div>
+                            </div>
 
-                                {/* Description */}
+                            {/* Description */}
+                            <div className="bg-white dark:bg-ios-dark-card rounded-2xl shadow-card mb-4 overflow-hidden">
                                 <div className="p-4">
                                     <div className="flex items-center gap-3 mb-2">
                                         <div className="w-8 h-8 bg-ios-blue/10 rounded-lg flex items-center justify-center">
@@ -352,13 +470,68 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                             {/* Category */}
                             <div className="bg-white dark:bg-ios-dark-card rounded-2xl shadow-card mb-4 p-4">
                                 <p className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle uppercase tracking-wider mb-3">קטגוריה</p>
+                                <div className="flex gap-2 mb-3">
+                                    <div className="flex-1 relative">
+                                        <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-ios-subtle dark:text-ios-dark-subtle" />
+                                        <input
+                                            type="text"
+                                            value={categorySearch}
+                                            onChange={(e) => setCategorySearch(e.target.value)}
+                                            placeholder="חיפוש קטגוריה קיימת"
+                                            className="w-full bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl py-2.5 pr-9 pl-3 text-sm text-ios-text dark:text-ios-dark-text placeholder-gray-400 dark:placeholder-ios-dark-subtle focus:outline-none focus:ring-2 focus:ring-ios-blue/30"
+                                        />
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setShowCreateCategory((prev) => !prev);
+                                            setNewCategoryName(categorySearch.trim());
+                                        }}
+                                        className="w-10 h-10 rounded-xl bg-ios-blue text-white flex items-center justify-center"
+                                        aria-label="הוספת קטגוריה חדשה"
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                    </button>
+                                </div>
+
+                                {showCreateCategory && (
+                                    <div className="bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl p-2.5 mb-3">
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                value={newCategoryName}
+                                                onChange={(e) => setNewCategoryName(e.target.value)}
+                                                placeholder="שם קטגוריה חדשה"
+                                                className="flex-1 bg-white dark:bg-ios-dark-card rounded-lg px-3 py-2 text-sm text-ios-text dark:text-ios-dark-text"
+                                            />
+                                            <select
+                                                value={newCategoryIcon}
+                                                onChange={(e) => setNewCategoryIcon(e.target.value)}
+                                                className="w-14 text-center bg-white dark:bg-ios-dark-card rounded-lg px-1 py-2 text-sm text-ios-text dark:text-ios-dark-text"
+                                                aria-label="בחירת אמוג׳י"
+                                            >
+                                                {CATEGORY_EMOJIS.map((emoji) => <option key={emoji} value={emoji}>{emoji}</option>)}
+                                            </select>
+                                            <button
+                                                type="button"
+                                                onClick={handleCreateCategory}
+                                                disabled={isAddingCategory}
+                                                className="px-3 py-2 rounded-lg bg-ios-blue text-white text-xs font-semibold disabled:opacity-50"
+                                            >
+                                                {isAddingCategory ? 'מוסיף...' : 'הוסף'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1" style={{ WebkitOverflowScrolling: 'touch' }}>
-                                    {categories.map((cat) => (
+                                    {filteredCategories.map((cat) => (
                                         <button
                                             key={cat.id}
                                             type="button"
                                             onClick={() => {
                                                 setCategory(cat.name);
+                                                setIsCategoryTouched(true);
                                                 trigger(10);
                                             }}
                                             className={`flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
@@ -371,10 +544,13 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                             <span>{cat.name}</span>
                                         </button>
                                     ))}
-                                    {!categories.some((c) => c.name === 'כללי') && (
+                                    {!availableCategories.some((c) => c.name === 'כללי') && (
                                         <button
                                             type="button"
-                                            onClick={() => setCategory('כללי')}
+                                            onClick={() => {
+                                                setCategory('כללי');
+                                                setIsCategoryTouched(true);
+                                            }}
                                             className={`flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                                                 category === 'כללי'
                                                     ? 'bg-ios-blue text-white shadow-sm'
@@ -386,6 +562,11 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                         </button>
                                     )}
                                 </div>
+                                {filteredCategories.length === 0 && (
+                                    <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle mt-2">
+                                        לא נמצאו קטגוריות. אפשר להוסיף קטגוריה חדשה עם כפתור +
+                                    </p>
+                                )}
                             </div>
 
                             {/* Recurring Toggle */}

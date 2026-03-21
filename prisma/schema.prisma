@@ -52,6 +52,7 @@ model Account {
   id                    String                 @id @default(uuid())
   name                  String
   type                  AccountType            @default(PRIVATE)
+  income                Float                  @default(0)
   balance               Float                  @default(0)
   color                 String?
   icon                  String?

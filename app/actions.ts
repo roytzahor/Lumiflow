@@ -130,7 +130,7 @@ async function logActionMetric(eventName: string, userId: string, payload: Recor
   console.info(`[metric] ${line}`);
 }
 
-async function decorateRecurringFlags(transactions: (Transaction & { recurringTransactionId: string | null; account: { id: string; name: string; type: AccountType; balance: number; color: string | null; icon: string | null; isArchived: boolean; createdAt: Date; updatedAt: Date } })[]) {
+async function decorateRecurringFlags(transactions: (Transaction & { recurringTransactionId: string | null; account: { id: string; name: string; type: AccountType; income: number; balance: number; color: string | null; icon: string | null; isArchived: boolean; createdAt: Date; updatedAt: Date } })[]) {
   return transactions.map((t) => ({
     ...t,
     isRecurring: Boolean(t.recurringTransactionId),
@@ -405,13 +405,24 @@ export async function updateAccountNames(updates: { id: string; name: string }[]
   }
 }
 
-export async function createAccount(input: { name: string; type: AccountType; color?: string; icon?: string }) {
+function normalizeAccountIncome(income: number | null | undefined) {
+  if (income == null) return 0;
+  if (!Number.isFinite(income) || income < 0) return null;
+  return Number(income);
+}
+
+export async function createAccount(input: { name: string; type: AccountType; income?: number | null; color?: string; icon?: string }) {
   try {
     const userId = await requireUserId();
+    const normalizedIncome = normalizeAccountIncome(input.income);
+    if (normalizedIncome == null) {
+      return { success: false, error: 'Monthly income must be a valid non-negative number' };
+    }
     const account = await prisma.account.create({
       data: {
         name: input.name.trim() || 'New account',
         type: input.type,
+        income: normalizedIncome,
         color: input.color ?? null,
         icon: input.icon ?? null,
       },
@@ -432,20 +443,36 @@ export async function createAccount(input: { name: string; type: AccountType; co
   }
 }
 
-export async function updateAccount(accountId: string, input: { name?: string; type?: AccountType; color?: string; icon?: string }) {
+export async function updateAccount(accountId: string, input: { name?: string; type?: AccountType; income?: number | null; color?: string; icon?: string }) {
   try {
     const userId = await requireUserId();
     const member = await assertUserHasAccount(userId, accountId);
     if (member.role !== 'OWNER') return { success: false, error: 'Only owner can edit this account' };
+    const shouldUpdateIncome = input.income !== undefined;
+    const normalizedIncome = shouldUpdateIncome ? normalizeAccountIncome(input.income) : undefined;
+    if (shouldUpdateIncome && normalizedIncome == null) {
+      return { success: false, error: 'Monthly income must be a valid non-negative number' };
+    }
+
+    const updateData: {
+      name?: string;
+      type?: AccountType;
+      income?: number;
+      color?: string;
+      icon?: string;
+    } = {
+      name: input.name?.trim(),
+      type: input.type,
+      color: input.color,
+      icon: input.icon,
+    };
+    if (shouldUpdateIncome && normalizedIncome != null) {
+      updateData.income = normalizedIncome;
+    }
 
     await prisma.account.update({
       where: { id: accountId },
-      data: {
-        name: input.name?.trim(),
-        type: input.type,
-        color: input.color,
-        icon: input.icon,
-      },
+      data: updateData,
     });
     refreshAllViews();
     return { success: true };
@@ -649,9 +676,17 @@ export async function addCategory(name: string, icon: string, type: string) {
     await prisma.category.create({
       data: { userId, name: name.trim(), icon, type, isCustom: true },
     });
-    revalidatePath('/settings');
+    refreshAllViews();
     return { success: true };
-  } catch {
+  } catch (error) {
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      (error as { code?: string }).code === 'P2002'
+    ) {
+      return { success: false, error: 'קטגוריה בשם הזה כבר קיימת' };
+    }
     return { success: false, error: 'Failed to add category' };
   }
 }

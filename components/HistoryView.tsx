@@ -33,9 +33,11 @@ export default function HistoryView({ transactions, total, accountTotals, accoun
             return a.accountName.localeCompare(b.accountName, "he");
         });
     const accountCount = normalizedAccountTotals.length;
-    const hasSingleOrNoAccount = accountCount <= 1;
+    const hasNoAccounts = accountCount === 0;
     const hasScrollableAccounts = accountCount > 3;
-    const visibleAccountTotals = hasScrollableAccounts ? normalizedAccountTotals : normalizedAccountTotals.slice(0, 3);
+    const visibleAccountTotals = normalizedAccountTotals.slice(0, 3);
+    const summaryRowHeightClass = "h-[172px]";
+    const scrollAccountCardHeightClass = "h-[52px]";
 
     const handleTransactionClick = (transaction: TransactionListItem) => {
         if (transaction.isProjected) return;
@@ -64,31 +66,28 @@ export default function HistoryView({ transactions, total, accountTotals, accoun
 
             {/* Summary Cards */}
             <div className="px-5 mt-4">
-                <div className={`flex gap-3 ${hasSingleOrNoAccount ? "" : "items-stretch"}`}>
+                <div className={`flex gap-3 items-stretch ${summaryRowHeightClass}`}>
                     {/* Total */}
-                    <div className={`${hasSingleOrNoAccount ? "w-full" : "flex-1"} bg-white dark:bg-ios-dark-card rounded-2xl p-4 shadow-card`}>
+                    <div className={`${hasNoAccounts ? "w-full" : "flex-1 h-full"} bg-white dark:bg-ios-dark-card rounded-2xl p-4 shadow-card flex flex-col justify-center`}>
                         <p className="text-[11px] font-medium text-ios-subtle dark:text-ios-dark-subtle mb-1">סה״כ כלל ההוצאות שלך</p>
                         <p className="text-2xl font-bold text-ios-text dark:text-ios-dark-text tabular-nums">₪{formatIlsAmount(total)}</p>
                     </div>
 
-                    {!hasSingleOrNoAccount && (
-                        <div className="flex-1 min-h-0">
+                    {!hasNoAccounts && (
+                        <div className="flex-1 min-h-0 h-full">
                             {hasScrollableAccounts ? (
-                                <div className="relative h-full">
-                                    <div className="h-full overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-                                        <div className="h-full flex gap-2">
-                                            {visibleAccountTotals.map((row) => (
-                                                <div
-                                                    key={row.accountId}
-                                                    className="w-[calc((100%-1rem)/3)] min-w-[96px] h-full bg-white dark:bg-ios-dark-card rounded-xl px-3 py-2.5 shadow-card flex-shrink-0 flex flex-col justify-center"
-                                                >
-                                                    <span className="text-[11px] font-semibold text-ios-indigo truncate">{row.accountName}</span>
-                                                    <span className="text-xs font-bold text-ios-text dark:text-ios-dark-text tabular-nums mt-1">₪{formatIlsAmount(row.total)}</span>
-                                                </div>
-                                            ))}
-                                        </div>
+                                <div className="h-full overflow-y-scroll pr-1 [scrollbar-gutter:stable] scrollbar-thin [scrollbar-color:rgba(0,122,255,0.72)_rgba(120,120,128,0.2)] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-ios-subtle/20 dark:[&::-webkit-scrollbar-track]:bg-ios-dark-subtle/20 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-ios-blue/75 dark:[&::-webkit-scrollbar-thumb]:bg-ios-blue/65">
+                                    <div className="flex flex-col gap-2">
+                                        {normalizedAccountTotals.map((row) => (
+                                            <div
+                                                key={row.accountId}
+                                                className={`${scrollAccountCardHeightClass} flex-shrink-0 bg-white dark:bg-ios-dark-card rounded-xl px-3 py-2 shadow-card flex justify-between items-center`}
+                                            >
+                                                <span className="text-[11px] font-semibold text-ios-indigo truncate max-w-[110px]">{row.accountName}</span>
+                                                <span className="text-xs font-bold text-ios-text dark:text-ios-dark-text tabular-nums">₪{formatIlsAmount(row.total)}</span>
+                                            </div>
+                                        ))}
                                     </div>
-                                    <div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-white dark:from-ios-dark-card to-transparent rounded-l-xl" />
                                 </div>
                             ) : (
                                 <div className="h-full flex flex-col gap-2">
@@ -108,7 +107,7 @@ export default function HistoryView({ transactions, total, accountTotals, accoun
                 </div>
                 {hasScrollableAccounts && (
                     <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle mt-2">
-                        החלקה להצגת חשבונות נוספים
+                        גללו למעלה/למטה להצגת חשבונות נוספים
                     </p>
                 )}
             </div>
