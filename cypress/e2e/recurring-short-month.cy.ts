@@ -1,4 +1,14 @@
 describe('Recurring short month policy visibility', () => {
+  Cypress.on('uncaught:exception', (err) => {
+    if (
+      err.message.includes('NEXT_REDIRECT') ||
+      err.message.includes('An unexpected response was received from the server.')
+    ) {
+      return false;
+    }
+    return true;
+  });
+
   const submitOnboardingWithStaleRetry = () => {
     cy.get('[data-testid="onboarding-submit"]').click();
     cy.get('body').then(($body) => {

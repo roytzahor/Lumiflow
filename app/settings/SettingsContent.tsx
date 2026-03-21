@@ -24,6 +24,7 @@ import {
 import { User, MoonStar, Pencil, Check, X, Trash2, Save, Plus, Wallet, Share2, LogOut, Link2, Mail, Copy, SendHorizontal } from 'lucide-react';
 import type { BudgetSettings, Account, Category } from '@/lib/types';
 import AccountPopup from '@/components/AccountPopup';
+import ProfileEditSheet from '@/components/ProfileEditSheet';
 
 const DEFAULT_BUDGET: BudgetSettings = {
   id: '',
@@ -92,14 +93,12 @@ export default function SettingsContent({
   } | null>(null);
   const [showInvitePopup, setShowInvitePopup] = useState(false);
   const [acceptingInvite, setAcceptingInvite] = useState(false);
-  const [profileName, setProfileName] = useState(currentUser?.name ?? '');
-  const [profileEmail, setProfileEmail] = useState(currentUser?.email ?? '');
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
+  const [profileSheetMode, setProfileSheetMode] = useState<'details' | 'password' | null>(null);
+  const [isProfileSaving, setIsProfileSaving] = useState(false);
+  const [isPasswordSaving, setIsPasswordSaving] = useState(false);
   const [themePreference, setThemePreference] = useState<'LIGHT' | 'DARK' | 'SYSTEM'>(currentUser?.themePreference ?? 'SYSTEM');
   const [isThemeSaving, setIsThemeSaving] = useState(false);
-  const [contributionDrafts, setContributionDrafts] = useState<Record<string, number>>({});
-  const [savingContributionId, setSavingContributionId] = useState<string | null>(null);
+  const [contributionPlansByAccount, setContributionPlansByAccount] = useState<Record<string, number>>({});
   const themeInitializedRef = useRef(false);
   const sharedAccounts = accounts.filter((a) => a.type === 'SHARED');
   const selectedInviteAccountName = sharedAccounts.find((a) => a.id === inviteAccountId)?.name ?? '';
@@ -109,15 +108,13 @@ export default function SettingsContent({
     setCategories(initialCategories);
     setAccounts(initialAccounts);
     setBudget(initialBudget ?? DEFAULT_BUDGET);
-    setProfileName(currentUser?.name ?? '');
-    setProfileEmail(currentUser?.email ?? '');
     const preference = currentUser?.themePreference ?? 'SYSTEM';
     setThemePreference(preference);
     if (!themeInitializedRef.current) {
       setTheme(mapThemePreferenceToClientTheme(preference));
       themeInitializedRef.current = true;
     }
-    setContributionDrafts(
+    setContributionPlansByAccount(
       initialContributionPlans.reduce<Record<string, number>>((acc, row) => {
         acc[row.accountId] = row.monthlyAmount;
         return acc;
@@ -194,47 +191,56 @@ export default function SettingsContent({
     setSelectedAccount(null);
   };
 
-  const updateContributionDraft = (accountId: string, value: string) => {
-    const nextValue = value === '' ? 0 : Number(value);
-    setContributionDrafts((prev) => ({
-      ...prev,
-      [accountId]: Number.isFinite(nextValue) ? nextValue : 0,
-    }));
-  };
-
-  const saveContribution = async (accountId: string) => {
-    const monthlyAmount = Number(contributionDrafts[accountId] ?? 0);
-    if (!Number.isFinite(monthlyAmount) || monthlyAmount < 0) {
-      toast.error('יש להזין סכום תקין');
-      return;
-    }
-    setSavingContributionId(accountId);
-    const res = await upsertContributionPlan({ accountId, monthlyAmount });
-    setSavingContributionId(null);
-    if (res.success) {
-      toast.success('התרומה החודשית נשמרה');
-      router.refresh();
-    } else {
-      toast.error(res.error ?? 'שמירת התרומה נכשלה');
-    }
-  };
-
-  const handleAccountSubmit = async (payload: { name: string; type: 'PRIVATE' | 'SHARED'; income: number }) => {
+  const handleAccountSubmit = async (payload: { name: string; type: 'PRIVATE' | 'SHARED'; income: number; monthlyContribution: number }) => {
     setAccountSaving(true);
     const res = accountPopupMode === 'create'
       ? await createAccount(payload)
       : selectedAccount
         ? await updateAccount(selectedAccount.id, payload)
         : { success: false, error: 'לא נמצא חשבון לעריכה' };
-    setAccountSaving(false);
-    if (res.success) {
-      toast.success(accountPopupMode === 'create' ? 'החשבון נוצר' : 'החשבון עודכן');
-      setIsAccountPopupOpen(false);
-      setSelectedAccount(null);
-      router.refresh();
-    } else {
+    if (!res.success) {
+      setAccountSaving(false);
       toast.error(res.error ?? 'שמירת החשבון נכשלה');
+      return;
     }
+
+    const createdAccount = accountPopupMode === 'create'
+      ? (res as { account?: Account }).account
+      : null;
+    const accountId = accountPopupMode === 'create'
+      ? createdAccount?.id ?? null
+      : selectedAccount?.id ?? null;
+
+    if (!accountId) {
+      setAccountSaving(false);
+      toast.error('לא נמצא חשבון לשמירת התרומה החודשית');
+      return;
+    }
+
+    const contributionRes = await upsertContributionPlan({
+      accountId,
+      monthlyAmount: payload.monthlyContribution,
+    });
+    setAccountSaving(false);
+
+    if (!contributionRes.success) {
+      toast.error(contributionRes.error ?? 'שמירת התרומה החודשית נכשלה');
+      if (accountPopupMode === 'create' && createdAccount) {
+        setAccountPopupMode('edit');
+        setSelectedAccount(createdAccount);
+      }
+      router.refresh();
+      return;
+    }
+
+    setContributionPlansByAccount((prev) => ({
+      ...prev,
+      [accountId]: payload.monthlyContribution,
+    }));
+    toast.success(accountPopupMode === 'create' ? 'החשבון נוצר' : 'החשבון עודכן');
+    setIsAccountPopupOpen(false);
+    setSelectedAccount(null);
+    router.refresh();
   };
 
   const handleAccountDelete = async () => {
@@ -246,6 +252,19 @@ export default function SettingsContent({
       toast.success('החשבון הועבר לארכיון');
       setIsAccountPopupOpen(false);
       setSelectedAccount(null);
+      router.refresh();
+    } else {
+      toast.error(res.error ?? 'מחיקת החשבון נכשלה');
+    }
+  };
+
+  const handleAccountDeleteFromCard = async (account: Account) => {
+    if (!window.confirm(`למחוק את החשבון "${account.name}"? החשבון יועבר לארכיון.`)) return;
+    setAccountDeleting(true);
+    const res = await archiveAccount(account.id);
+    setAccountDeleting(false);
+    if (res.success) {
+      toast.success('החשבון הועבר לארכיון');
       router.refresh();
     } else {
       toast.error(res.error ?? 'מחיקת החשבון נכשלה');
@@ -308,29 +327,48 @@ export default function SettingsContent({
   };
 
   const saveProfile = async () => {
-    const res = await updateCurrentUserProfile({
-      name: profileName,
-      email: profileEmail,
-    });
-    if (res.success) {
-      toast.success('הפרופיל עודכן בהצלחה');
-      router.refresh();
-    } else {
-      toast.error(res.error ?? 'עדכון פרופיל נכשל');
-    }
+    setProfileSheetMode('details');
   };
 
   const savePassword = async () => {
-    const res = await updateCurrentUserPassword({
-      currentPassword,
-      newPassword,
+    setProfileSheetMode('password');
+  };
+
+  const closeProfileSheet = () => {
+    if (isProfileSaving || isPasswordSaving) return;
+    setProfileSheetMode(null);
+  };
+
+  const saveProfileDetails = async (payload: { name: string; email: string }) => {
+    setIsProfileSaving(true);
+    const res = await updateCurrentUserProfile({
+      name: payload.name,
+      email: payload.email,
     });
+    setIsProfileSaving(false);
     if (res.success) {
-      setCurrentPassword('');
-      setNewPassword('');
+      toast.success('הפרופיל עודכן בהצלחה');
+      router.refresh();
+      return true;
+    } else {
+      toast.error(res.error ?? 'עדכון פרופיל נכשל');
+      return false;
+    }
+  };
+
+  const savePasswordDetails = async (payload: { currentPassword: string; newPassword: string }) => {
+    setIsPasswordSaving(true);
+    const res = await updateCurrentUserPassword({
+      currentPassword: payload.currentPassword,
+      newPassword: payload.newPassword,
+    });
+    setIsPasswordSaving(false);
+    if (res.success) {
       toast.success('הסיסמה עודכנה');
+      return true;
     } else {
       toast.error(res.error ?? 'עדכון סיסמה נכשל');
+      return false;
     }
   };
 
@@ -390,50 +428,29 @@ export default function SettingsContent({
           </div>
           <h2 className="text-base font-bold text-ios-text dark:text-ios-dark-text">פרופיל משתמש</h2>
         </div>
-        <div className="px-5 pb-5 space-y-3">
-          <input
-            type="text"
-            value={profileName}
-            onChange={(e) => setProfileName(e.target.value)}
-            placeholder="שם תצוגה"
-            className="w-full bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-4 py-2.5 text-sm text-ios-text dark:text-ios-dark-text"
-          />
-          <input
-            type="email"
-            value={profileEmail}
-            onChange={(e) => setProfileEmail(e.target.value)}
-            placeholder="אימייל"
-            dir="ltr"
-            className="w-full bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-4 py-2.5 text-sm text-ios-text dark:text-ios-dark-text"
-          />
-          <button
-            onClick={saveProfile}
-            className="w-full py-2.5 rounded-xl bg-ios-blue text-white text-sm font-semibold"
-          >
-            שמור פרטים
-          </button>
-          <div className="border-t border-gray-100 dark:border-white/10 pt-3 space-y-2">
-            <input
-              type="password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              placeholder="סיסמה נוכחית"
-              dir="ltr"
-              className="w-full bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-4 py-2.5 text-sm text-ios-text dark:text-ios-dark-text"
-            />
-            <input
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="סיסמה חדשה"
-              dir="ltr"
-              className="w-full bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-4 py-2.5 text-sm text-ios-text dark:text-ios-dark-text"
-            />
+        <div className="px-5 pb-5 space-y-4">
+          <div className="rounded-xl bg-ios-gray-6 dark:bg-ios-dark-fill px-4 py-3">
+            <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle">שם</p>
+            <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text">{currentUser?.name?.trim() || 'לא הוגדר עדיין'}</p>
+            <div className="my-2 border-t border-gray-200/70 dark:border-white/10" />
+            <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle">אימייל</p>
+            <p dir="ltr" className="text-[13px] text-ios-text dark:text-ios-dark-text">{currentUser?.email ?? '—'}</p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <button
+              type="button"
+              onClick={saveProfile}
+              className="w-full py-2.5 rounded-xl bg-ios-blue text-white text-sm font-semibold"
+            >
+              עריכת פרטים
+            </button>
+            <button
+              type="button"
               onClick={savePassword}
               className="w-full py-2.5 rounded-xl bg-ios-indigo text-white text-sm font-semibold"
             >
-              עדכן סיסמה
+              עדכון סיסמה
             </button>
           </div>
         </div>
@@ -528,50 +545,32 @@ export default function SettingsContent({
         </div>
         <div className="px-5 pb-5 space-y-3">
           {accounts.map((account) => (
-            <div key={account.id} className="bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl p-3 space-y-2">
+            <div key={account.id} className="bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl p-3">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text">{account.name}</p>
+                  <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text leading-tight">{account.name}</p>
                   <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle">
                     {account.type === 'PRIVATE' ? 'פרטי' : 'משותף'} · הכנסה חודשית: ₪{Math.round(account.income ?? 0).toLocaleString('he-IL')}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => openEditAccountPopup(account)}
-                  className="px-3 py-2 rounded-lg bg-white dark:bg-ios-dark-card text-ios-blue text-sm font-medium"
-                >
-                  עריכה
-                </button>
-              </div>
-              <div className="pt-1 border-t border-gray-200/60 dark:border-white/10">
-                <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle mb-2">
-                  תרומה חודשית לחשבון הזה (₪)
-                </p>
-                <div className="flex gap-2">
-                  <input
-                    type="number"
-                    min={0}
-                    inputMode="decimal"
-                    value={contributionDrafts[account.id] ?? 0}
-                    onChange={(e) => updateContributionDraft(account.id, e.target.value)}
-                    className="flex-1 bg-white dark:bg-ios-dark-card rounded-lg px-3 py-2.5 text-sm text-ios-text dark:text-ios-dark-text"
-                    dir="ltr"
-                  />
+                <div className="flex items-center gap-2 shrink-0">
                   <button
                     type="button"
-                    onClick={() => saveContribution(account.id)}
-                    disabled={savingContributionId === account.id}
-                    className="px-3 py-2 rounded-lg bg-ios-indigo text-white text-sm disabled:opacity-60"
+                    onClick={() => openEditAccountPopup(account)}
+                    className="px-3 py-2 rounded-lg bg-white dark:bg-ios-dark-card text-ios-blue text-sm font-medium"
                   >
-                    {savingContributionId === account.id ? 'שומר...' : 'שמור תרומה'}
+                    עריכה
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAccountDeleteFromCard(account)}
+                    disabled={accountDeleting}
+                    className="px-2.5 py-2 rounded-lg bg-white dark:bg-ios-dark-card text-ios-red disabled:opacity-60"
+                    aria-label={`מחיקת חשבון ${account.name}`}
+                  >
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
-                {account.type === 'SHARED' && (
-                  <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle mt-2">
-                    בחשבון משותף הסכום הכולל בסקירה יחושב משילוב התרומות של כל השותפים.
-                  </p>
-                )}
               </div>
             </div>
           ))}
@@ -844,11 +843,23 @@ export default function SettingsContent({
         isOpen={isAccountPopupOpen}
         mode={accountPopupMode}
         account={selectedAccount}
+        initialMonthlyContribution={selectedAccount ? contributionPlansByAccount[selectedAccount.id] ?? 0 : 0}
         isSaving={accountSaving}
         isDeleting={accountDeleting}
         onClose={closeAccountPopup}
         onSubmit={handleAccountSubmit}
         onDelete={accountPopupMode === 'edit' ? handleAccountDelete : undefined}
+      />
+
+      <ProfileEditSheet
+        isOpen={profileSheetMode !== null}
+        mode={profileSheetMode ?? 'details'}
+        initialName={currentUser?.name ?? ''}
+        initialEmail={currentUser?.email ?? ''}
+        isSaving={profileSheetMode === 'details' ? isProfileSaving : isPasswordSaving}
+        onClose={closeProfileSheet}
+        onSaveDetails={saveProfileDetails}
+        onSavePassword={savePasswordDetails}
       />
     </div>
   );

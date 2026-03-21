@@ -1,4 +1,11 @@
 describe('Auth and onboarding flow', () => {
+  Cypress.on('uncaught:exception', (err) => {
+    if (err.message.includes('NEXT_REDIRECT')) {
+      return false;
+    }
+    return true;
+  });
+
   const submitOnboardingWithStaleRetry = () => {
     cy.get('[data-testid="onboarding-submit"]').click();
     cy.get('body').then(($body) => {
@@ -36,9 +43,9 @@ describe('Auth and onboarding flow', () => {
     cy.visit('/');
 
     cy.url().should('eq', `${Cypress.config('baseUrl')}/`);
-    cy.contains('החיסכון החודשי נעול').should('not.exist');
+    cy.contains('הוסיפו לחשבון הכנסות או הוצאות כדי לפתוח את המאזן').should('not.exist');
     cy.contains('₪12,000').should('be.visible');
-    cy.contains('הכרטיס נעול כי טרם הוגדרו הכנסות/הוצאות לחשבון הזה').should('not.exist');
+    cy.contains(/הוסיפו לחשבון ".+" הכנסות או הוצאות כדי לפתוח את המאזן/u).should('not.exist');
   });
 
   it('locks account card when both account inflow and expenses are zero', () => {
@@ -61,7 +68,7 @@ describe('Auth and onboarding flow', () => {
     cy.visit('/');
 
     cy.url().should('eq', `${Cypress.config('baseUrl')}/`);
-    cy.contains('החיסכון החודשי נעול').should('be.visible');
-    cy.contains('הכרטיס נעול כי טרם הוגדרו הכנסות/הוצאות לחשבון הזה').should('be.visible');
+    cy.contains('הוסיפו לחשבון הכנסות או הוצאות כדי לפתוח את המאזן').should('be.visible');
+    cy.contains(/הוסיפו לחשבון ".+" הכנסות או הוצאות כדי לפתוח את המאזן/u).should('be.visible');
   });
 });
