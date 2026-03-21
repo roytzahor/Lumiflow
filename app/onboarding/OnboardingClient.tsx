@@ -65,14 +65,6 @@ export default function OnboardingClient() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const parseOptionalNonNegativeNumber = (value: string) => {
-    const trimmedValue = value.trim();
-    if (!trimmedValue) return null;
-    const parsed = Number(trimmedValue);
-    if (!Number.isFinite(parsed) || parsed < 0) return null;
-    return parsed;
-  };
-
   useEffect(() => {
     try {
       const rawDraft = localStorage.getItem(DRAFT_STORAGE_KEY);
