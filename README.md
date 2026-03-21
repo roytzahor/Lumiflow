@@ -10,7 +10,7 @@ Flexible budgeting for individuals and groups. A mobile-first app for tracking p
 - **Settings** — Manage accounts, budget settings, categories, recurring transactions, and invite links
 - **Multi-Account** — Any number of private or shared accounts
 - **Recurring Transactions** — Monthly automation with short-month policy (`roll to last day` or `skip month`)
-- **Auth** — Email/password + Google sign-in with protected app routes
+- **Auth** — Email/password sign-in with protected app routes
 - **RTL / Hebrew** — Fully right-to-left interface with Hebrew locale
 
 ## Tech Stack
@@ -48,6 +48,7 @@ Create a `.env` file in the project root:
 
 ```
 DATABASE_URL="postgresql://lumiflow:lumiflow@localhost:5433/lumiflow?schema=public"
+DIRECT_URL="postgresql://lumiflow:lumiflow@localhost:5433/lumiflow?schema=public"
 NEXTAUTH_SECRET="<random-long-secret>"
 NEXTAUTH_URL="http://localhost:3000"
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
@@ -76,6 +77,32 @@ yarn prisma:migrate:dev
 If you already run PostgreSQL locally on `5432` (e.g. Homebrew), this project intentionally uses Docker on `5433` to avoid port conflicts.
 
 Option B: use an existing hosted PostgreSQL database and set `DATABASE_URL` accordingly.
+
+### Neon Setup (Vercel-friendly)
+
+If you choose Neon now (and keep the option to switch later), use Prisma's two-URL setup:
+
+- `DATABASE_URL`: pooled Neon connection string (recommended for app runtime)
+- `DIRECT_URL`: direct/non-pooled Neon connection string (recommended for migrations)
+
+In Neon dashboard:
+
+1. Create a project and database.
+2. Copy both connection strings from **Connection Details**.
+3. Set them in `.env` locally and in Vercel env vars per environment (`Development`, `Preview`, `Production`).
+
+Then run:
+
+```bash
+yarn prisma:generate
+yarn prisma:migrate:dev
+```
+
+For production/CI deploys:
+
+```bash
+yarn prisma:migrate:deploy
+```
 
 ### Development
 
@@ -120,7 +147,6 @@ In Vercel Project Settings -> Environment Variables, set at least:
 - `NEXT_PUBLIC_APP_URL`
 - `CRON_SECRET` (if using cron route protection)
 - `GEMINI_API_KEY` (if using AI insights)
-- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (if using Google auth)
 
 Run schema changes safely:
 

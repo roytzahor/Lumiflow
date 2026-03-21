@@ -47,10 +47,6 @@ export default function SignUpPage() {
     window.location.href = signInResult.url ?? '/';
   };
 
-  const signUpWithProvider = async (provider: 'google') => {
-    await signIn(provider, { callbackUrl: '/onboarding' });
-  };
-
   const inputClassName =
     'w-full rounded-xl px-4 py-3 text-ios-text dark:text-ios-dark-text bg-white dark:bg-[#111a2e] border border-gray-200 dark:border-white/20 placeholder:text-gray-400 dark:placeholder:text-ios-dark-subtle/90 focus:outline-none focus:ring-2 focus:ring-ios-blue/45 focus:border-ios-blue/35 transition-shadow shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]';
 
@@ -65,20 +61,6 @@ export default function SignUpPage() {
           <AuthThemeToggle />
         </div>
         <h1 className="text-3xl font-bold text-ios-text dark:text-ios-dark-text tracking-tight">יצירת חשבון חדש</h1>
-        <div className="space-y-2">
-          <button
-            type="button"
-            onClick={() => signUpWithProvider('google')}
-            className="w-full py-2.5 rounded-xl bg-ios-gray-6 dark:bg-[#121d34] border border-gray-200 dark:border-white/15 text-sm font-semibold text-ios-text dark:text-ios-dark-text hover:bg-ios-gray-5 dark:hover:bg-[#172541] transition"
-          >
-            המשך עם Google
-          </button>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="h-px bg-gray-200 dark:bg-white/15 flex-1" />
-          <span className="text-xs text-gray-400 dark:text-ios-dark-subtle">או הרשמה עם אימייל וסיסמה</span>
-          <div className="h-px bg-gray-200 dark:bg-white/15 flex-1" />
-        </div>
         <input
           data-testid="signup-name"
           type="text"
