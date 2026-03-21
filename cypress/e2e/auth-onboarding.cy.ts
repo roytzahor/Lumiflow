@@ -45,7 +45,7 @@ describe('Auth and onboarding flow', () => {
     cy.url().should('eq', `${Cypress.config('baseUrl')}/`);
     cy.contains('הוסיפו לחשבון הכנסות או הוצאות כדי לפתוח את המאזן').should('not.exist');
     cy.contains('₪12,000').should('be.visible');
-    cy.contains(/הוסיפו לחשבון ".+" הכנסות או הוצאות כדי לפתוח את המאזן/u).should('not.exist');
+    cy.contains(/הוסיפו לחשבון ".+" הכנסות או הוצאות כדי לפתוח את המאזן/).should('not.exist');
   });
 
   it('locks account card when both account inflow and expenses are zero', () => {
@@ -69,6 +69,6 @@ describe('Auth and onboarding flow', () => {
 
     cy.url().should('eq', `${Cypress.config('baseUrl')}/`);
     cy.contains('הוסיפו לחשבון הכנסות או הוצאות כדי לפתוח את המאזן').should('be.visible');
-    cy.contains(/הוסיפו לחשבון ".+" הכנסות או הוצאות כדי לפתוח את המאזן/u).should('be.visible');
+    cy.contains(/הוסיפו לחשבון ".+" הכנסות או הוצאות כדי לפתוח את המאזן/).should('be.visible');
   });
 });

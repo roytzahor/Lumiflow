@@ -46,8 +46,8 @@ describe('Invite popup flow', () => {
     cy.url().should('eq', `${Cypress.config('baseUrl')}/`);
 
     cy.visit('/settings');
-    cy.get('[data-testid="settings-invite-account"]').select(1);
-    cy.get('[data-testid="settings-create-invite"]').click();
+    cy.get('button[aria-label^="שיתוף חשבון"]').first().click();
+    cy.contains('button', 'צור קישור הזמנה').click();
     cy.get('[data-testid="settings-invite-url"]')
       .should('contain', 'http')
       .invoke('text')

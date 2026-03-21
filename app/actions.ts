@@ -1486,9 +1486,16 @@ export async function acceptPendingAccountInvite(inviteId: string) {
 }
 
 export async function completeOnboarding(input: {
-  createPersonal: boolean;
-  createShared: boolean;
+  createPersonal?: boolean;
+  createShared?: boolean;
   sharedAccountName?: string;
+  accounts?: Array<{
+    draftId?: string;
+    name: string;
+    type: AccountType;
+    income?: number | null;
+  }>;
+  inviteAccountDraftId?: string | null;
   invitedEmail?: string;
   monthlyIncomeNet?: number | null;
   autoSplitContributions?: boolean;
@@ -1501,6 +1508,29 @@ export async function completeOnboarding(input: {
     const hasMonthlyIncomeInput = input.monthlyIncomeNet != null && Number.isFinite(input.monthlyIncomeNet) && input.monthlyIncomeNet >= 0;
     const normalizedMonthlyIncome = hasMonthlyIncomeInput ? Number(input.monthlyIncomeNet) : null;
     const shouldAutoSplitContributions = Boolean(input.autoSplitContributions);
+    const normalizedAccounts = Array.isArray(input.accounts)
+      ? input.accounts
+        .filter((account) => account && (account.type === 'PRIVATE' || account.type === 'SHARED'))
+        .map((account) => {
+          const normalizedIncome = account.income != null && Number.isFinite(account.income) && account.income >= 0
+            ? Number(account.income)
+            : 0;
+          return {
+            draftId: typeof account.draftId === 'string' && account.draftId ? account.draftId : null,
+            name: account.name.trim(),
+            type: account.type as AccountType,
+            income: normalizedIncome,
+          };
+        })
+        .filter((account) => account.name.length > 0)
+      : [];
+    const hasAccountsPayload = normalizedAccounts.length > 0;
+    const shouldCreatePersonal = hasAccountsPayload
+      ? normalizedAccounts.some((account) => account.type === 'PRIVATE')
+      : Boolean(input.createPersonal);
+    const shouldCreateShared = hasAccountsPayload
+      ? normalizedAccounts.some((account) => account.type === 'SHARED')
+      : Boolean(input.createShared);
     const hasCustomSplitAmountInput =
       input.personalContributionAmount != null &&
       Number.isFinite(input.personalContributionAmount);
@@ -1508,73 +1538,141 @@ export async function completeOnboarding(input: {
       ? Math.max(0, Number(input.personalContributionAmount))
       : null;
 
-    if (!input.createPersonal && !input.createShared) {
+    if (!shouldCreatePersonal && !shouldCreateShared) {
       return { success: false, error: 'Choose at least one option', code: 'INVALID_INPUT' as const };
     }
 
     const result = await prisma.$transaction(async (tx) => {
       const createdAccounts: { id: string; name: string; type: AccountType }[] = [];
+      const createdAccountDraftMap = new Map<string, { id: string; name: string; type: AccountType }>();
       let inviteUrl: string | null = null;
 
-      if (input.createPersonal) {
-        let personal = await tx.account.findFirst({
-          where: {
-            type: 'PRIVATE',
-            isArchived: false,
-            members: { some: { userId } },
-          },
-        });
-
-        if (!personal) {
-          personal = await tx.account.create({
-            data: {
-              name: 'החשבון האישי שלי',
-              type: 'PRIVATE',
-            },
-          });
+      if (hasAccountsPayload) {
+        const duplicateAccountKeys = new Set<string>();
+        for (let i = 0; i < normalizedAccounts.length; i += 1) {
+          const account = normalizedAccounts[i];
+          const duplicateKey = `${account.type}:${account.name.toLowerCase()}`;
+          if (duplicateAccountKeys.has(duplicateKey)) {
+            return { createdAccounts: [], inviteUrl: null, error: 'Duplicate account names are not allowed by type' };
+          }
+          duplicateAccountKeys.add(duplicateKey);
         }
 
-        await tx.accountMember.upsert({
-          where: { userId_accountId: { userId, accountId: personal.id } },
-          create: { userId, accountId: personal.id, role: 'OWNER' },
-          update: { role: 'OWNER' },
-        });
-
-        createdAccounts.push({ id: personal.id, name: personal.name, type: personal.type });
-      }
-
-      if (input.createShared) {
-        let shared = await tx.account.findFirst({
-          where: {
-            type: 'SHARED',
-            isArchived: false,
-            name: normalizedSharedName,
-            members: {
-              some: {
-                userId,
-                role: 'OWNER',
+        for (let i = 0; i < normalizedAccounts.length; i += 1) {
+          const accountInput = normalizedAccounts[i];
+          let account = await tx.account.findFirst({
+            where: {
+              type: accountInput.type,
+              isArchived: false,
+              name: accountInput.name,
+              members: {
+                some: {
+                  userId,
+                  role: 'OWNER',
+                },
               },
             },
-          },
-        });
+          });
 
-        if (!shared) {
-          shared = await tx.account.create({
-            data: {
-              name: normalizedSharedName,
-              type: 'SHARED',
+          if (!account) {
+            account = await tx.account.create({
+              data: {
+                name: accountInput.name,
+                type: accountInput.type,
+                income: accountInput.income,
+              },
+            });
+          } else if (account.income !== accountInput.income) {
+            account = await tx.account.update({
+              where: { id: account.id },
+              data: { income: accountInput.income },
+            });
+          }
+
+          await tx.accountMember.upsert({
+            where: { userId_accountId: { userId, accountId: account.id } },
+            create: { userId, accountId: account.id, role: 'OWNER' },
+            update: { role: 'OWNER' },
+          });
+
+          const created = { id: account.id, name: account.name, type: account.type };
+          createdAccounts.push(created);
+          if (accountInput.draftId) {
+            createdAccountDraftMap.set(accountInput.draftId, created);
+          }
+        }
+      } else {
+        if (shouldCreatePersonal) {
+          let personal = await tx.account.findFirst({
+            where: {
+              type: 'PRIVATE',
+              isArchived: false,
+              members: { some: { userId } },
             },
           });
+
+          if (!personal) {
+            personal = await tx.account.create({
+              data: {
+                name: 'החשבון האישי שלי',
+                type: 'PRIVATE',
+              },
+            });
+          }
+
+          await tx.accountMember.upsert({
+            where: { userId_accountId: { userId, accountId: personal.id } },
+            create: { userId, accountId: personal.id, role: 'OWNER' },
+            update: { role: 'OWNER' },
+          });
+
+          createdAccounts.push({ id: personal.id, name: personal.name, type: personal.type });
         }
 
-        await tx.accountMember.upsert({
-          where: { userId_accountId: { userId, accountId: shared.id } },
-          create: { userId, accountId: shared.id, role: 'OWNER' },
-          update: { role: 'OWNER' },
-        });
+        if (shouldCreateShared) {
+          let shared = await tx.account.findFirst({
+            where: {
+              type: 'SHARED',
+              isArchived: false,
+              name: normalizedSharedName,
+              members: {
+                some: {
+                  userId,
+                  role: 'OWNER',
+                },
+              },
+            },
+          });
 
-        createdAccounts.push({ id: shared.id, name: shared.name, type: shared.type });
+          if (!shared) {
+            shared = await tx.account.create({
+              data: {
+                name: normalizedSharedName,
+                type: 'SHARED',
+              },
+            });
+          }
 
+          await tx.accountMember.upsert({
+            where: { userId_accountId: { userId, accountId: shared.id } },
+            create: { userId, accountId: shared.id, role: 'OWNER' },
+            update: { role: 'OWNER' },
+          });
+
+          createdAccounts.push({ id: shared.id, name: shared.name, type: shared.type });
+        }
+      }
+
+      const sharedInviteTarget = (() => {
+        if (!shouldCreateShared) return null;
+        if (input.inviteAccountDraftId && createdAccountDraftMap.has(input.inviteAccountDraftId)) {
+          const selected = createdAccountDraftMap.get(input.inviteAccountDraftId);
+          return selected?.type === 'SHARED' ? selected : null;
+        }
+        return createdAccounts.find((account) => account.type === 'SHARED') ?? null;
+      })();
+
+      if (sharedInviteTarget) {
         const rawToken = randomBytes(24).toString('hex');
         const tokenHash = hashInviteToken(rawToken);
         const expiresInMinutes = 30;
@@ -1582,7 +1680,7 @@ export async function completeOnboarding(input: {
 
         await tx.accountInvite.create({
           data: {
-            accountId: shared.id,
+            accountId: sharedInviteTarget.id,
             createdById: userId,
             invitedEmail: normalizedInvitedEmail,
             tokenHash,
@@ -1592,6 +1690,10 @@ export async function completeOnboarding(input: {
 
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
         inviteUrl = `${baseUrl}/settings?invite=${rawToken}`;
+      }
+
+      if (createdAccounts.length === 0) {
+        return { createdAccounts: [], inviteUrl, error: 'No accounts were created' };
       }
 
       if (hasMonthlyIncomeInput && normalizedMonthlyIncome != null) {
@@ -1610,32 +1712,36 @@ export async function completeOnboarding(input: {
         });
       }
 
-      if (hasMonthlyIncomeInput && normalizedMonthlyIncome != null && createdAccounts.length > 0) {
-        const incomeInCents = Math.max(Math.round(normalizedMonthlyIncome * 100), 0);
+      if (createdAccounts.length > 0) {
+        const incomeInCents = hasMonthlyIncomeInput && normalizedMonthlyIncome != null
+          ? Math.max(Math.round(normalizedMonthlyIncome * 100), 0)
+          : 0;
         const contributionByAccountId = new Map<string, number>();
 
-        if (createdAccounts.length === 1) {
-          contributionByAccountId.set(createdAccounts[0].id, incomeInCents / 100);
-        } else if (shouldAutoSplitContributions) {
-          const personalAccount = createdAccounts.find((account) => account.type === 'PRIVATE');
-          const sharedAccount = createdAccounts.find((account) => account.type === 'SHARED');
-          const canApplyPersonalSharedSplit = Boolean(personalAccount && sharedAccount);
+        if (hasMonthlyIncomeInput && normalizedMonthlyIncome != null) {
+          if (createdAccounts.length === 1) {
+            contributionByAccountId.set(createdAccounts[0].id, incomeInCents / 100);
+          } else if (shouldAutoSplitContributions) {
+            const personalAccount = createdAccounts.find((account) => account.type === 'PRIVATE');
+            const sharedAccount = createdAccounts.find((account) => account.type === 'SHARED');
+            const canApplyPersonalSharedSplit = Boolean(personalAccount && sharedAccount);
 
-          if (canApplyPersonalSharedSplit && personalAccount && sharedAccount) {
-            const desiredPersonalInCents = normalizedPersonalContributionAmount != null
-              ? Math.round(normalizedPersonalContributionAmount * 100)
-              : Math.round(incomeInCents / 2);
-            const personalInCents = Math.max(0, Math.min(desiredPersonalInCents, incomeInCents));
-            const sharedInCents = Math.max(incomeInCents - personalInCents, 0);
-            contributionByAccountId.set(personalAccount.id, personalInCents / 100);
-            contributionByAccountId.set(sharedAccount.id, sharedInCents / 100);
-          } else {
-            const basePerAccountInCents = Math.floor(incomeInCents / createdAccounts.length);
-            const remainderInCents = incomeInCents % createdAccounts.length;
-            for (let i = 0; i < createdAccounts.length; i += 1) {
-              const account = createdAccounts[i];
-              const monthlyAmount = (basePerAccountInCents + (i < remainderInCents ? 1 : 0)) / 100;
-              contributionByAccountId.set(account.id, monthlyAmount);
+            if (canApplyPersonalSharedSplit && personalAccount && sharedAccount) {
+              const desiredPersonalInCents = normalizedPersonalContributionAmount != null
+                ? Math.round(normalizedPersonalContributionAmount * 100)
+                : Math.round(incomeInCents / 2);
+              const personalInCents = Math.max(0, Math.min(desiredPersonalInCents, incomeInCents));
+              const sharedInCents = Math.max(incomeInCents - personalInCents, 0);
+              contributionByAccountId.set(personalAccount.id, personalInCents / 100);
+              contributionByAccountId.set(sharedAccount.id, sharedInCents / 100);
+            } else {
+              const basePerAccountInCents = Math.floor(incomeInCents / createdAccounts.length);
+              const remainderInCents = incomeInCents % createdAccounts.length;
+              for (let i = 0; i < createdAccounts.length; i += 1) {
+                const account = createdAccounts[i];
+                const monthlyAmount = (basePerAccountInCents + (i < remainderInCents ? 1 : 0)) / 100;
+                contributionByAccountId.set(account.id, monthlyAmount);
+              }
             }
           }
         }
@@ -1673,6 +1779,14 @@ export async function completeOnboarding(input: {
       return { createdAccounts, inviteUrl };
     });
 
+    if ('error' in result && result.error) {
+      return {
+        success: false,
+        error: 'השלמת האשף נכשלה. יש לעדכן את החשבונות ולנסות שוב.',
+        code: 'INVALID_INPUT' as const,
+      };
+    }
+
     refreshAllViews();
     return {
       success: true,
@@ -1685,8 +1799,8 @@ export async function completeOnboarding(input: {
     console.error('completeOnboarding failed', {
       error: errorMessage,
       input: {
-        createPersonal: input.createPersonal,
-        createShared: input.createShared,
+        createPersonal: Boolean(input.createPersonal),
+        createShared: Boolean(input.createShared),
         hasSharedAccountName: Boolean(input.sharedAccountName?.trim()),
       },
     });

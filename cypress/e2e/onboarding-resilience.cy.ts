@@ -46,7 +46,8 @@ describe('Onboarding resilience', () => {
     cy.get('[data-testid="onboarding-auto-split"]').should('not.exist');
     cy.get('[data-testid="onboarding-personal-split-slider"]').should('not.exist');
     cy.contains('button', 'חזרה').click();
-    cy.get('[data-testid="onboarding-shared"]').check();
+    cy.get('[data-testid="onboarding-add-account"]').click();
+    cy.get('[data-testid="onboarding-account-type"]').last().select('משותף');
     cy.contains('button', 'המשך').click();
     cy.get('[data-testid="onboarding-auto-split"]').should('be.visible');
     cy.get('[data-testid="onboarding-personal-split-slider"]').should('not.exist');
@@ -73,14 +74,15 @@ describe('Onboarding resilience', () => {
     cy.url().should('include', '/onboarding');
     cy.get('[data-testid="onboarding-template-custom"]').click();
     cy.contains('button', 'המשך').click();
-    cy.get('[data-testid="onboarding-shared"]').check();
-    cy.get('[data-testid="onboarding-shared-name"]').clear().type('בית חכם');
+    cy.get('[data-testid="onboarding-add-account"]').click();
+    cy.get('[data-testid="onboarding-account-type"]').last().select('משותף');
+    cy.get('[data-testid="onboarding-account-name"]').last().clear().type('בית חכם');
 
     cy.reload();
 
     cy.contains('מצאנו טיוטת אשף קודמת').should('be.visible');
     cy.contains('button', 'המשך').click();
-    cy.get('[data-testid="onboarding-shared-name"]').should('have.value', 'בית חכם');
+    cy.get('[data-testid="onboarding-account-name"]').last().should('have.value', 'בית חכם');
   });
 
   it('shows dashboard retry state without bouncing to onboarding', () => {
