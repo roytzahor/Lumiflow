@@ -50,6 +50,7 @@ Create a `.env` file in the project root:
 DATABASE_URL="postgresql://lumiflow:lumiflow@localhost:5433/lumiflow?schema=public"
 DIRECT_URL="postgresql://lumiflow:lumiflow@localhost:5433/lumiflow?schema=public"
 NEXTAUTH_SECRET="<random-long-secret>"
+AUTH_SECRET=""
 NEXTAUTH_URL="http://localhost:3000"
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
 CRON_SECRET="<optional-secret-for-cron-endpoint>"
@@ -142,7 +143,7 @@ Use a separate `DATABASE_URL` per environment:
 In Vercel Project Settings -> Environment Variables, set at least:
 
 - `DATABASE_URL`
-- `NEXTAUTH_SECRET`
+- `NEXTAUTH_SECRET` (or `AUTH_SECRET`)
 - `NEXTAUTH_URL`
 - `NEXT_PUBLIC_APP_URL`
 - `CRON_SECRET` (if using cron route protection)
