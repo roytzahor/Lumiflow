@@ -24,6 +24,7 @@ jobs:
           --health-retries 5
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/lumiflow?schema=public
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/lumiflow?schema=public
       NEXTAUTH_SECRET: test-secret
       NEXTAUTH_URL: http://localhost:3000
       NEXT_PUBLIC_APP_URL: http://localhost:3000
