@@ -3,6 +3,7 @@
 import { completeOnboarding } from '@/app/actions';
 import type { AccountType } from '@/lib/types';
 import { useRouter } from 'next/navigation';
+import { signOut } from 'next-auth/react';
 import { useEffect, useMemo, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 
@@ -279,6 +280,12 @@ export default function OnboardingClient() {
   const goToDashboard = () => {
     router.push('/');
     router.refresh();
+  };
+
+  const signInCallbackPath = '/auth/signin?callbackUrl=%2Fonboarding';
+
+  const handleSwitchAccount = () => {
+    void signOut({ callbackUrl: signInCallbackPath });
   };
 
   return (
@@ -645,6 +652,21 @@ export default function OnboardingClient() {
                 {loading ? 'שומר...' : 'סיום והתחלה'}
               </button>
             )}
+          </div>
+        )}
+
+        {!result && (
+          <div className="pt-4 border-t border-gray-200/80 dark:border-white/10 space-y-2 text-center">
+            <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle">
+              לא החשבון הנכון? התנתקו ואז תוכלו להתחבר עם משתמש אחר.
+            </p>
+            <button
+              type="button"
+              onClick={handleSwitchAccount}
+              className="text-xs font-semibold text-ios-blue hover:underline"
+            >
+              התנתקות ומעבר למסך כניסה
+            </button>
           </div>
         )}
       </section>
