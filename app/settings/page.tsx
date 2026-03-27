@@ -1,4 +1,4 @@
-import { getBudgetSettings, getCategories, getAccounts, getCurrentUserProfile, getContributionPlans } from '../actions';
+import { getBudgetSettings, getCategories, getAccountsWithMembersForSettings, getCurrentUserProfile, getContributionPlans } from '../actions';
 import SettingsContent from './SettingsContent';
 import BottomNav from '@/components/BottomNav';
 import { redirectToOnboardingIfNeeded } from '@/lib/onboarding';
@@ -10,7 +10,7 @@ export default async function SettingsPage() {
   const [budgetSettings, categories, accounts, contributionPlans, currentUser] = await Promise.all([
     getBudgetSettings(),
     getCategories(),
-    getAccounts(),
+    getAccountsWithMembersForSettings(),
     getContributionPlans(),
     getCurrentUserProfile(),
   ]);

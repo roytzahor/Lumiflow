@@ -20,14 +20,17 @@ import {
   acceptAccountInvite,
   getInvitePreview,
   upsertContributionPlan,
+  removeAccountMember,
 } from '../actions';
-import { User, MoonStar, Pencil, Check, X, Trash2, Plus, Wallet, Share2, LogOut, Copy, SendHorizontal } from 'lucide-react';
+import type { AccountMemberSummary } from '../actions';
+import { User, MoonStar, Pencil, Check, X, Trash2, Plus, Wallet, Share2, LogOut, Copy, SendHorizontal, Info } from 'lucide-react';
 import type { BudgetSettings, Account, Category } from '@/lib/types';
 import AccountPopup from '@/components/AccountPopup';
 import ProfileEditSheet from '@/components/ProfileEditSheet';
 import AccountShareSheet from '@/components/AccountShareSheet';
+import AccountInfoSheet from '@/components/AccountInfoSheet';
 
-type SettingsAccount = Account & { income?: number };
+type SettingsAccount = Account & { income?: number; members?: AccountMemberSummary[] };
 
 const DEFAULT_BUDGET: BudgetSettings = {
   id: '',
@@ -87,6 +90,8 @@ export default function SettingsContent({
   const [shareSheetMethod, setShareSheetMethod] = useState<'link' | 'email'>('link');
   const [shareSheetEmail, setShareSheetEmail] = useState('');
   const [shareSheetLoading, setShareSheetLoading] = useState(false);
+  const [infoSheetAccount, setInfoSheetAccount] = useState<SettingsAccount | null>(null);
+  const [infoRemovingUserId, setInfoRemovingUserId] = useState<string | null>(null);
   const [pendingInviteToken, setPendingInviteToken] = useState<string | null>(null);
   const [invitePreview, setInvitePreview] = useState<{
     accountName: string;
@@ -260,6 +265,46 @@ export default function SettingsContent({
     setShareSheetAccount({ id: account.id, name: account.name });
     setShareSheetMethod('link');
     setShareSheetEmail('');
+  };
+
+  const openAccountInfoSheet = (account: SettingsAccount) => {
+    setInfoSheetAccount(account);
+  };
+
+  const closeAccountInfoSheet = () => {
+    if (infoRemovingUserId) return;
+    setInfoSheetAccount(null);
+  };
+
+  const handleRemoveMemberFromInfo = async (memberUserId: string) => {
+    if (!infoSheetAccount) return;
+    const member = infoSheetAccount.members?.find((m) => m.userId === memberUserId);
+    const label = member?.name?.trim() || member?.email || 'משתמש';
+    if (!window.confirm(`להסיר את ${label} מהחשבון "${infoSheetAccount.name}"?`)) return;
+
+    setInfoRemovingUserId(memberUserId);
+    const res = await removeAccountMember(infoSheetAccount.id, memberUserId);
+    setInfoRemovingUserId(null);
+
+    if (!res.success) {
+      toast.error(res.error ?? 'הסרת המשתמש נכשלה');
+      return;
+    }
+
+    toast.success('המשתמש הוסר מהחשבון');
+    setAccounts((prev) =>
+      prev.map((a) =>
+        a.id !== infoSheetAccount.id
+          ? a
+          : { ...a, members: (a.members ?? []).filter((m) => m.userId !== memberUserId) },
+      ),
+    );
+    setInfoSheetAccount((prev) =>
+      prev && prev.id === infoSheetAccount.id
+        ? { ...prev, members: (prev.members ?? []).filter((m) => m.userId !== memberUserId) }
+        : prev,
+    );
+    router.refresh();
   };
 
   const closeAccountShareSheet = () => {
@@ -569,6 +614,14 @@ export default function SettingsContent({
                   </p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => openAccountInfoSheet(account)}
+                    className="text-ios-teal/90 hover:text-ios-teal p-1"
+                    aria-label={`מידע על חשבון ${account.name}`}
+                  >
+                    <Info className="w-4 h-4" />
+                  </button>
                   {account.type === 'SHARED' ? (
                     <button
                       type="button"
@@ -811,6 +864,18 @@ export default function SettingsContent({
         onMethodChange={setShareSheetMethod}
         onEmailChange={setShareSheetEmail}
         onSubmit={createInviteFromShareSheet}
+      />
+
+      <AccountInfoSheet
+        isOpen={infoSheetAccount !== null}
+        accountName={infoSheetAccount?.name ?? ''}
+        accountType={infoSheetAccount?.type ?? 'PRIVATE'}
+        monthlyIncome={infoSheetAccount ? contributionPlansByAccount[infoSheetAccount.id] ?? infoSheetAccount.income ?? 0 : 0}
+        members={infoSheetAccount?.members ?? []}
+        currentUserId={currentUser?.id ?? ''}
+        removingUserId={infoRemovingUserId}
+        onClose={closeAccountInfoSheet}
+        onRemoveMember={handleRemoveMemberFromInfo}
       />
     </div>
   );

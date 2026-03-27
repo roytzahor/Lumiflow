@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 
 type OnboardingTemplate = 'personalOnly' | 'personalShared' | 'custom';
-type OnboardingStep = 1 | 2 | 3 | 4;
+type OnboardingStep = 1 | 2 | 3 | 4 | 5;
 type OnboardingAccountDraft = {
   id: string;
   type: AccountType;
@@ -19,6 +19,9 @@ type OnboardingDraft = {
   accounts: OnboardingAccountDraft[];
   inviteAccountDraftId: string | null;
   invitedEmail: string;
+  monthlyIncomeInput: string;
+  autoSplitContributions: boolean;
+  personalContributionAmount: number;
 };
 
 type OnboardingSuccess = {
@@ -41,6 +44,9 @@ const DEFAULT_DRAFT: OnboardingDraft = {
   accounts: [createDraftAccount('PRIVATE')],
   inviteAccountDraftId: null,
   invitedEmail: '',
+  monthlyIncomeInput: '',
+  autoSplitContributions: false,
+  personalContributionAmount: 0,
 };
 
 function getTemplateLabel(template: OnboardingTemplate) {
@@ -104,6 +110,13 @@ export default function OnboardingClient() {
           ? parsed.inviteAccountDraftId
           : null,
         invitedEmail: typeof parsed.invitedEmail === 'string' ? parsed.invitedEmail : DEFAULT_DRAFT.invitedEmail,
+        monthlyIncomeInput: typeof parsed.monthlyIncomeInput === 'string' ? parsed.monthlyIncomeInput : DEFAULT_DRAFT.monthlyIncomeInput,
+        autoSplitContributions: typeof parsed.autoSplitContributions === 'boolean'
+          ? parsed.autoSplitContributions
+          : DEFAULT_DRAFT.autoSplitContributions,
+        personalContributionAmount: typeof parsed.personalContributionAmount === 'number' && Number.isFinite(parsed.personalContributionAmount)
+          ? parsed.personalContributionAmount
+          : DEFAULT_DRAFT.personalContributionAmount,
       };
 
       setDraft(restored);
@@ -120,11 +133,18 @@ export default function OnboardingClient() {
     localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
   }, [draft, didHydrateDraft, result]);
 
-  const totalSteps = 4;
+  const totalSteps = 5;
   const progress = useMemo(() => Math.round((step / totalSteps) * 100), [step]);
   const hasPersonalAccount = draft.accounts.some((account) => account.type === 'PRIVATE');
   const sharedAccounts = draft.accounts.filter((account) => account.type === 'SHARED');
   const hasSharedAccount = sharedAccounts.length > 0;
+  const showIncomeSplitControls = hasPersonalAccount && hasSharedAccount;
+  const parsedMonthlyIncome = useMemo(() => {
+    const raw = draft.monthlyIncomeInput.trim();
+    if (raw === '') return null;
+    const n = Number(raw);
+    return Number.isFinite(n) && n >= 0 ? n : null;
+  }, [draft.monthlyIncomeInput]);
 
   useEffect(() => {
     setDraft((prev) => {
@@ -220,6 +240,12 @@ export default function OnboardingClient() {
       })),
       inviteAccountDraftId: draft.inviteAccountDraftId,
       invitedEmail: draft.invitedEmail,
+      monthlyIncomeNet: parsedMonthlyIncome,
+      autoSplitContributions: draft.autoSplitContributions,
+      personalContributionAmount:
+        draft.autoSplitContributions && showIncomeSplitControls
+          ? draft.personalContributionAmount
+          : null,
     });
 
     setLoading(false);
@@ -423,6 +449,90 @@ export default function OnboardingClient() {
 
         {step === 3 && (
           <div className="space-y-3">
+            <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text">הכנסה חודשית (אופציונלי)</p>
+            <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle">
+              אפשר לדלג — תמיד אפשר לעדכן מאוחר יותר בהגדרות. אם יש חשבון אישי ומשותף, אפשר לחלק את ההכנסה ביניהם.
+            </p>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle">הכנסה נטו חודשית (₪)</label>
+              <input
+                data-testid="onboarding-monthly-income"
+                inputMode="decimal"
+                value={draft.monthlyIncomeInput}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setDraft((prev) => {
+                    const trimmed = v.trim();
+                    const n = trimmed === '' ? null : Number(trimmed);
+                    const inc = n != null && Number.isFinite(n) && n >= 0 ? n : null;
+                    let pc = prev.personalContributionAmount;
+                    if (inc != null && prev.autoSplitContributions) {
+                      pc = Math.min(Math.max(pc, 0), inc);
+                      if (inc > 0 && (pc === 0 || Number.isNaN(pc))) {
+                        pc = inc / 2;
+                      }
+                    }
+                    return { ...prev, monthlyIncomeInput: v, personalContributionAmount: pc };
+                  });
+                }}
+                className="w-full bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-3 py-2.5 text-sm text-ios-text dark:text-ios-dark-text"
+                placeholder="למשל: 12000"
+              />
+            </div>
+            {showIncomeSplitControls && (
+              <div className="space-y-2 rounded-xl border border-gray-200 dark:border-white/10 p-3">
+                <label className="flex items-center gap-2 text-sm text-ios-text dark:text-ios-dark-text cursor-pointer">
+                  <input
+                    type="checkbox"
+                    data-testid="onboarding-auto-split"
+                    checked={draft.autoSplitContributions}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setDraft((prev) => {
+                        const inc = prev.monthlyIncomeInput.trim() === ''
+                          ? null
+                          : Number(prev.monthlyIncomeInput.trim());
+                        const income = inc != null && Number.isFinite(inc) && inc >= 0 ? inc : null;
+                        return {
+                          ...prev,
+                          autoSplitContributions: checked,
+                          personalContributionAmount:
+                            checked && income != null && income > 0 ? income / 2 : prev.personalContributionAmount,
+                        };
+                      });
+                    }}
+                    className="rounded border-gray-300"
+                  />
+                  <span>חלוקה אוטומטית בין אישי למשותף</span>
+                </label>
+                {draft.autoSplitContributions && parsedMonthlyIncome != null && parsedMonthlyIncome > 0 && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle">
+                      אישי ₪{Math.round(draft.personalContributionAmount).toLocaleString('he-IL')} · משותף ₪
+                      {Math.max(0, Math.round(parsedMonthlyIncome - draft.personalContributionAmount)).toLocaleString('he-IL')}
+                    </p>
+                    <input
+                      type="range"
+                      data-testid="onboarding-personal-split-slider"
+                      min={0}
+                      max={parsedMonthlyIncome}
+                      step={1}
+                      value={Math.min(Math.max(draft.personalContributionAmount, 0), parsedMonthlyIncome)}
+                      onChange={(e) => setDraft((prev) => ({
+                        ...prev,
+                        personalContributionAmount: Number(e.target.value),
+                      }))}
+                      className="w-full"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {step === 4 && (
+          <div className="space-y-3">
             <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text">הזמנת שותף/ה</p>
             {!hasSharedAccount ? (
               <div className="rounded-2xl bg-white/28 dark:bg-ios-dark-card/42 backdrop-blur-xl border border-white/20 dark:border-white/10 px-4 py-3 text-sm text-ios-subtle dark:text-ios-dark-subtle">
@@ -446,7 +556,7 @@ export default function OnboardingClient() {
           </div>
         )}
 
-        {step === 4 && !result && (
+        {step === 5 && !result && (
           <div className="space-y-3">
             <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text">סיכום לפני סיום</p>
             <div className="rounded-xl bg-ios-gray-6 dark:bg-ios-dark-fill p-3 space-y-2 text-sm">
@@ -459,6 +569,9 @@ export default function OnboardingClient() {
               ))}
               {hasSharedAccount && (
                 <p className="text-ios-subtle dark:text-ios-dark-subtle">אימייל הזמנה: <span className="font-semibold text-ios-text dark:text-ios-dark-text">{draft.invitedEmail.trim() || 'ללא אימייל (לינק כללי)'}</span></p>
+              )}
+              {parsedMonthlyIncome != null && (
+                <p className="text-ios-subtle dark:text-ios-dark-subtle">הכנסה חודשית: <span className="font-semibold text-ios-text dark:text-ios-dark-text">₪{parsedMonthlyIncome.toLocaleString('he-IL')}</span></p>
               )}
             </div>
           </div>
@@ -512,7 +625,7 @@ export default function OnboardingClient() {
             >
               חזרה
             </button>
-            {step < 4 ? (
+            {step < totalSteps ? (
               <button
                 type="button"
                 onClick={goNextStep}

@@ -7,7 +7,7 @@ import { hashInviteToken } from '@/lib/invite-utils';
 import { prisma } from '@/lib/prisma';
 import { resolveMonthlyDate } from '@/lib/recurring-utils';
 import { resolveOrRestoreSessionUserId } from '@/lib/session-user';
-import type { AccountType, RecurringMonthPolicy, Transaction } from '@prisma/client';
+import type { AccountMemberRole, AccountType, RecurringMonthPolicy, Transaction } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
 import { getServerSession } from 'next-auth';
@@ -502,6 +502,91 @@ export async function getAccounts() {
     });
   } catch {
     return [];
+  }
+}
+
+export type AccountMemberSummary = {
+  userId: string;
+  role: AccountMemberRole;
+  name: string | null;
+  email: string;
+};
+
+export type AccountWithMembersForSettings = Awaited<ReturnType<typeof getAccounts>>[number] & {
+  members: AccountMemberSummary[];
+};
+
+export async function getAccountsWithMembersForSettings(): Promise<AccountWithMembersForSettings[]> {
+  try {
+    const userId = await requireUserId();
+    await ensureUserBootstrap(userId);
+    const rows = await prisma.account.findMany({
+      where: {
+        isArchived: false,
+        members: { some: { userId } },
+      },
+      orderBy: [{ type: 'asc' }, { name: 'asc' }],
+      include: {
+        members: {
+          include: {
+            user: { select: { id: true, name: true, email: true } },
+          },
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+    });
+    return rows.map((account) => {
+      const { members: memberRows, ...rest } = account;
+      return {
+        ...rest,
+        members: memberRows.map((m) => ({
+          userId: m.userId,
+          role: m.role,
+          name: m.user.name,
+          email: m.user.email,
+        })),
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
+export async function removeAccountMember(accountId: string, memberUserId: string) {
+  try {
+    const userId = await requireUserId();
+    const actor = await assertUserHasAccount(userId, accountId);
+    if (actor.role !== 'OWNER') {
+      return { success: false, error: 'רק בעל החשבון יכול להסיר משתמשים' };
+    }
+    if (memberUserId === userId) {
+      return { success: false, error: 'לא ניתן להסיר את עצמך דרך פעולה זו' };
+    }
+
+    const target = await prisma.accountMember.findUnique({
+      where: { userId_accountId: { userId: memberUserId, accountId } },
+    });
+    if (!target) {
+      return { success: false, error: 'המשתמש אינו חבר בחשבון זה' };
+    }
+    if (target.role === 'OWNER') {
+      return { success: false, error: 'לא ניתן להסיר בעל חשבון' };
+    }
+
+    await prisma.$transaction([
+      prisma.accountContributionPlan.deleteMany({
+        where: { userId: memberUserId, accountId },
+      }),
+      prisma.accountMember.delete({
+        where: { userId_accountId: { userId: memberUserId, accountId } },
+      }),
+    ]);
+
+    await recalculateAccountIncome(accountId);
+    refreshAllViews();
+    return { success: true };
+  } catch {
+    return { success: false, error: 'הסרת המשתמש נכשלה' };
   }
 }
 
@@ -1373,23 +1458,28 @@ export async function acceptAccountInvite(rawToken: string) {
       return { success: false, error: 'Invite is assigned to a different email' };
     }
 
-    await prisma.accountMember.upsert({
-      where: { userId_accountId: { userId, accountId: invite.accountId } },
-      create: {
-        userId,
-        accountId: invite.accountId,
-        role: 'MEMBER',
-      },
-      update: {},
+    const acceptedAt = new Date();
+    const consumed = await prisma.$transaction(async (tx) => {
+      const mark = await tx.accountInvite.updateMany({
+        where: { id: invite.id, acceptedAt: null },
+        data: { acceptedAt, acceptedById: userId },
+      });
+      if (mark.count !== 1) return false;
+      await tx.accountMember.upsert({
+        where: { userId_accountId: { userId, accountId: invite.accountId } },
+        create: {
+          userId,
+          accountId: invite.accountId,
+          role: 'MEMBER',
+        },
+        update: {},
+      });
+      return true;
     });
 
-    await prisma.accountInvite.update({
-      where: { id: invite.id },
-      data: {
-        acceptedAt: new Date(),
-        acceptedById: userId,
-      },
-    });
+    if (!consumed) {
+      return { success: false, error: 'Invite already used' };
+    }
 
     refreshAllViews();
     return { success: true };
@@ -1452,23 +1542,28 @@ export async function acceptPendingAccountInvite(inviteId: string) {
       return { success: false, error: 'Invite does not match your email' };
     }
 
-    await prisma.accountMember.upsert({
-      where: { userId_accountId: { userId, accountId: invite.accountId } },
-      create: {
-        userId,
-        accountId: invite.accountId,
-        role: 'MEMBER',
-      },
-      update: {},
+    const acceptedAt = new Date();
+    const consumed = await prisma.$transaction(async (tx) => {
+      const mark = await tx.accountInvite.updateMany({
+        where: { id: invite.id, acceptedAt: null },
+        data: { acceptedAt, acceptedById: userId },
+      });
+      if (mark.count !== 1) return false;
+      await tx.accountMember.upsert({
+        where: { userId_accountId: { userId, accountId: invite.accountId } },
+        create: {
+          userId,
+          accountId: invite.accountId,
+          role: 'MEMBER',
+        },
+        update: {},
+      });
+      return true;
     });
 
-    await prisma.accountInvite.update({
-      where: { id: invite.id },
-      data: {
-        acceptedAt: new Date(),
-        acceptedById: userId,
-      },
-    });
+    if (!consumed) {
+      return { success: false, error: 'Invite already used' };
+    }
 
     refreshAllViews();
     return { success: true };
