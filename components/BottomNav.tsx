@@ -2,18 +2,23 @@
 
 import { Home, Clock, PieChart, Plus, Settings } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useHaptic } from '@/hooks/useHaptic';
 
 export default function BottomNav() {
     const pathname = usePathname();
+    const searchParams = useSearchParams();
     const { trigger } = useHaptic();
 
+    const month = searchParams.get('month');
+    const year = searchParams.get('year');
+    const historyHref = month && year ? `/history?month=${month}&year=${year}` : '/history';
+
     const navItems = [
-        { name: 'סקירה', path: '/', icon: Home, col: 'col-start-1' },
-        { name: 'היסטוריה', path: '/history', icon: Clock, col: 'col-start-2' },
-        { name: 'תובנות', path: '/insights', icon: PieChart, col: 'col-start-4' },
-        { name: 'הגדרות', path: '/settings', icon: Settings, col: 'col-start-5' },
+        { name: 'סקירה', path: '/', basePath: '/', icon: Home, col: 'col-start-1' },
+        { name: 'היסטוריה', path: historyHref, basePath: '/history', icon: Clock, col: 'col-start-2' },
+        { name: 'תובנות', path: '/insights', basePath: '/insights', icon: PieChart, col: 'col-start-4' },
+        { name: 'הגדרות', path: '/settings', basePath: '/settings', icon: Settings, col: 'col-start-5' },
     ];
 
     return (
@@ -35,12 +40,12 @@ export default function BottomNav() {
 
                     <div className="grid grid-cols-5 items-center pt-4 gap-0.5">
                     {navItems.map((item) => {
-                        const isActive = pathname === item.path;
+                        const isActive = pathname === item.basePath;
                         const Icon = item.icon;
 
                         return (
                             <Link
-                                key={item.path}
+                                key={item.basePath}
                                 href={item.path}
                                 onClick={() => trigger(10)}
                                 className={`relative flex flex-col items-center justify-center py-2 gap-0.5 ${item.col}`}

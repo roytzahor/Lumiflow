@@ -53,3 +53,13 @@ export type DailyNudge = {
   description: string;
   tone: 'neutral' | 'positive' | 'warning';
 };
+
+export type CategoryAnomaly = {
+  accountName: string;
+  category: string;
+  currentAmount: number;
+  monthlyAverage: number;
+  difference: number;
+  percentChange: number;
+  direction: 'up' | 'down';
+};

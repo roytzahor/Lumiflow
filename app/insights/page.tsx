@@ -1,32 +1,25 @@
-import { getMonthlyStats, getRecurringTransactions } from "@/app/actions";
+import { getCategoryAnomalies, getCategories } from "@/app/actions";
 import BottomNav from "@/components/BottomNav";
-import InsightsAI from "@/components/InsightsAI";
 import { formatIlsAmount } from "@/lib/formatters";
 import { redirectToOnboardingIfNeeded } from "@/lib/onboarding";
-import { buildRetentionSignals } from "@/lib/retention-signals";
+import type { Category } from "@/lib/types";
 import { format } from "date-fns";
 import { he } from "date-fns/locale";
 
 export const dynamic = "force-dynamic";
 
+function getCategoryIcon(categories: Category[], categoryName: string): string {
+  return categories.find((c) => c.name === categoryName)?.icon ?? "🛒";
+}
+
 export default async function InsightsPage() {
   await redirectToOnboardingIfNeeded();
 
   const now = new Date();
-  const [{ total, transactions }, recurring] = await Promise.all([
-    getMonthlyStats(now.getFullYear(), now.getMonth()),
-    getRecurringTransactions(),
+  const [{ anomalies, hasEnoughHistory }, categories] = await Promise.all([
+    getCategoryAnomalies(),
+    getCategories(),
   ]);
-
-  const average = transactions.length > 0 ? total / transactions.length : 0;
-  const retentionSignals = buildRetentionSignals({ transactions });
-  const topCategoryEntry = Object.entries(
-    transactions.reduce<Record<string, number>>((acc, row) => {
-      const key = row.category || "כללי";
-      acc[key] = (acc[key] ?? 0) + row.amount;
-      return acc;
-    }, {})
-  ).sort((a, b) => b[1] - a[1])[0];
 
   const thisMonthLabel = format(now, "MMMM yyyy", { locale: he });
 
@@ -36,62 +29,103 @@ export default async function InsightsPage() {
         <header className="mb-2">
           <h1 className="text-3xl font-bold tracking-tight">תובנות</h1>
           <p className="text-sm text-ios-subtle dark:text-ios-dark-subtle mt-0.5">{thisMonthLabel}</p>
-          <div className="flex flex-wrap gap-2 mt-3">
-            <span className="text-[11px] px-2.5 py-1 rounded-full bg-ios-indigo/10 text-ios-indigo">מגמות</span>
-            <span className="text-[11px] px-2.5 py-1 rounded-full bg-ios-purple/10 text-ios-purple">אנומליות</span>
-            <span className="text-[11px] px-2.5 py-1 rounded-full bg-ios-blue/10 text-ios-blue">צעדים מומלצים</span>
-          </div>
         </header>
 
-        <section className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 shadow-card">
-          <h2 className="text-base font-bold mb-4">תמונת מצב חודשית</h2>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-4 py-3">
-              <span className="text-sm text-ios-subtle dark:text-ios-dark-subtle">סה״כ הוצאות</span>
-              <span className="text-lg font-bold tabular-nums">₪{formatIlsAmount(total)}</span>
-            </div>
-            <div className="flex items-center justify-between bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-4 py-3">
-              <span className="text-sm text-ios-subtle dark:text-ios-dark-subtle">ממוצע פעולה</span>
-              <span className="text-lg font-bold tabular-nums">₪{formatIlsAmount(Math.round(average))}</span>
-            </div>
-            <div className="flex items-center justify-between bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-4 py-3">
-              <span className="text-sm text-ios-subtle dark:text-ios-dark-subtle">קטגוריה מובילה</span>
-              <span className="text-sm font-semibold">{topCategoryEntry ? `${topCategoryEntry[0]} · ₪${formatIlsAmount(Math.round(topCategoryEntry[1]))}` : "אין נתונים"}</span>
-            </div>
-            <div className="flex items-center justify-between bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-4 py-3">
-              <span className="text-sm text-ios-subtle dark:text-ios-dark-subtle">הוצאות חוזרות פעילות</span>
-              <span className="text-sm font-semibold">{recurring.length}</span>
-            </div>
-          </div>
-        </section>
+        <section>
+          <h2 className="text-base font-bold mb-3">שינויים בולטים החודש</h2>
 
-        <section className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 shadow-card">
-          <h2 className="text-base font-bold mb-3">צעדים מומלצים להמשך החודש</h2>
-          <div className="space-y-2">
-            {retentionSignals.nudges.map((nudge) => (
-              <div key={nudge.id} className="bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-4 py-3">
-                <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text">{nudge.title}</p>
-                <p className="text-xs mt-1 text-ios-subtle dark:text-ios-dark-subtle">{nudge.description}</p>
+          {!hasEnoughHistory ? (
+            <div className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-6 shadow-card text-center">
+              <div className="w-12 h-12 rounded-full bg-ios-indigo/10 flex items-center justify-center mx-auto mb-3">
+                <span className="text-2xl">📊</span>
               </div>
-            ))}
-            {retentionSignals.alerts.map((alert) => (
-              <p
-                key={alert.id}
-                className={`text-xs px-3 py-2 rounded-lg ${
-                  alert.severity === "critical"
-                    ? "bg-ios-red/10 text-ios-red"
-                    : alert.severity === "warning"
-                      ? "bg-ios-orange/10 text-ios-orange"
-                      : "bg-ios-green/10 text-ios-green"
-                }`}
-              >
-                {alert.message}
+              <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text mb-1">
+                עדיין אין מספיק היסטוריה
               </p>
-            ))}
-          </div>
-        </section>
+              <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle leading-relaxed">
+                כדי לזהות שינויים בולטים נדרשים לפחות שני חודשים של נתונים. המשיכו לרשום הוצאות ותובנות יופיעו כאן.
+              </p>
+            </div>
+          ) : anomalies.length === 0 ? (
+            <div className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-6 shadow-card text-center">
+              <div className="w-12 h-12 rounded-full bg-ios-green/10 flex items-center justify-center mx-auto mb-3">
+                <span className="text-2xl">✅</span>
+              </div>
+              <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text mb-1">
+                הכל בסדר החודש
+              </p>
+              <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle leading-relaxed">
+                לא זוהו שינויים בולטים בקטגוריות לעומת הממוצע החודשי הרגיל.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {anomalies.map((a) => {
+                const icon = getCategoryIcon(categories, a.category);
+                const isUp = a.direction === "up";
+                return (
+                  <div
+                    key={`${a.accountName}-${a.category}`}
+                    className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-4 shadow-card"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-11 h-11 rounded-xl bg-gray-50 dark:bg-ios-dark-fill flex items-center justify-center text-xl flex-shrink-0">
+                        {icon}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[15px] font-semibold text-ios-text dark:text-ios-dark-text truncate">
+                            {a.category}
+                          </span>
+                          <span
+                            className={`text-sm font-bold tabular-nums flex-shrink-0 ${
+                              isUp ? "text-ios-red" : "text-ios-green"
+                            }`}
+                          >
+                            {isUp ? "+" : "-"}₪{formatIlsAmount(Math.abs(Math.round(a.difference)))}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-2 mt-0.5">
+                          <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-md text-ios-indigo bg-ios-indigo/8 truncate">
+                            {a.accountName}
+                          </span>
+                          <span
+                            className={`text-xs flex-shrink-0 ${
+                              isUp ? "text-ios-red/80" : "text-ios-green/80"
+                            }`}
+                          >
+                            {isUp ? "עלייה" : "ירידה"} של {Math.round(Math.abs(a.percentChange))}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
 
-        <InsightsAI />
+                    <div
+                      className={`mt-3 rounded-xl px-3 py-2 flex items-center justify-between ${
+                        isUp ? "bg-ios-red/8" : "bg-ios-green/8"
+                      }`}
+                    >
+                      <span className="text-xs text-ios-subtle dark:text-ios-dark-subtle">
+                        החודש
+                      </span>
+                      <span className="text-xs font-semibold tabular-nums text-ios-text dark:text-ios-dark-text">
+                        ₪{formatIlsAmount(Math.round(a.currentAmount))}
+                      </span>
+                    </div>
+                    <div className="mt-1 rounded-xl px-3 py-2 flex items-center justify-between bg-ios-gray-6 dark:bg-ios-dark-fill">
+                      <span className="text-xs text-ios-subtle dark:text-ios-dark-subtle">
+                        ממוצע חודשים קודמים
+                      </span>
+                      <span className="text-xs font-semibold tabular-nums text-ios-text dark:text-ios-dark-text">
+                        ₪{formatIlsAmount(Math.round(a.monthlyAverage))}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
       </div>
 
       <BottomNav />

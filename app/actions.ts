@@ -216,13 +216,18 @@ export async function getTransactions(filter: string = 'All', year?: number, mon
     const where: Record<string, unknown> = {
       accountId: { in: accountIds },
     };
+    const accountFilterId = filter !== 'All' && accountIds.includes(filter) ? filter : null;
 
-    if (filter !== 'All' && accountIds.includes(filter)) {
-      where.accountId = filter;
+    if (accountFilterId) {
+      where.accountId = accountFilterId;
     }
 
+    const hasMonthFilter = year != null && month != null;
+    const from = hasMonthFilter ? startOfMonth(year, month) : null;
+    const to = hasMonthFilter ? endOfMonth(year, month) : null;
+
     if (year != null && month != null) {
-      where.date = { gte: startOfMonth(year, month), lte: endOfMonth(year, month) };
+      where.date = { gte: from!, lte: to! };
     }
 
     const transactions = await prisma.transaction.findMany({
@@ -231,7 +236,52 @@ export async function getTransactions(filter: string = 'All', year?: number, mon
       include: { account: true },
     });
 
-    return decorateRecurringFlags(transactions);
+    const actualDecorated = await decorateRecurringFlags(transactions);
+
+    if (!hasMonthFilter) return actualDecorated;
+
+    const recurring = await prisma.recurringTransaction.findMany({
+      where: {
+        active: true,
+        accountId: accountFilterId ? accountFilterId : { in: accountIds },
+        startDate: { lte: to! },
+      },
+      include: { account: true },
+    });
+
+    const projected = recurring
+      .map((r) => {
+        const occurrence = resolveMonthlyDate(year!, month!, r.dayOfMonth, r.monthPolicy);
+        if (!occurrence) return null;
+        if (occurrence < from! || occurrence > to!) return null;
+        if (occurrence < r.startDate) return null;
+
+        const exists = transactions.some(
+          (t) => t.recurringTransactionId === r.id && isSameDay(new Date(t.date), occurrence)
+        );
+        if (exists) return null;
+
+        return {
+          id: `projected-${r.id}-${year}-${month}`,
+          amount: r.amount,
+          category: r.category,
+          date: occurrence,
+          accountId: r.accountId,
+          paidByUserId: null,
+          attributedToUserId: null,
+          description: r.description,
+          recurringTransactionId: r.id,
+          createdAt: occurrence,
+          account: r.account,
+          isRecurring: true,
+          isProjected: true,
+        };
+      })
+      .filter((item): item is NonNullable<typeof item> => Boolean(item));
+
+    return [...actualDecorated, ...projected].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
   } catch {
     return [];
   }
@@ -1011,6 +1061,103 @@ export async function getInsightsAdvancedAnalysis() {
     return { success: true, analysis: ai.text };
   } catch {
     return { success: false, error: 'ניתוח מתקדם נכשל' };
+  }
+}
+
+export async function getCategoryAnomalies(): Promise<{
+  anomalies: import('@/lib/types').CategoryAnomaly[];
+  hasEnoughHistory: boolean;
+}> {
+  try {
+    const userId = await requireUserId();
+    const accountIds = await getUserAccountIds(userId);
+    if (accountIds.length === 0) return { anomalies: [], hasEnoughHistory: false };
+
+    const now = new Date();
+    const currentFrom = startOfMonth(now.getFullYear(), now.getMonth());
+    const currentTo = endOfMonth(now.getFullYear(), now.getMonth());
+
+    // 6-month historical window, excluding current month
+    const histFrom = startOfMonth(now.getFullYear(), now.getMonth() - 6);
+    const histTo = new Date(currentFrom.getTime() - 1);
+
+    const [currentTxns, historicalTxns, accounts] = await Promise.all([
+      prisma.transaction.findMany({
+        where: { accountId: { in: accountIds }, date: { gte: currentFrom, lte: currentTo } },
+        select: { amount: true, category: true, accountId: true, date: true },
+      }),
+      prisma.transaction.findMany({
+        where: { accountId: { in: accountIds }, date: { gte: histFrom, lte: histTo } },
+        select: { amount: true, category: true, accountId: true, date: true },
+      }),
+      prisma.account.findMany({
+        where: { id: { in: accountIds }, isArchived: false },
+        select: { id: true, name: true },
+      }),
+    ]);
+
+    const accountNameById = new Map(accounts.map((a) => [a.id, a.name]));
+
+    // Count distinct months in the historical window per account
+    const accountMonthSets = new Map<string, Set<string>>();
+    historicalTxns.forEach((t) => {
+      const bucket = buildMonthBucket(new Date(t.date));
+      if (!accountMonthSets.has(t.accountId)) accountMonthSets.set(t.accountId, new Set());
+      accountMonthSets.get(t.accountId)!.add(bucket);
+    });
+
+    // Determine the global number of historical months (max across accounts, floored at 1)
+    const globalMonthCount = Math.max(...Array.from(accountMonthSets.values()).map((s) => s.size), 0);
+    if (globalMonthCount < 2) return { anomalies: [], hasEnoughHistory: false };
+
+    // Aggregate historical totals by (accountId, category)
+    const histTotals = new Map<string, number>();
+    const histMonthCounts = new Map<string, Set<string>>();
+    historicalTxns.forEach((t) => {
+      const key = `${t.accountId}::${t.category}`;
+      const bucket = buildMonthBucket(new Date(t.date));
+      histTotals.set(key, (histTotals.get(key) ?? 0) + t.amount);
+      if (!histMonthCounts.has(key)) histMonthCounts.set(key, new Set());
+      histMonthCounts.get(key)!.add(bucket);
+    });
+
+    // Aggregate current month totals by (accountId, category)
+    const currTotals = new Map<string, number>();
+    currentTxns.forEach((t) => {
+      const key = `${t.accountId}::${t.category}`;
+      currTotals.set(key, (currTotals.get(key) ?? 0) + t.amount);
+    });
+
+    const anomalies: import('@/lib/types').CategoryAnomaly[] = [];
+
+    currTotals.forEach((currentAmount, key) => {
+      const [accountId, category] = key.split('::');
+      const monthsWithData = histMonthCounts.get(key)?.size ?? 0;
+      if (monthsWithData < 2) return;
+
+      const historicalTotal = histTotals.get(key) ?? 0;
+      const monthlyAverage = historicalTotal / monthsWithData;
+      const difference = currentAmount - monthlyAverage;
+      const percentChange = monthlyAverage > 0 ? (difference / monthlyAverage) * 100 : 0;
+
+      if (Math.abs(difference) < 100 || Math.abs(percentChange) < 30) return;
+
+      anomalies.push({
+        accountName: accountNameById.get(accountId) ?? accountId,
+        category: category || 'כללי',
+        currentAmount,
+        monthlyAverage,
+        difference,
+        percentChange,
+        direction: difference > 0 ? 'up' : 'down',
+      });
+    });
+
+    anomalies.sort((a, b) => Math.abs(b.difference) - Math.abs(a.difference));
+
+    return { anomalies: anomalies.slice(0, 5), hasEnoughHistory: true };
+  } catch {
+    return { anomalies: [], hasEnoughHistory: false };
   }
 }
 

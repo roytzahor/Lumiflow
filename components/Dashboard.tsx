@@ -5,14 +5,16 @@ import { motion, useScroll, useMotionValueEvent } from "framer-motion";
 import QuickAddSheet from "./QuickAddSheet";
 import RecurringEditSheet from "./RecurringEditSheet";
 import PieChart from "./PieChart";
-import { formatIlsAmount, formatUtcDayMonthYear, formatUtcMonthYear, getHourInTimezone } from "@/lib/formatters";
+import { formatIlsAmount, formatUtcMonthYear, getHourInTimezone } from "@/lib/formatters";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, Lock } from "lucide-react";
+import DashboardMonthDropdown from "./DashboardMonthDropdown";
 import type { TransactionListItem, Account, Category, BudgetSettings, RecurringWithAccount } from "@/lib/types";
 
 interface DashboardProps {
     initialTransactions: TransactionListItem[];
     nowIso: string;
+    selectedMonthIso?: string;
     budgetSettings?: BudgetSettings | null;
     categories: Category[];
     accounts: Account[];
@@ -44,9 +46,15 @@ function getAccountColor(account: Account): { bg: string; text: string; ring: st
     return { bg: "bg-ios-teal/8", text: "text-ios-blue", ring: "ring-ios-teal/20" };
 }
 
+function getCategoryIcon(categories: Category[], categoryName: string): string {
+    const cat = categories.find((c) => c.name === categoryName);
+    return cat ? cat.icon : '🛒';
+}
+
 export default function Dashboard({
     initialTransactions = [],
     nowIso,
+    selectedMonthIso,
     budgetSettings,
     categories = [],
     accounts = [],
@@ -60,6 +68,7 @@ export default function Dashboard({
     const router = useRouter();
     const searchParams = useSearchParams();
     const stableNow = useMemo(() => new Date(nowIso), [nowIso]);
+    const selectedMonth = useMemo(() => selectedMonthIso ? new Date(selectedMonthIso) : stableNow, [selectedMonthIso, stableNow]);
 
     const { scrollY } = useScroll();
 
@@ -148,7 +157,7 @@ export default function Dashboard({
         setSelectedRecurring(null);
     };
 
-    const monthName = formatUtcMonthYear(stableNow);
+    const monthName = formatUtcMonthYear(selectedMonth);
 
     return (
         <div className="w-full max-w-md mx-auto h-full relative min-h-screen pb-28 pt-safe">
@@ -181,6 +190,9 @@ export default function Dashboard({
                             <h1 className="text-3xl font-bold text-ios-text dark:text-ios-dark-text tracking-tight">
                                 {monthName}
                             </h1>
+                        </div>
+                        <div className="mt-1.5">
+                            <DashboardMonthDropdown />
                         </div>
                     </div>
                 </header>
@@ -439,30 +451,44 @@ export default function Dashboard({
                     className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 shadow-card mt-3"
                 >
                     <div className="flex items-center justify-between mb-3">
-                        <h2 className="text-lg font-bold text-ios-text dark:text-ios-dark-text">ריכוז הוצאות חוזרות</h2>
+                        <h2 className="text-lg font-bold text-ios-text dark:text-ios-dark-text">ריכוז הוצאות קבועות</h2>
                         <span className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle">{recurringTransactions.length} סה״כ</span>
                     </div>
                     {recurringTransactions.length === 0 ? (
                         <p className="text-sm text-ios-subtle dark:text-ios-dark-subtle py-2">אין הוצאות חוזרות כרגע</p>
                     ) : (
-                        <div className="space-y-2">
+                        <div className="bg-white dark:bg-ios-dark-card rounded-2xl shadow-card overflow-hidden divide-y divide-gray-100 dark:divide-white/10">
                             {recurringTransactions.map((item) => {
-                                const nextRun = new Date(item.nextRun);
+                                const icon = getCategoryIcon(categories, item.category);
+                                const isShared = item.account.type === "SHARED";
+                                const badgeColor = isShared
+                                    ? "text-ios-indigo bg-ios-indigo/8"
+                                    : "text-ios-blue bg-ios-teal/8";
                                 return (
                                     <button
                                         key={item.id}
                                         type="button"
                                         onClick={() => handleRecurringClick(item)}
-                                        className="w-full flex items-center justify-between bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-3.5 py-3 active:opacity-90 transition-opacity"
+                                        className="w-full flex items-center justify-between p-4 cursor-pointer active:bg-gray-50 dark:active:bg-ios-dark-fill transition-colors"
                                     >
-                                        <div className="min-w-0 text-right">
-                                            <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text truncate">{item.description || item.category}</p>
-                                            <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle truncate">
-                                                {item.account.name} · חיוב הבא {formatUtcDayMonthYear(nextRun)}
-                                            </p>
+                                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                                            <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-ios-dark-fill flex items-center justify-center text-lg flex-shrink-0">
+                                                {icon}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <h3 className="text-[15px] font-semibold text-ios-text dark:text-ios-dark-text truncate">{item.description || item.category}</h3>
+                                                <div className="flex items-center gap-2 mt-0.5">
+                                                    <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-md ${badgeColor}`}>
+                                                        {item.account.name}
+                                                    </span>
+                                                    <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-md text-ios-blue bg-ios-blue/10">
+                                                        קבועה
+                                                    </span>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <p className="text-sm font-bold text-ios-text dark:text-ios-dark-text tabular-nums">₪{formatIlsAmount(item.amount)}</p>
+                                        <div className="flex items-center gap-2 flex-shrink-0">
+                                            <span className="text-[15px] font-bold text-ios-text dark:text-ios-dark-text tabular-nums">₪{formatIlsAmount(item.amount)}</span>
                                             <ChevronLeft className="w-4 h-4 text-gray-300 dark:text-ios-dark-subtle/60" />
                                         </div>
                                     </button>

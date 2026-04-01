@@ -1,4 +1,4 @@
-import { getMonthlyStats, getAccounts, getCategories } from "@/app/actions";
+import { getMonthlyStats, getAccounts, getCategories, getRecurringTransactions } from "@/app/actions";
 import HistoryView from "@/components/HistoryView";
 import { redirectToOnboardingIfNeeded } from "@/lib/onboarding";
 
@@ -18,10 +18,11 @@ export default async function HistoryPage({
     const year = Number.isFinite(parsedYear) && parsedYear >= 2020 && parsedYear <= 2100 ? parsedYear : now.getFullYear();
     const month = Number.isFinite(parsedMonth) && parsedMonth >= 0 && parsedMonth <= 11 ? parsedMonth : now.getMonth();
 
-    const [{ total, accountTotals, transactions }, accounts, categories] = await Promise.all([
+    const [{ total, accountTotals, transactions }, accounts, categories, recurringTransactions] = await Promise.all([
         getMonthlyStats(year, month),
         getAccounts(),
         getCategories(),
+        getRecurringTransactions(),
     ]);
 
     return (
@@ -31,6 +32,7 @@ export default async function HistoryPage({
             accountTotals={accountTotals}
             accounts={accounts}
             categories={categories}
+            recurringTransactions={recurringTransactions}
         />
     );
 }

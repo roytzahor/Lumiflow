@@ -3,11 +3,12 @@
 import { useState } from "react";
 import TransactionFeed from "./TransactionFeed";
 import QuickAddSheet from "./QuickAddSheet";
+import RecurringEditSheet from "./RecurringEditSheet";
 import { useHaptic } from "@/hooks/useHaptic";
 import { formatIlsAmount } from "@/lib/formatters";
 import BottomNav from "./BottomNav";
 import MonthSelector from "./MonthSelector";
-import type { TransactionListItem, Account, Category, AccountTotal } from "@/lib/types";
+import type { TransactionListItem, Account, Category, AccountTotal, RecurringWithAccount } from "@/lib/types";
 
 interface HistoryViewProps {
     transactions: TransactionListItem[];
@@ -15,11 +16,13 @@ interface HistoryViewProps {
     accountTotals: AccountTotal[];
     accounts: Account[];
     categories: Category[];
+    recurringTransactions?: RecurringWithAccount[];
 }
 
-export default function HistoryView({ transactions, total, accountTotals, accounts, categories }: HistoryViewProps) {
+export default function HistoryView({ transactions, total, accountTotals, accounts, categories, recurringTransactions = [] }: HistoryViewProps) {
     const [isSheetOpen, setIsSheetOpen] = useState(false);
     const [editingTransaction, setEditingTransaction] = useState<TransactionListItem | null>(null);
+    const [selectedRecurring, setSelectedRecurring] = useState<RecurringWithAccount | null>(null);
     const { trigger } = useHaptic();
     const totalsByAccountId = new Map(accountTotals.map((row) => [row.accountId, row.total]));
     const normalizedAccountTotals = accounts
@@ -37,8 +40,15 @@ export default function HistoryView({ transactions, total, accountTotals, accoun
     const summaryRowHeightClass = "h-[152px]";
 
     const handleTransactionClick = (transaction: TransactionListItem) => {
-        if (transaction.isProjected) return;
         trigger(10);
+        if (transaction.recurringTransactionId) {
+            const recurring = recurringTransactions.find((r) => r.id === transaction.recurringTransactionId);
+            if (recurring) {
+                setSelectedRecurring(recurring);
+                return;
+            }
+        }
+        if (transaction.isProjected) return;
         setEditingTransaction(transaction);
         setIsSheetOpen(true);
     };
@@ -46,6 +56,10 @@ export default function HistoryView({ transactions, total, accountTotals, accoun
     const handleCloseSheet = () => {
         setIsSheetOpen(false);
         setEditingTransaction(null);
+    };
+
+    const handleCloseRecurringSheet = () => {
+        setSelectedRecurring(null);
     };
 
     return (
@@ -106,6 +120,13 @@ export default function HistoryView({ transactions, total, accountTotals, accoun
                 isOpen={isSheetOpen}
                 onClose={handleCloseSheet}
                 initialData={editingTransaction}
+                categories={categories}
+                accounts={accounts}
+            />
+            <RecurringEditSheet
+                isOpen={selectedRecurring !== null}
+                recurring={selectedRecurring}
+                onClose={handleCloseRecurringSheet}
                 categories={categories}
                 accounts={accounts}
             />

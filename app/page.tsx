@@ -28,8 +28,14 @@ export default async function Home({
     }
 
     const now = new Date();
+    const parsedYear = params.year ? parseInt(params.year as string, 10) : now.getFullYear();
+    const parsedMonth = params.month ? parseInt(params.month as string, 10) : now.getMonth();
+    const year = Number.isFinite(parsedYear) && parsedYear >= 2020 && parsedYear <= 2100 ? parsedYear : now.getFullYear();
+    const month = Number.isFinite(parsedMonth) && parsedMonth >= 0 && parsedMonth <= 11 ? parsedMonth : now.getMonth();
+    const selectedMonthIso = new Date(Date.UTC(year, month, 1)).toISOString();
+
     const [transactions, budgetSettings, categories, accounts, recurringTransactions, contributionTotals, currentUser] = await Promise.all([
-      getTransactions('All', now.getFullYear(), now.getMonth()),
+      getTransactions('All', year, month),
       getBudgetSettings(),
       getCategories(),
       getAccounts(),
@@ -42,6 +48,7 @@ export default async function Home({
         <Dashboard
           initialTransactions={transactions}
           nowIso={now.toISOString()}
+          selectedMonthIso={selectedMonthIso}
           budgetSettings={budgetSettings}
           categories={categories}
           accounts={accounts}

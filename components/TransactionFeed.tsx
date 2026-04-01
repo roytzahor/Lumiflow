@@ -110,13 +110,13 @@ export default function TransactionFeed({ transactions = [], accounts = [], cate
                                             <motion.div
                                                 key={t.id}
                                                 layout
-                                                onClick={() => !t.isProjected && onTransactionClick?.(t)}
+                                                onClick={() => (t.isRecurring || !t.isProjected) ? onTransactionClick?.(t) : undefined}
                                                 initial={{ opacity: 0 }}
                                                 animate={{ opacity: 1 }}
                                                 exit={{ opacity: 0, scale: 0.98 }}
-                                                whileTap={t.isProjected ? undefined : { scale: 0.98 }}
+                                                whileTap={(t.isRecurring || !t.isProjected) ? { scale: 0.98 } : undefined}
                                                 className={`flex items-center justify-between p-4 transition-colors ${
-                                                    t.isProjected ? 'cursor-default' : 'cursor-pointer active:bg-gray-50 dark:active:bg-ios-dark-fill'
+                                                    (t.isRecurring || !t.isProjected) ? 'cursor-pointer active:bg-gray-50 dark:active:bg-ios-dark-fill' : 'cursor-default'
                                                 }`}
                                             >
                                                 <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -144,7 +144,7 @@ export default function TransactionFeed({ transactions = [], accounts = [], cate
                                                     <span className="text-[15px] font-bold text-ios-text dark:text-ios-dark-text tabular-nums">
                                                         ₪{formatIlsAmount(t.amount)}
                                                     </span>
-                                                    {!t.isProjected && <ChevronLeft className="w-4 h-4 text-gray-300 dark:text-ios-dark-subtle/60" />}
+                                                    {(t.isRecurring || !t.isProjected) && <ChevronLeft className="w-4 h-4 text-gray-300 dark:text-ios-dark-subtle/60" />}
                                                 </div>
                                             </motion.div>
                                         );
