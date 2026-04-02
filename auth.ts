@@ -2,8 +2,12 @@ import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import type { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import GoogleProvider from 'next-auth/providers/google';
 
 const authSecret = process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET;
+
+const googleClientId = process.env.GOOGLE_CLIENT_ID?.trim();
+const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
 
 export const authOptions: NextAuthOptions = {
   secret: authSecret,
@@ -14,6 +18,14 @@ export const authOptions: NextAuthOptions = {
     signIn: '/auth/signin',
   },
   providers: [
+    ...(googleClientId && googleClientSecret
+      ? [
+          GoogleProvider({
+            clientId: googleClientId,
+            clientSecret: googleClientSecret,
+          }),
+        ]
+      : []),
     CredentialsProvider({
       name: 'Credentials',
       credentials: {

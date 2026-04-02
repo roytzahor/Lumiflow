@@ -22,17 +22,17 @@ export default function BottomNav() {
     ];
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 z-50 pb-safe">
+        <div className="fixed bottom-0 left-0 right-0 z-50 pb-safe bg-white/80 dark:bg-ios-dark-card/85 backdrop-blur-2xl border-t border-gray-200/50 dark:border-white/10">
             {/* Soft gradient fade */}
             <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-ios-bg dark:from-ios-dark-bg via-ios-bg/90 dark:via-ios-dark-bg/90 to-transparent pointer-events-none" />
 
             {/* Tab bar */}
-            <div className="relative bg-white/80 dark:bg-ios-dark-card/85 backdrop-blur-2xl border-t border-gray-200/50 dark:border-white/10">
+            <div className="relative">
                 <div className="max-w-md mx-auto relative px-4 pt-2 pb-1">
                     <Link
                         href="/?quickAdd=1"
                         onClick={() => trigger(10)}
-                        className="absolute left-1/2 -translate-x-1/2 -top-5 z-10 w-14 h-14 rounded-full bg-ios-blue shadow-lg shadow-ios-blue/35 flex items-center justify-center ring-4 ring-ios-bg dark:ring-ios-dark-bg"
+                        className="absolute left-1/2 -translate-x-1/2 -top-5 z-10 w-14 h-14 rounded-full bg-ios-blue shadow-lg shadow-ios-blue/35 flex items-center justify-center ring-4 ring-white/80 dark:ring-ios-dark-card"
                         aria-label="הוספת הוצאה"
                     >
                         <Plus className="w-6 h-6 text-white" strokeWidth={2.8} />
