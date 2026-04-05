@@ -55,6 +55,7 @@ export default async function Home({
           recurringTransactions={recurringTransactions}
           contributionTotals={contributionTotals}
           viewerName={currentUser?.name ?? null}
+          initialRecurringSectionExpanded={currentUser?.dashboardRecurringSectionExpanded ?? true}
         />
         <BottomNav />
       </main>

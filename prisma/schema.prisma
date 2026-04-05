@@ -36,6 +36,8 @@ model User {
   passwordHash    String
   onboardingCompletedAt DateTime?
   themePreference ThemePreference @default(SYSTEM)
+  /// Collapsed/expanded state for "ריכוז הוצאות קבועות" on dashboard (persisted per user).
+  dashboardRecurringSectionExpanded Boolean @default(true)
   isPremiumMock   Boolean         @default(false)
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt

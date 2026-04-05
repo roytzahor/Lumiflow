@@ -6,6 +6,7 @@ import QuickAddSheet from "./QuickAddSheet";
 import RecurringEditSheet from "./RecurringEditSheet";
 import PieChart from "./PieChart";
 import { formatIlsAmount, formatUtcMonthYear, getHourInTimezone } from "@/lib/formatters";
+import { updateDashboardRecurringSectionExpanded } from "@/app/actions";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, ChevronLeft, Lock } from "lucide-react";
 import DashboardMonthDropdown from "./DashboardMonthDropdown";
@@ -26,6 +27,7 @@ interface DashboardProps {
         totalMonthlyInflow: number;
     }>;
     viewerName?: string | null;
+    initialRecurringSectionExpanded?: boolean;
 }
 
 function getGreeting(now: Date): string {
@@ -61,11 +63,16 @@ export default function Dashboard({
     recurringTransactions = [],
     contributionTotals = [],
     viewerName = null,
+    initialRecurringSectionExpanded = true,
 }: DashboardProps) {
     const [isSheetOpen, setIsSheetOpen] = useState(false);
     const [showStickyHeader, setShowStickyHeader] = useState(false);
     const [selectedRecurring, setSelectedRecurring] = useState<RecurringWithAccount | null>(null);
-    const [recurringSectionExpanded, setRecurringSectionExpanded] = useState(true);
+    const [recurringSectionExpanded, setRecurringSectionExpanded] = useState(initialRecurringSectionExpanded);
+
+    useEffect(() => {
+        setRecurringSectionExpanded(initialRecurringSectionExpanded);
+    }, [initialRecurringSectionExpanded]);
     const router = useRouter();
     const searchParams = useSearchParams();
     const stableNow = useMemo(() => new Date(nowIso), [nowIso]);
@@ -156,6 +163,14 @@ export default function Dashboard({
 
     const handleCloseRecurringSheet = () => {
         setSelectedRecurring(null);
+    };
+
+    const toggleRecurringSection = () => {
+        setRecurringSectionExpanded((open) => {
+            const next = !open;
+            void updateDashboardRecurringSectionExpanded(next);
+            return next;
+        });
     };
 
     const monthName = formatUtcMonthYear(selectedMonth);
@@ -453,15 +468,15 @@ export default function Dashboard({
                 >
                     <button
                         type="button"
-                        onClick={() => setRecurringSectionExpanded((open) => !open)}
+                        onClick={toggleRecurringSection}
                         aria-expanded={recurringSectionExpanded}
                         className="w-full flex items-center justify-between gap-2 text-start rounded-xl -mx-1 px-1 py-0.5 active:bg-black/[0.03] dark:active:bg-white/[0.04] transition-colors"
                     >
                         <div className="flex items-center gap-2 min-w-0">
                             <motion.span
-                                animate={{ rotate: recurringSectionExpanded ? 0 : -90 }}
+                                animate={{ rotate: recurringSectionExpanded ? 180 : 0 }}
                                 transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                                className="flex-shrink-0 text-ios-subtle dark:text-ios-dark-subtle"
+                                className="flex-shrink-0 text-ios-subtle dark:text-ios-dark-subtle inline-flex"
                                 aria-hidden
                             >
                                 <ChevronDown className="w-5 h-5" />

@@ -333,6 +333,7 @@ export async function getCurrentUserProfile() {
         name: true,
         email: true,
         themePreference: true,
+        dashboardRecurringSectionExpanded: true,
         isPremiumMock: true,
       },
     });
@@ -408,6 +409,20 @@ export async function updateThemePreference(themePreference: 'LIGHT' | 'DARK' | 
     return { success: true };
   } catch {
     return { success: false, error: 'עדכון תצוגה נכשל' };
+  }
+}
+
+export async function updateDashboardRecurringSectionExpanded(expanded: boolean) {
+  try {
+    const userId = await requireUserId();
+    await prisma.user.update({
+      where: { id: userId },
+      data: { dashboardRecurringSectionExpanded: expanded },
+    });
+    revalidatePath('/');
+    return { success: true };
+  } catch {
+    return { success: false, error: 'עדכון העדפת תצוגה נכשל' };
   }
 }
 
