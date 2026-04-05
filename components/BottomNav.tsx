@@ -20,9 +20,10 @@ export default function BottomNav() {
     const month = searchParams.get("month");
     const year = searchParams.get("year");
     const historyHref = month && year ? `/history?month=${month}&year=${year}` : "/history";
+    const homeHref = month && year ? `/?month=${month}&year=${year}` : "/";
 
     const navItems = [
-        { name: "סקירה", path: "/", basePath: "/", icon: Home, col: "col-start-1" },
+        { name: "סקירה", path: homeHref, basePath: "/", icon: Home, col: "col-start-1" },
         { name: "היסטוריה", path: historyHref, basePath: "/history", icon: Clock, col: "col-start-2" },
         { name: "תובנות", path: "/insights", basePath: "/insights", icon: PieChart, col: "col-start-4" },
         { name: "הגדרות", path: "/settings", basePath: "/settings", icon: Settings, col: "col-start-5" },
@@ -52,9 +53,14 @@ export default function BottomNav() {
         (recurring: boolean) => {
             closeFabMenu();
             trigger(10);
-            router.push(recurring ? "/?quickAdd=1&recurring=1" : "/?quickAdd=1");
+            const qs = new URLSearchParams();
+            if (month) qs.set("month", month);
+            if (year) qs.set("year", year);
+            qs.set("quickAdd", "1");
+            if (recurring) qs.set("recurring", "1");
+            router.push(`/?${qs.toString()}`);
         },
-        [router, trigger, closeFabMenu]
+        [router, trigger, closeFabMenu, month, year]
     );
 
     const onFabPointerDown = () => {

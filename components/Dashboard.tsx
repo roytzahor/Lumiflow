@@ -10,7 +10,7 @@ import { updateDashboardRecurringSectionExpanded } from "@/app/actions";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, ChevronLeft, Lock } from "lucide-react";
-import DashboardMonthDropdown from "./DashboardMonthDropdown";
+import MonthSelector from "./MonthSelector";
 import type { TransactionListItem, Account, Category, BudgetSettings, RecurringWithAccount } from "@/lib/types";
 
 interface DashboardProps {
@@ -310,21 +310,18 @@ export default function Dashboard({
 
             <div className="px-5 pt-6">
                 {/* Header */}
-                <header className="mb-8">
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <p className="text-base text-ios-subtle dark:text-ios-dark-subtle mb-1">
-                                {viewerName?.trim() ? `${getGreeting(stableNow)}, ${viewerName.trim()}` : getGreeting(stableNow)}
-                            </p>
-                            <h1 className="text-3xl font-bold text-ios-text dark:text-ios-dark-text tracking-tight">
-                                {monthName}
-                            </h1>
-                        </div>
-                        <div className="mt-1.5">
-                            <DashboardMonthDropdown />
-                        </div>
-                    </div>
+                <header className="mb-3">
+                    <p className="text-base text-ios-subtle dark:text-ios-dark-subtle mb-1">
+                        {viewerName?.trim() ? `${getGreeting(stableNow)}, ${viewerName.trim()}` : getGreeting(stableNow)}
+                    </p>
+                    <h1 className="text-3xl font-bold text-ios-text dark:text-ios-dark-text tracking-tight">
+                        {monthName}
+                    </h1>
                 </header>
+
+                <div className="mb-8">
+                    <MonthSelector basePath="/" />
+                </div>
 
                 {/* Savings Ring */}
                 <motion.div

@@ -6,7 +6,12 @@ import { eachMonthOfInterval, format, startOfYear, endOfYear } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 
-export default function MonthSelector() {
+type MonthSelectorProps = {
+    /** Where month/year query updates apply (e.g. `/` for dashboard, `/history` for history). */
+    basePath?: string;
+};
+
+export default function MonthSelector({ basePath = '/history' }: MonthSelectorProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const now = new Date();
@@ -39,14 +44,19 @@ export default function MonthSelector() {
         }
     }, [currentMonth, currentYear]);
 
+    const withQuery = (m: number, y: number) => {
+        const path = basePath === '/' ? `/?month=${m}&year=${y}` : `${basePath}?month=${m}&year=${y}`;
+        return path;
+    };
+
     const handleSelect = (date: Date) => {
         const m = date.getMonth();
         const y = date.getFullYear();
-        router.push(`/history?month=${m}&year=${y}`);
+        router.push(withQuery(m, y));
     };
 
-    const nextYear = () => router.push(`/history?month=${currentMonth}&year=${currentYear + 1}`);
-    const prevYear = () => router.push(`/history?month=${currentMonth}&year=${currentYear - 1}`);
+    const nextYear = () => router.push(withQuery(currentMonth, currentYear + 1));
+    const prevYear = () => router.push(withQuery(currentMonth, currentYear - 1));
 
     return (
         <div className="w-full max-w-full min-w-0 overflow-hidden">
