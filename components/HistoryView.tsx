@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import TransactionFeed from "./TransactionFeed";
 import QuickAddSheet from "./QuickAddSheet";
 import RecurringEditSheet from "./RecurringEditSheet";
@@ -10,6 +10,7 @@ import { formatIlsAmount } from "@/lib/formatters";
 import BottomNav from "./BottomNav";
 import MonthSelector from "./MonthSelector";
 import type { TransactionListItem, Account, Category, AccountTotal, RecurringWithAccount } from "@/lib/types";
+import { updateHistoryShowRecurringTransactions } from "@/app/actions";
 
 interface HistoryViewProps {
     transactions: TransactionListItem[];
@@ -18,14 +19,35 @@ interface HistoryViewProps {
     accounts: Account[];
     categories: Category[];
     recurringTransactions?: RecurringWithAccount[];
+    initialHistoryShowRecurring?: boolean;
 }
 
-export default function HistoryView({ transactions, total, accountTotals, accounts, categories, recurringTransactions = [] }: HistoryViewProps) {
+export default function HistoryView({
+    transactions,
+    total,
+    accountTotals,
+    accounts,
+    categories,
+    recurringTransactions = [],
+    initialHistoryShowRecurring = true,
+}: HistoryViewProps) {
     const [isSheetOpen, setIsSheetOpen] = useState(false);
     const [editingTransaction, setEditingTransaction] = useState<TransactionListItem | null>(null);
     const [selectedRecurring, setSelectedRecurring] = useState<RecurringWithAccount | null>(null);
-    const [showRecurring, setShowRecurring] = useState(true);
+    const [showRecurring, setShowRecurring] = useState(initialHistoryShowRecurring);
+    const showRecurringRef = useRef(showRecurring);
+    showRecurringRef.current = showRecurring;
     const { trigger } = useHaptic();
+
+    useEffect(() => {
+        setShowRecurring(initialHistoryShowRecurring);
+    }, [initialHistoryShowRecurring]);
+
+    const toggleShowRecurring = () => {
+        const next = !showRecurringRef.current;
+        setShowRecurring(next);
+        void updateHistoryShowRecurringTransactions(next);
+    };
     const normalizedAccountTotals = useMemo(() => {
         const totalsByAccountId = new Map(accountTotals.map((row) => [row.accountId, row.total]));
         return accounts
@@ -45,28 +67,8 @@ export default function HistoryView({ transactions, total, accountTotals, accoun
         [transactions, showRecurring]
     );
 
-    const { displayTotal, displayAccountTotals } = useMemo(() => {
-        if (showRecurring) {
-            return { displayTotal: total, displayAccountTotals: normalizedAccountTotals };
-        }
-        const filtered = transactions.filter((t) => !t.isRecurring);
-        const nextTotal = filtered.reduce((sum, t) => sum + t.amount, 0);
-        const byAccountId = new Map<string, number>();
-        for (const t of filtered) {
-            byAccountId.set(t.accountId, (byAccountId.get(t.accountId) ?? 0) + t.amount);
-        }
-        const rows = accounts
-            .map((account) => ({
-                accountId: account.id,
-                accountName: account.name,
-                total: byAccountId.get(account.id) ?? 0,
-            }))
-            .sort((a, b) => {
-                if (b.total !== a.total) return b.total - a.total;
-                return a.accountName.localeCompare(b.accountName, "he");
-            });
-        return { displayTotal: nextTotal, displayAccountTotals: rows };
-    }, [showRecurring, total, transactions, accounts, normalizedAccountTotals]);
+    const displayTotal = total;
+    const displayAccountTotals = normalizedAccountTotals;
 
     const accountCount = displayAccountTotals.length;
     const hasSingleOrNoAccounts = accountCount <= 1;
@@ -112,7 +114,7 @@ export default function HistoryView({ transactions, total, accountTotals, accoun
 
             <div className="px-5 mt-3 flex items-center justify-between gap-3 rounded-2xl bg-white/80 dark:bg-ios-dark-card/80 py-3 px-3.5 shadow-card border border-gray-100/80 dark:border-white/10">
                 <span className="text-sm font-semibold text-ios-text dark:text-ios-dark-text">הצג הוצאות קבועות</span>
-                <LiquidToggle isOn={showRecurring} onToggle={() => setShowRecurring((v) => !v)} testId="history-show-recurring" />
+                <LiquidToggle isOn={showRecurring} onToggle={toggleShowRecurring} testId="history-show-recurring" />
             </div>
 
             {/* Summary Cards */}
@@ -122,6 +124,11 @@ export default function HistoryView({ transactions, total, accountTotals, accoun
                     <div className={`${hasSingleOrNoAccounts ? "w-full" : "flex-1 h-full"} bg-white dark:bg-ios-dark-card rounded-2xl p-4 shadow-card flex flex-col justify-center`}>
                         <p className="text-[11px] font-medium text-ios-subtle dark:text-ios-dark-subtle mb-1">סה״כ כלל ההוצאות שלך</p>
                         <p className="text-2xl font-bold text-ios-text dark:text-ios-dark-text tabular-nums">₪{formatIlsAmount(displayTotal)}</p>
+                        {!showRecurring && (
+                            <p className="text-[10px] font-semibold text-ios-subtle dark:text-ios-dark-subtle mt-2 leading-snug" role="status">
+                                כולל הוצאות קבועות שאינן מוצגות
+                            </p>
+                        )}
                     </div>
 
                     {!hasSingleOrNoAccounts && (

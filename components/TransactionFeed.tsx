@@ -98,9 +98,18 @@ export default function TransactionFeed({ transactions = [], accounts = [], cate
                         <div className="w-14 h-14 bg-gray-100 dark:bg-ios-dark-fill rounded-full flex items-center justify-center mb-3">
                             <span className="text-2xl opacity-60">💸</span>
                         </div>
-                        <p className="text-sm font-medium">
+                        <p className="text-sm font-medium text-center px-2">
                             {filter === 'All' ? 'לא נוספו עדיין הוצאות לחשבונות' : `לא נוספו עדיין הוצאות לחשבון ${activeFilterLabel}`}
                         </p>
+                        {filter !== 'All' && (
+                            <button
+                                type="button"
+                                onClick={() => setFilter('All')}
+                                className="mt-4 text-sm font-semibold text-ios-blue active:opacity-80"
+                            >
+                                הצג את כל החשבונות
+                            </button>
+                        )}
                     </motion.div>
                 ) : (
                     <div className="space-y-5">
@@ -125,7 +134,7 @@ export default function TransactionFeed({ transactions = [], accounts = [], cate
                                                 animate={{ opacity: 1 }}
                                                 exit={{ opacity: 0, scale: 0.98 }}
                                                 whileTap={(t.isRecurring || !t.isProjected) ? { scale: 0.98 } : undefined}
-                                                className={`flex items-center justify-between p-4 transition-colors ${
+                                                className={`flex items-center justify-between min-h-[44px] py-3 px-4 transition-colors ${
                                                     (t.isRecurring || !t.isProjected) ? 'cursor-pointer active:bg-gray-50 dark:active:bg-ios-dark-fill' : 'cursor-default'
                                                 }`}
                                             >

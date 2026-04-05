@@ -26,6 +26,11 @@ export default function HistoryLoading() {
                     </div>
                 </div>
 
+                {/* Recurring visibility toggle (matches HistoryView) */}
+                <div className="px-5 mb-4">
+                    <div className="h-12 rounded-2xl bg-white dark:bg-ios-dark-card shadow-card border border-gray-100/80 dark:border-white/10" />
+                </div>
+
                 {/* Summary */}
                 <div className="px-5 flex gap-3">
                     <div className="flex-1 bg-white dark:bg-ios-dark-card rounded-2xl h-20 shadow-card" />

@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import LiquidToggle from './ui/LiquidToggle';
 import { addCategory, addTransaction } from '@/app/actions';
 import { useHaptic } from '@/hooks/useHaptic';
-import { detectCategory } from '@/lib/category-dictionary';
+import { detectAllCategoryMatches } from '@/lib/category-dictionary';
 import { formatDateInputForDisplay, getTodayDateInputValue, toDateInputValueFromUtc } from '@/lib/date-only';
 import type { TransactionListItem, Account, Category, RecurringMonthPolicy } from '@/lib/types';
 
@@ -18,6 +18,8 @@ interface QuickAddSheetProps {
     initialData?: TransactionListItem | null;
     categories?: Category[];
     accounts?: Account[];
+    /** When opening a new transaction (no initialData), start in recurring mode */
+    openWithRecurring?: boolean;
 }
 
 function getDefaultAccountId(accounts: Account[]): string {
@@ -36,7 +38,7 @@ function getAccountIcon(account: Account): string {
 
 const CATEGORY_EMOJIS = ['🍕', '🛒', '🚗', '🏠', '💡', '🍽️', '☕', '🎁', '🎉', '💊', '🧾', '✈️', '📦', '🧒', '🐶', '💸', '✨'];
 
-export default function QuickAddSheet({ isOpen, onClose, initialData, categories = [], accounts = [] }: QuickAddSheetProps) {
+export default function QuickAddSheet({ isOpen, onClose, initialData, categories = [], accounts = [], openWithRecurring = false }: QuickAddSheetProps) {
     const router = useRouter();
     const [amount, setAmount] = useState('');
     const [description, setDescription] = useState('');
@@ -65,6 +67,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
     const dragControls = useDragControls();
     const { trigger } = useHaptic();
     const sheetRef = useRef<HTMLDivElement>(null);
+    const amountInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         if (isOpen) {
@@ -119,7 +122,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                 setAmount('');
                 setDescription('');
                 setDate(getTodayDateInputValue());
-                setIsRecurring(false);
+                setIsRecurring(openWithRecurring);
                 setMonthPolicy('ROLL_TO_LAST_DAY');
                 setAccountId(accounts.length > 1 ? '' : getDefaultAccountId(accounts));
                 setHasUserPickedAccount(accounts.length <= 1);
@@ -137,13 +140,18 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
             setNewCategoryCustomIcon('');
             setIsAccountListExpanded(false);
         }
-    }, [isOpen, initialData, accounts]);
+    }, [isOpen, initialData, accounts, openWithRecurring]);
 
     useEffect(() => {
-        if (!initialData && !isCategoryTouched && description) {
-            const detected = detectCategory(description);
-            if (detected) setCategory(detected.name);
-        }
+        if (initialData || isCategoryTouched || !description.trim()) return;
+        const all = detectAllCategoryMatches(description);
+        if (all.length === 1) setCategory(all[0].name);
+    }, [description, initialData, isCategoryTouched]);
+
+    const ambiguousCategoryMatches = useMemo(() => {
+        if (initialData || isCategoryTouched || !description.trim()) return [];
+        const all = detectAllCategoryMatches(description);
+        return all.length > 1 ? all : [];
     }, [description, initialData, isCategoryTouched]);
 
     useEffect(() => {
@@ -188,7 +196,24 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
         if (res.success) {
             toast.success(initialData ? 'עודכן בהצלחה' : 'נוסף בהצלחה');
             router.refresh();
-            onClose();
+            if (initialData) {
+                onClose();
+            } else {
+                setAmount('');
+                setDescription('');
+                setDate(getTodayDateInputValue());
+                setIsRecurring(false);
+                setMonthPolicy('ROLL_TO_LAST_DAY');
+                setAccountId(accounts.length > 1 ? '' : getDefaultAccountId(accounts));
+                setHasUserPickedAccount(accounts.length <= 1);
+                setCategory('כללי');
+                setIsCategoryTouched(false);
+                setCategorySearch('');
+                setAmountError('');
+                setAccountError('');
+                setDateError('');
+                requestAnimationFrame(() => amountInputRef.current?.focus());
+            }
         } else {
             toast.error('שמירה נכשלה. נסה שוב.');
         }
@@ -336,6 +361,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                 <div className="flex items-center justify-center gap-1">
                                     <span className="text-3xl sm:text-4xl text-gray-300 dark:text-ios-dark-subtle/60 font-light">₪</span>
                                     <input
+                                        ref={amountInputRef}
                                         data-testid="quickadd-amount"
                                         type="number"
                                         inputMode="decimal"
@@ -471,6 +497,30 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                         placeholder="על מה יצא הכסף?"
                                     />
                                 </div>
+                                {ambiguousCategoryMatches.length > 0 && (
+                                    <div className="px-4 pb-4 pt-1 border-t border-gray-100 dark:border-white/10">
+                                        <p className="text-xs font-medium text-ios-subtle dark:text-ios-dark-subtle mb-2">
+                                            זוהו כמה התאמות לתיאור — בחרו קטגוריה:
+                                        </p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {ambiguousCategoryMatches.map((m) => (
+                                                <button
+                                                    key={m.name}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setCategory(m.name);
+                                                        setIsCategoryTouched(true);
+                                                        trigger(8);
+                                                    }}
+                                                    className="inline-flex items-center gap-1.5 rounded-xl bg-ios-blue/10 dark:bg-ios-blue/20 text-ios-text dark:text-ios-dark-text text-xs font-semibold py-2 px-3 active:opacity-80"
+                                                >
+                                                    <span>{m.icon}</span>
+                                                    <span>{m.name}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Category */}

@@ -334,6 +334,11 @@ export async function getCurrentUserProfile() {
         email: true,
         themePreference: true,
         dashboardRecurringSectionExpanded: true,
+        historyShowRecurringTransactions: true,
+        settingsProfileSectionExpanded: true,
+        settingsAppearanceSectionExpanded: true,
+        settingsAccountsSectionExpanded: true,
+        settingsCategoriesSectionExpanded: true,
         isPremiumMock: true,
       },
     });
@@ -423,6 +428,44 @@ export async function updateDashboardRecurringSectionExpanded(expanded: boolean)
     return { success: true };
   } catch {
     return { success: false, error: 'עדכון העדפת תצוגה נכשל' };
+  }
+}
+
+export async function updateHistoryShowRecurringTransactions(show: boolean) {
+  try {
+    const userId = await requireUserId();
+    await prisma.user.update({
+      where: { id: userId },
+      data: { historyShowRecurringTransactions: show },
+    });
+    revalidatePath('/history');
+    return { success: true };
+  } catch {
+    return { success: false, error: 'עדכון העדפת היסטוריה נכשל' };
+  }
+}
+
+export type SettingsSectionKey = 'profile' | 'appearance' | 'accounts' | 'categories';
+
+export async function updateSettingsSectionExpanded(section: SettingsSectionKey, expanded: boolean) {
+  try {
+    const userId = await requireUserId();
+    const data =
+      section === 'profile'
+        ? { settingsProfileSectionExpanded: expanded }
+        : section === 'appearance'
+          ? { settingsAppearanceSectionExpanded: expanded }
+          : section === 'accounts'
+            ? { settingsAccountsSectionExpanded: expanded }
+            : { settingsCategoriesSectionExpanded: expanded };
+    await prisma.user.update({
+      where: { id: userId },
+      data,
+    });
+    revalidatePath('/settings');
+    return { success: true };
+  } catch {
+    return { success: false, error: 'עדכון תצוגת הגדרות נכשל' };
   }
 }
 

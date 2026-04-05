@@ -83,6 +83,24 @@ const dictionary: Record<string, CategoryDetectionResult> = {
     'הולמס פלייס': { name: 'בריאות', icon: '💪' },
 };
 
+/** All distinct category matches for ambiguous descriptions (e.g. "סופר וקפה"). */
+export function detectAllCategoryMatches(description: string): CategoryDetectionResult[] {
+    if (!description.trim()) return [];
+
+    const lowerDesc = description.toLowerCase();
+    const seen = new Set<string>();
+    const out: CategoryDetectionResult[] = [];
+
+    for (const [key, value] of Object.entries(dictionary)) {
+        if (lowerDesc.includes(key.toLowerCase()) && !seen.has(value.name)) {
+            seen.add(value.name);
+            out.push(value);
+        }
+    }
+
+    return out;
+}
+
 export function detectCategory(description: string): CategoryDetectionResult | null {
     if (!description) return null;
 

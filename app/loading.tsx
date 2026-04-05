@@ -39,6 +39,15 @@ export default function Loading() {
                 {/* Pie chart area */}
                 <div className="bg-white dark:bg-ios-dark-card rounded-3xl h-72 shadow-card mb-6" />
 
+                {/* Recurring summary card (matches dashboard) */}
+                <div className="bg-white dark:bg-ios-dark-card rounded-3xl p-5 shadow-card mb-6">
+                    <div className="flex items-center justify-between mb-3">
+                        <div className="h-5 w-40 bg-gray-200 dark:bg-ios-dark-fill rounded-lg" />
+                        <div className="h-4 w-14 bg-gray-100 dark:bg-ios-dark-fill rounded" />
+                    </div>
+                    <div className="bg-gray-100 dark:bg-ios-dark-fill rounded-2xl h-24" />
+                </div>
+
                 {/* Filter tabs */}
                 <div className="h-5 w-32 bg-gray-200 dark:bg-ios-dark-fill rounded-lg mb-3" />
                 <div className="bg-gray-100 dark:bg-ios-dark-fill rounded-xl h-10 mb-4" />

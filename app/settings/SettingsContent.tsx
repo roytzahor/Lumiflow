@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { useTheme } from 'next-themes';
@@ -21,14 +22,17 @@ import {
   getInvitePreview,
   upsertContributionPlan,
   removeAccountMember,
+  updateSettingsSectionExpanded,
 } from '../actions';
+import type { SettingsSectionKey } from '../actions';
 import type { AccountMemberSummary } from '../actions';
-import { User, MoonStar, Pencil, Check, X, Trash2, Plus, Wallet, Share2, LogOut, Copy, SendHorizontal, Info } from 'lucide-react';
+import { User, MoonStar, Pencil, Check, X, Trash2, Plus, Wallet, Share2, LogOut, Copy, SendHorizontal, Info, ChevronDown } from 'lucide-react';
 import type { BudgetSettings, Account, Category } from '@/lib/types';
 import AccountPopup from '@/components/AccountPopup';
 import ProfileEditSheet from '@/components/ProfileEditSheet';
 import AccountShareSheet from '@/components/AccountShareSheet';
 import AccountInfoSheet from '@/components/AccountInfoSheet';
+import { cn } from '@/lib/utils';
 
 type SettingsAccount = Account & { income?: number; members?: AccountMemberSummary[] };
 
@@ -51,12 +55,82 @@ function mapThemePreferenceToClientTheme(theme: 'LIGHT' | 'DARK' | 'SYSTEM'): 'l
   return 'system';
 }
 
+function SettingsCollapsibleSection({
+  open,
+  onToggle,
+  title,
+  headerStart,
+  children,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  title: string;
+  headerStart?: ReactNode;
+  children: ReactNode;
+}) {
+  const reduceMotion = useReducedMotion();
+
+  return (
+    <section className="rounded-3xl shadow-card bg-ios-card dark:bg-ios-dark-card">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className={cn(
+          'sticky top-0 z-[2] flex w-full items-center gap-2.5 px-5 pt-5 pb-3 text-right',
+          'bg-ios-card/95 dark:bg-ios-dark-card/95 backdrop-blur-md',
+          'transition-[border-radius] duration-300 ease-out',
+          open
+            ? 'rounded-t-3xl rounded-b-none border-b border-gray-200/40 dark:border-white/10'
+            : 'rounded-3xl border-b border-transparent',
+        )}
+      >
+        {headerStart}
+        <h2 className="text-base font-bold text-ios-text dark:text-ios-dark-text flex-1 min-w-0">{title}</h2>
+        <ChevronDown
+          className={cn(
+            'w-5 h-5 shrink-0 text-ios-subtle dark:text-ios-dark-subtle transition-transform duration-200',
+            open ? 'rotate-0' : '-rotate-90',
+          )}
+          aria-hidden
+        />
+      </button>
+      {reduceMotion ? (
+        open ? <div className="px-5 pb-5 pt-1 rounded-b-3xl">{children}</div> : null
+      ) : (
+        <div className="overflow-hidden">
+          <motion.div
+            initial={false}
+            animate={{
+              height: open ? 'auto' : 0,
+              opacity: open ? 1 : 0,
+            }}
+            transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div className="px-5 pb-5 pt-1 rounded-b-3xl">{children}</div>
+          </motion.div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 interface SettingsContentProps {
   initialBudget: BudgetSettings | null;
   initialCategories: Category[];
   initialAccounts: SettingsAccount[];
   initialContributionPlans: Array<{ accountId: string; monthlyAmount: number }>;
-  currentUser: { id: string; name: string | null; email: string; themePreference: 'LIGHT' | 'DARK' | 'SYSTEM' } | null;
+  currentUser: {
+    id: string;
+    name: string | null;
+    email: string;
+    themePreference: 'LIGHT' | 'DARK' | 'SYSTEM';
+    settingsProfileSectionExpanded?: boolean | null;
+    settingsAppearanceSectionExpanded?: boolean | null;
+    settingsAccountsSectionExpanded?: boolean | null;
+    settingsCategoriesSectionExpanded?: boolean | null;
+  } | null;
 }
 
 export default function SettingsContent({
@@ -106,7 +180,21 @@ export default function SettingsContent({
   const [themePreference, setThemePreference] = useState<'LIGHT' | 'DARK' | 'SYSTEM'>(currentUser?.themePreference ?? 'SYSTEM');
   const [isThemeSaving, setIsThemeSaving] = useState(false);
   const [contributionPlansByAccount, setContributionPlansByAccount] = useState<Record<string, number>>({});
+  const [settingsSectionOpen, setSettingsSectionOpen] = useState({
+    profile: currentUser?.settingsProfileSectionExpanded ?? true,
+    appearance: currentUser?.settingsAppearanceSectionExpanded ?? true,
+    accounts: currentUser?.settingsAccountsSectionExpanded ?? true,
+    categories: currentUser?.settingsCategoriesSectionExpanded ?? true,
+  });
+  const settingsSectionOpenRef = useRef(settingsSectionOpen);
+  settingsSectionOpenRef.current = settingsSectionOpen;
   const themeInitializedRef = useRef(false);
+
+  const toggleSettingsSection = (key: SettingsSectionKey) => {
+    const next = !settingsSectionOpenRef.current[key];
+    setSettingsSectionOpen((s) => ({ ...s, [key]: next }));
+    void updateSettingsSectionExpanded(key, next);
+  };
   const shareSheetEmailIsValid = shareSheetMethod !== 'email' || !shareSheetEmail.trim() || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(shareSheetEmail.trim());
 
   useEffect(() => {
@@ -126,6 +214,21 @@ export default function SettingsContent({
       }, {}),
     );
   }, [initialBudget, initialCategories, initialAccounts, initialContributionPlans, currentUser, setTheme]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    setSettingsSectionOpen({
+      profile: currentUser.settingsProfileSectionExpanded ?? true,
+      appearance: currentUser.settingsAppearanceSectionExpanded ?? true,
+      accounts: currentUser.settingsAccountsSectionExpanded ?? true,
+      categories: currentUser.settingsCategoriesSectionExpanded ?? true,
+    });
+  }, [
+    currentUser?.settingsProfileSectionExpanded,
+    currentUser?.settingsAppearanceSectionExpanded,
+    currentUser?.settingsAccountsSectionExpanded,
+    currentUser?.settingsCategoriesSectionExpanded,
+  ]);
 
   useEffect(() => {
     const token = searchParams.get('invite');
@@ -497,14 +600,17 @@ export default function SettingsContent({
 
   return (
     <div className="space-y-6 animate-fade-in pb-8">
-      <section className="bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card overflow-hidden">
-        <div className="px-5 pt-5 pb-3 flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-ios-indigo/10 rounded-lg flex items-center justify-center">
+      <SettingsCollapsibleSection
+        open={settingsSectionOpen.profile}
+        onToggle={() => toggleSettingsSection('profile')}
+        title="פרופיל משתמש"
+        headerStart={
+          <div className="w-8 h-8 bg-ios-indigo/10 rounded-lg flex items-center justify-center shrink-0">
             <User className="w-4 h-4 text-ios-indigo" />
           </div>
-          <h2 className="text-base font-bold text-ios-text dark:text-ios-dark-text">פרופיל משתמש</h2>
-        </div>
-        <div className="px-5 pb-5 space-y-4">
+        }
+      >
+        <div className="space-y-4">
           <div className="rounded-xl bg-ios-gray-6 dark:bg-ios-dark-fill px-4 py-3">
             <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle">שם</p>
             <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text">{currentUser?.name?.trim() || 'לא הוגדר עדיין'}</p>
@@ -540,70 +646,72 @@ export default function SettingsContent({
             </button>
           </div>
         </div>
-      </section>
+      </SettingsCollapsibleSection>
 
-      <section className="bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card overflow-hidden">
-        <div className="px-5 pt-5 pb-3 flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-ios-purple/15 rounded-lg flex items-center justify-center">
+      <SettingsCollapsibleSection
+        open={settingsSectionOpen.appearance}
+        onToggle={() => toggleSettingsSection('appearance')}
+        title="תצוגה"
+        headerStart={
+          <div className="w-8 h-8 bg-ios-purple/15 rounded-lg flex items-center justify-center shrink-0">
             <MoonStar className="w-4 h-4 text-ios-purple" />
           </div>
-          <h2 className="text-base font-bold text-ios-text dark:text-ios-dark-text">תצוגה</h2>
+        }
+      >
+        <div className="grid grid-cols-3 gap-2">
+          <button
+            type="button"
+            onClick={() => handleThemeChange('LIGHT')}
+            disabled={isThemeSaving}
+            className={`py-2.5 rounded-xl text-sm font-semibold transition ${
+              themePreference === 'LIGHT'
+                ? 'bg-ios-blue text-white'
+                : 'bg-ios-gray-6 dark:bg-ios-dark-fill text-ios-text dark:text-ios-dark-text'
+            } ${isThemeSaving ? 'opacity-60 cursor-wait' : ''}`}
+          >
+            בהיר
+          </button>
+          <button
+            type="button"
+            onClick={() => handleThemeChange('DARK')}
+            disabled={isThemeSaving}
+            className={`py-2.5 rounded-xl text-sm font-semibold transition ${
+              themePreference === 'DARK'
+                ? 'bg-ios-blue text-white'
+                : 'bg-ios-gray-6 dark:bg-ios-dark-fill text-ios-text dark:text-ios-dark-text'
+            } ${isThemeSaving ? 'opacity-60 cursor-wait' : ''}`}
+          >
+            כהה
+          </button>
+          <button
+            type="button"
+            onClick={() => handleThemeChange('SYSTEM')}
+            disabled={isThemeSaving}
+            className={`py-2.5 rounded-xl text-sm font-semibold transition ${
+              themePreference === 'SYSTEM'
+                ? 'bg-ios-blue text-white'
+                : 'bg-ios-gray-6 dark:bg-ios-dark-fill text-ios-text dark:text-ios-dark-text'
+            } ${isThemeSaving ? 'opacity-60 cursor-wait' : ''}`}
+          >
+            מערכת
+          </button>
         </div>
-        <div className="px-5 pb-5">
-          <div className="grid grid-cols-3 gap-2">
-            <button
-              type="button"
-              onClick={() => handleThemeChange('LIGHT')}
-              disabled={isThemeSaving}
-              className={`py-2.5 rounded-xl text-sm font-semibold transition ${
-                themePreference === 'LIGHT'
-                  ? 'bg-ios-blue text-white'
-                  : 'bg-ios-gray-6 dark:bg-ios-dark-fill text-ios-text dark:text-ios-dark-text'
-              } ${isThemeSaving ? 'opacity-60 cursor-wait' : ''}`}
-            >
-              בהיר
-            </button>
-            <button
-              type="button"
-              onClick={() => handleThemeChange('DARK')}
-              disabled={isThemeSaving}
-              className={`py-2.5 rounded-xl text-sm font-semibold transition ${
-                themePreference === 'DARK'
-                  ? 'bg-ios-blue text-white'
-                  : 'bg-ios-gray-6 dark:bg-ios-dark-fill text-ios-text dark:text-ios-dark-text'
-              } ${isThemeSaving ? 'opacity-60 cursor-wait' : ''}`}
-            >
-              כהה
-            </button>
-            <button
-              type="button"
-              onClick={() => handleThemeChange('SYSTEM')}
-              disabled={isThemeSaving}
-              className={`py-2.5 rounded-xl text-sm font-semibold transition ${
-                themePreference === 'SYSTEM'
-                  ? 'bg-ios-blue text-white'
-                  : 'bg-ios-gray-6 dark:bg-ios-dark-fill text-ios-text dark:text-ios-dark-text'
-              } ${isThemeSaving ? 'opacity-60 cursor-wait' : ''}`}
-            >
-              מערכת
-            </button>
-          </div>
-        </div>
-      </section>
+      </SettingsCollapsibleSection>
 
-      <section className="bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card overflow-hidden">
-        <div className="px-5 pt-5 pb-3 flex items-center justify-between gap-2">
-          <h2 className="text-base font-bold text-ios-text dark:text-ios-dark-text">חשבונות</h2>
+      <SettingsCollapsibleSection
+        open={settingsSectionOpen.accounts}
+        onToggle={() => toggleSettingsSection('accounts')}
+        title="חשבונות"
+      >
+        <div className="space-y-3">
           <button
             type="button"
             onClick={openCreateAccountPopup}
-            className="px-3 py-2 rounded-xl bg-ios-blue text-white text-sm font-semibold flex items-center gap-1.5"
+            className="w-full px-3 py-2.5 rounded-xl bg-ios-blue text-white text-sm font-semibold flex items-center justify-center gap-1.5"
           >
             <Plus className="w-4 h-4" />
             הוספת חשבון
           </button>
-        </div>
-        <div className="px-5 pb-5 space-y-3">
           {accounts.map((account) => (
             <div key={account.id} className="bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl p-3">
               <div className="flex items-start justify-between gap-3">
@@ -654,13 +762,14 @@ export default function SettingsContent({
             </div>
           ))}
         </div>
-      </section>
+      </SettingsCollapsibleSection>
 
-      <section className="bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card overflow-hidden">
-        <div className="px-5 pt-5 pb-3">
-          <h2 className="text-base font-bold text-ios-text dark:text-ios-dark-text">קטגוריות</h2>
-        </div>
-        <div className="px-5 pb-5 space-y-3">
+      <SettingsCollapsibleSection
+        open={settingsSectionOpen.categories}
+        onToggle={() => toggleSettingsSection('categories')}
+        title="קטגוריות"
+      >
+        <div className="space-y-3">
           <div className="flex gap-2">
             <input
               type="text"
@@ -732,7 +841,7 @@ export default function SettingsContent({
             ))}
           </div>
         </div>
-      </section>
+      </SettingsCollapsibleSection>
 
       <button
         data-testid="settings-signout"

@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { motion, AnimatePresence, useScroll, useMotionValueEvent } from "framer-motion";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { motion, AnimatePresence, useReducedMotion, useScroll, useMotionValueEvent } from "framer-motion";
 import QuickAddSheet from "./QuickAddSheet";
 import RecurringEditSheet from "./RecurringEditSheet";
 import PieChart from "./PieChart";
 import { formatIlsAmount, formatUtcMonthYear, getHourInTimezone } from "@/lib/formatters";
 import { updateDashboardRecurringSectionExpanded } from "@/app/actions";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, ChevronLeft, Lock } from "lucide-react";
 import DashboardMonthDropdown from "./DashboardMonthDropdown";
@@ -53,6 +54,103 @@ function getCategoryIcon(categories: Category[], categoryName: string): string {
     return cat ? cat.icon : '🛒';
 }
 
+type AccountBalanceRow = {
+    account: Account;
+    expenses: number;
+    monthlyInflow: number;
+    balance: number;
+};
+
+function DashboardAccountBalanceCard({
+    row,
+    index,
+    reduceMotion,
+}: {
+    row: AccountBalanceRow;
+    index: number;
+    reduceMotion: boolean;
+}) {
+    const { account, expenses, monthlyInflow, balance } = row;
+    const colors = getAccountColor(account);
+    const isAccountLocked = monthlyInflow === 0 && expenses === 0;
+    return (
+        <motion.div
+            initial={reduceMotion ? false : { opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: reduceMotion ? 0 : 0.24 + index * 0.06 }}
+            className={`rounded-2xl p-4 ring-1 ${colors.ring} ${colors.bg}`}
+        >
+            {isAccountLocked ? (
+                <div className="relative overflow-hidden rounded-xl min-h-[112px]">
+                    <div className="pointer-events-none select-none blur-[2.5px] opacity-85">
+                        <div className="rounded-xl bg-white/70 dark:bg-ios-dark-card/70 p-3">
+                            <div className="flex items-center justify-between mb-3">
+                                <p className={`text-sm font-semibold ${colors.text}`}>{getAccountLabel(account)}</p>
+                                <p className="text-sm font-bold text-ios-subtle dark:text-ios-dark-subtle tabular-nums">₪0</p>
+                            </div>
+                            <div className="grid grid-cols-3 gap-2 text-center">
+                                <div className="rounded-lg bg-ios-gray-6/80 dark:bg-ios-dark-fill/80 px-2 py-2">
+                                    <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">הכנסות</p>
+                                    <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text tabular-nums">₪0</p>
+                                </div>
+                                <div className="rounded-lg bg-ios-gray-6/80 dark:bg-ios-dark-fill/80 px-2 py-2">
+                                    <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">הוצאות</p>
+                                    <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text tabular-nums">₪0</p>
+                                </div>
+                                <div className="rounded-lg bg-ios-gray-6/80 dark:bg-ios-dark-fill/80 px-2 py-2">
+                                    <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">מאזן</p>
+                                    <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text tabular-nums">₪0</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="absolute inset-0 flex items-center justify-center p-3">
+                        <div className="w-[235px] rounded-xl bg-white/26 dark:bg-ios-dark-card/42 backdrop-blur-xl border border-white/20 dark:border-white/10 p-3 text-center shadow-card">
+                            <div className="w-7 h-7 rounded-full bg-ios-blue/15 text-ios-blue flex items-center justify-center mx-auto mb-2">
+                                <Lock className="w-3.5 h-3.5" />
+                            </div>
+                            <p className="text-xs text-ios-text dark:text-ios-dark-text leading-relaxed">
+                                הוסיפו לחשבון &quot;{getAccountLabel(account)}&quot; הכנסות או הוצאות כדי לפתוח את המאזן
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                <>
+                    <div className="flex items-center justify-between mb-3">
+                        <p className={`text-sm font-semibold ${colors.text}`}>{getAccountLabel(account)}</p>
+                        <p className={`text-sm font-bold tabular-nums ${balance >= 0 ? "text-ios-green" : "text-ios-red"}`}>
+                            {balance >= 0 ? "₪" : "-₪"}
+                            {formatIlsAmount(Math.abs(balance))}
+                        </p>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                        <div className="rounded-lg bg-white/70 dark:bg-ios-dark-card/70 px-2 py-2">
+                            <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">הכנסות</p>
+                            <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text tabular-nums">
+                                ₪{formatIlsAmount(Math.round(monthlyInflow))}
+                            </p>
+                        </div>
+                        <div className="rounded-lg bg-white/70 dark:bg-ios-dark-card/70 px-2 py-2">
+                            <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">הוצאות</p>
+                            <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text tabular-nums">
+                                ₪{formatIlsAmount(Math.round(expenses))}
+                            </p>
+                        </div>
+                        <div className="rounded-lg bg-white/70 dark:bg-ios-dark-card/70 px-2 py-2">
+                            <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">מאזן</p>
+                            <p className={`text-sm font-semibold tabular-nums ${balance >= 0 ? "text-ios-green" : "text-ios-red"}`}>
+                                {balance >= 0 ? "₪" : "-₪"}
+                                {formatIlsAmount(Math.abs(Math.round(balance)))}
+                            </p>
+                        </div>
+                    </div>
+                </>
+            )}
+        </motion.div>
+    );
+}
+
 export default function Dashboard({
     initialTransactions = [],
     nowIso,
@@ -66,9 +164,12 @@ export default function Dashboard({
     initialRecurringSectionExpanded = true,
 }: DashboardProps) {
     const [isSheetOpen, setIsSheetOpen] = useState(false);
+    const [quickAddIntent, setQuickAddIntent] = useState<{ recurring: boolean } | null>(null);
     const [showStickyHeader, setShowStickyHeader] = useState(false);
     const [selectedRecurring, setSelectedRecurring] = useState<RecurringWithAccount | null>(null);
     const [recurringSectionExpanded, setRecurringSectionExpanded] = useState(initialRecurringSectionExpanded);
+    const recurringExpandedRef = useRef(recurringSectionExpanded);
+    recurringExpandedRef.current = recurringSectionExpanded;
 
     useEffect(() => {
         setRecurringSectionExpanded(initialRecurringSectionExpanded);
@@ -79,6 +180,12 @@ export default function Dashboard({
     const selectedMonth = useMemo(() => selectedMonthIso ? new Date(selectedMonthIso) : stableNow, [selectedMonthIso, stableNow]);
 
     const { scrollY } = useScroll();
+    const reduceMotion = useReducedMotion();
+
+    const recurringTotalAmount = useMemo(
+        () => recurringTransactions.reduce((sum, r) => sum + r.amount, 0),
+        [recurringTransactions]
+    );
 
     const chartData = useMemo(() => {
         const categoryMap = new Map();
@@ -138,8 +245,13 @@ export default function Dashboard({
 
     useEffect(() => {
         if (searchParams.get('quickAdd') !== '1') return;
+        setQuickAddIntent({ recurring: searchParams.get('recurring') === '1' });
         setIsSheetOpen(true);
-        router.replace('/', { scroll: false });
+        const params = new URLSearchParams(searchParams.toString());
+        params.delete('quickAdd');
+        params.delete('recurring');
+        const q = params.toString();
+        router.replace(q ? `/?${q}` : '/', { scroll: false });
     }, [searchParams, router]);
 
     useMotionValueEvent(scrollY, "change", (latest) => {
@@ -155,6 +267,7 @@ export default function Dashboard({
 
     const handleCloseSheet = () => {
         setIsSheetOpen(false);
+        setQuickAddIntent(null);
     };
 
     const handleRecurringClick = (item: RecurringWithAccount) => {
@@ -166,21 +279,21 @@ export default function Dashboard({
     };
 
     const toggleRecurringSection = () => {
-        setRecurringSectionExpanded((open) => {
-            const next = !open;
-            void updateDashboardRecurringSectionExpanded(next);
-            return next;
-        });
+        const next = !recurringExpandedRef.current;
+        setRecurringSectionExpanded(next);
+        void updateDashboardRecurringSectionExpanded(next);
     };
 
     const monthName = formatUtcMonthYear(selectedMonth);
+    const sectionEnter = reduceMotion ? false : ({ opacity: 0, y: 20 } as const);
+    const sectionDelay = (seconds: number) => ({ delay: reduceMotion ? 0 : seconds });
 
     return (
         <div className="w-full max-w-md mx-auto h-full relative min-h-screen pb-28 pt-safe">
             {/* Sticky Header */}
             {showStickyHeader && hasIncomeConfigured && (
                 <motion.div
-                    initial={{ y: -60, opacity: 0 }}
+                    initial={reduceMotion ? false : { y: -60, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     className="fixed top-0 inset-x-0 z-50 bg-white/80 dark:bg-ios-dark-card/80 backdrop-blur-xl border-b border-gray-200/60 dark:border-white/10 pt-safe"
                 >
@@ -215,9 +328,9 @@ export default function Dashboard({
 
                 {/* Savings Ring */}
                 <motion.div
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={sectionEnter}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
+                    transition={sectionDelay(0.1)}
                     className={`bg-ios-card dark:bg-ios-dark-card rounded-3xl p-6 shadow-card mb-4 ${hasIncomeConfigured ? '' : 'opacity-80'}`}
                 >
                     {hasIncomeConfigured ? (
@@ -236,9 +349,13 @@ export default function Dashboard({
                                         strokeWidth="6"
                                         fill="transparent"
                                         strokeLinecap="round"
-                                        initial={{ pathLength: 0 }}
+                                        initial={{ pathLength: reduceMotion ? savingsRatio / 100 : 0 }}
                                         animate={{ pathLength: savingsRatio / 100 }}
-                                        transition={{ duration: 1.2, ease: "easeOut", delay: 0.3 }}
+                                        transition={
+                                            reduceMotion
+                                                ? { duration: 0 }
+                                                : { duration: 1.2, ease: "easeOut", delay: 0.3 }
+                                        }
                                         strokeDasharray="1"
                                     />
                                 </svg>
@@ -292,14 +409,20 @@ export default function Dashboard({
                                     </div>
                                 </div>
                             </div>
-                            <div className="absolute inset-0 flex items-center justify-center px-4">
-                                <div className="w-[235px] rounded-xl bg-white/28 dark:bg-ios-dark-card/42 backdrop-blur-xl border border-white/20 dark:border-white/10 px-3 py-3 text-center shadow-card">
+                            <div className="absolute inset-0 flex items-center justify-center px-4 pointer-events-none">
+                                <div className="w-[235px] rounded-xl bg-white/28 dark:bg-ios-dark-card/42 backdrop-blur-xl border border-white/20 dark:border-white/10 px-3 py-3 text-center shadow-card pointer-events-auto">
                                     <div className="w-8 h-8 rounded-full bg-ios-blue/15 text-ios-blue flex items-center justify-center mx-auto mb-2">
                                         <Lock className="w-4 h-4" />
                                     </div>
                                     <p className="text-xs text-ios-text dark:text-ios-dark-text leading-relaxed">
                                         הוסיפו לחשבון הכנסות או הוצאות כדי לפתוח את המאזן
                                     </p>
+                                    <Link
+                                        href="/settings"
+                                        className="mt-3 inline-flex items-center justify-center w-full rounded-xl bg-ios-blue text-white text-xs font-semibold py-2.5 active:opacity-90"
+                                    >
+                                        הגדר הכנסה חודשית
+                                    </Link>
                                 </div>
                             </div>
                         </div>
@@ -307,9 +430,9 @@ export default function Dashboard({
                 </motion.div>
 
                 <motion.div
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={sectionEnter}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
+                    transition={sectionDelay(0.2)}
                     className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 shadow-card mb-6"
                 >
                     <div className="flex items-center justify-between mb-3">
@@ -344,100 +467,31 @@ export default function Dashboard({
                                 </div>
                             </div>
                         </div>
+                    ) : accountBalances.length > 1 ? (
+                        <div className="flex flex-row-reverse gap-3 overflow-x-auto pb-2 pt-0.5 snap-x snap-mandatory no-scrollbar -mx-1 px-1">
+                            {accountBalances.map((row, index) => (
+                                <div
+                                    key={row.account.id}
+                                    className="snap-center shrink-0 w-[min(100%,17.5rem)] max-w-[280px]"
+                                >
+                                    <DashboardAccountBalanceCard row={row} index={index} reduceMotion={!!reduceMotion} />
+                                </div>
+                            ))}
+                        </div>
                     ) : (
                         <div className="space-y-2.5">
-                            {accountBalances.map(({ account, expenses, monthlyInflow, balance }, index) => {
-                                const colors = getAccountColor(account);
-                                const isAccountLocked = monthlyInflow === 0 && expenses === 0;
-                                return (
-                                    <motion.div
-                                        key={account.id}
-                                        initial={{ opacity: 0, y: 15 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: 0.24 + index * 0.06 }}
-                                        className={`rounded-2xl p-4 ring-1 ${colors.ring} ${colors.bg}`}
-                                    >
-                                        {isAccountLocked ? (
-                                            <div className="relative overflow-hidden rounded-xl min-h-[112px]">
-                                                <div className="pointer-events-none select-none blur-[2.5px] opacity-85">
-                                                    <div className="rounded-xl bg-white/70 dark:bg-ios-dark-card/70 p-3">
-                                                        <div className="flex items-center justify-between mb-3">
-                                                            <p className={`text-sm font-semibold ${colors.text}`}>
-                                                                {getAccountLabel(account)}
-                                                            </p>
-                                                            <p className="text-sm font-bold text-ios-subtle dark:text-ios-dark-subtle tabular-nums">₪0</p>
-                                                        </div>
-                                                        <div className="grid grid-cols-3 gap-2 text-center">
-                                                            <div className="rounded-lg bg-ios-gray-6/80 dark:bg-ios-dark-fill/80 px-2 py-2">
-                                                                <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">הכנסות</p>
-                                                                <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text tabular-nums">₪0</p>
-                                                            </div>
-                                                            <div className="rounded-lg bg-ios-gray-6/80 dark:bg-ios-dark-fill/80 px-2 py-2">
-                                                                <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">הוצאות</p>
-                                                                <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text tabular-nums">₪0</p>
-                                                            </div>
-                                                            <div className="rounded-lg bg-ios-gray-6/80 dark:bg-ios-dark-fill/80 px-2 py-2">
-                                                                <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">מאזן</p>
-                                                                <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text tabular-nums">₪0</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div className="absolute inset-0 flex items-center justify-center p-3">
-                                                    <div className="w-[235px] rounded-xl bg-white/26 dark:bg-ios-dark-card/42 backdrop-blur-xl border border-white/20 dark:border-white/10 p-3 text-center shadow-card">
-                                                        <div className="w-7 h-7 rounded-full bg-ios-blue/15 text-ios-blue flex items-center justify-center mx-auto mb-2">
-                                                            <Lock className="w-3.5 h-3.5" />
-                                                        </div>
-                                                        <p className="text-xs text-ios-text dark:text-ios-dark-text leading-relaxed">
-                                                            הוסיפו לחשבון &quot;{getAccountLabel(account)}&quot; הכנסות או הוצאות כדי לפתוח את המאזן
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <>
-                                                <div className="flex items-center justify-between mb-3">
-                                                    <p className={`text-sm font-semibold ${colors.text}`}>
-                                                        {getAccountLabel(account)}
-                                                    </p>
-                                                    <p className={`text-sm font-bold tabular-nums ${balance >= 0 ? 'text-ios-green' : 'text-ios-red'}`}>
-                                                        {balance >= 0 ? '₪' : '-₪'}{formatIlsAmount(Math.abs(balance))}
-                                                    </p>
-                                                </div>
-                                                <div className="grid grid-cols-3 gap-2 text-center">
-                                                    <div className="rounded-lg bg-white/70 dark:bg-ios-dark-card/70 px-2 py-2">
-                                                        <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">הכנסות</p>
-                                                        <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text tabular-nums">
-                                                            ₪{formatIlsAmount(Math.round(monthlyInflow))}
-                                                        </p>
-                                                    </div>
-                                                    <div className="rounded-lg bg-white/70 dark:bg-ios-dark-card/70 px-2 py-2">
-                                                        <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">הוצאות</p>
-                                                        <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text tabular-nums">
-                                                            ₪{formatIlsAmount(Math.round(expenses))}
-                                                        </p>
-                                                    </div>
-                                                    <div className="rounded-lg bg-white/70 dark:bg-ios-dark-card/70 px-2 py-2">
-                                                        <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">מאזן</p>
-                                                        <p className={`text-sm font-semibold tabular-nums ${balance >= 0 ? 'text-ios-green' : 'text-ios-red'}`}>
-                                                            {balance >= 0 ? '₪' : '-₪'}{formatIlsAmount(Math.abs(Math.round(balance)))}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </>
-                                        )}
-                                    </motion.div>
-                                );
-                            })}
+                            {accountBalances.map((row, index) => (
+                                <DashboardAccountBalanceCard key={row.account.id} row={row} index={index} reduceMotion={!!reduceMotion} />
+                            ))}
                         </div>
                     )}
                 </motion.div>
 
                 {/* Spending Breakdown */}
                 <motion.div
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={sectionEnter}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.35 }}
+                    transition={sectionDelay(0.35)}
                     className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 shadow-card mb-6"
                 >
                     <h2 className="text-lg font-bold text-ios-text dark:text-ios-dark-text mb-3">התפלגות הוצאות</h2>
@@ -461,9 +515,9 @@ export default function Dashboard({
                 </motion.div>
 
                 <motion.div
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={sectionEnter}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4 }}
+                    transition={sectionDelay(0.4)}
                     className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 shadow-card mt-3"
                 >
                     <button
@@ -475,7 +529,11 @@ export default function Dashboard({
                         <div className="flex items-center gap-2 min-w-0">
                             <motion.span
                                 animate={{ rotate: recurringSectionExpanded ? 180 : 0 }}
-                                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                                transition={
+                                    reduceMotion
+                                        ? { duration: 0 }
+                                        : { type: "spring", stiffness: 400, damping: 30 }
+                                }
                                 className="flex-shrink-0 text-ios-subtle dark:text-ios-dark-subtle inline-flex"
                                 aria-hidden
                             >
@@ -485,6 +543,14 @@ export default function Dashboard({
                         </div>
                         <span className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle flex-shrink-0">{recurringTransactions.length} סה״כ</span>
                     </button>
+                    {!recurringSectionExpanded && recurringTransactions.length > 0 && (
+                        <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle mt-2 pr-7">
+                            סה״כ קבועות חודשיות:{" "}
+                            <span className="font-bold text-ios-text dark:text-ios-dark-text tabular-nums">
+                                ₪{formatIlsAmount(recurringTotalAmount)}
+                            </span>
+                        </p>
+                    )}
                     <AnimatePresence initial={false}>
                         {recurringSectionExpanded && (
                             <motion.div
@@ -492,7 +558,10 @@ export default function Dashboard({
                                 initial={{ opacity: 0, height: 0 }}
                                 animate={{ opacity: 1, height: "auto" }}
                                 exit={{ opacity: 0, height: 0 }}
-                                transition={{ duration: 0.2, ease: "easeInOut" }}
+                                transition={{
+                                    duration: reduceMotion ? 0.01 : 0.2,
+                                    ease: "easeInOut",
+                                }}
                                 className="overflow-hidden"
                             >
                                 <div className={recurringTransactions.length === 0 ? "pt-2" : "pt-3"}>
@@ -552,6 +621,7 @@ export default function Dashboard({
                 initialData={null}
                 categories={categories}
                 accounts={accounts}
+                openWithRecurring={quickAddIntent?.recurring ?? false}
             />
             <RecurringEditSheet
                 isOpen={selectedRecurring !== null}
