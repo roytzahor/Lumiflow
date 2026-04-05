@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { motion, useScroll, useMotionValueEvent } from "framer-motion";
+import { motion, AnimatePresence, useScroll, useMotionValueEvent } from "framer-motion";
 import QuickAddSheet from "./QuickAddSheet";
 import RecurringEditSheet from "./RecurringEditSheet";
 import PieChart from "./PieChart";
 import { formatIlsAmount, formatUtcMonthYear, getHourInTimezone } from "@/lib/formatters";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronLeft, Lock } from "lucide-react";
+import { ChevronDown, ChevronLeft, Lock } from "lucide-react";
 import DashboardMonthDropdown from "./DashboardMonthDropdown";
 import type { TransactionListItem, Account, Category, BudgetSettings, RecurringWithAccount } from "@/lib/types";
 
@@ -65,6 +65,7 @@ export default function Dashboard({
     const [isSheetOpen, setIsSheetOpen] = useState(false);
     const [showStickyHeader, setShowStickyHeader] = useState(false);
     const [selectedRecurring, setSelectedRecurring] = useState<RecurringWithAccount | null>(null);
+    const [recurringSectionExpanded, setRecurringSectionExpanded] = useState(true);
     const router = useRouter();
     const searchParams = useSearchParams();
     const stableNow = useMemo(() => new Date(nowIso), [nowIso]);
@@ -450,52 +451,82 @@ export default function Dashboard({
                     transition={{ delay: 0.4 }}
                     className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 shadow-card mt-3"
                 >
-                    <div className="flex items-center justify-between mb-3">
-                        <h2 className="text-lg font-bold text-ios-text dark:text-ios-dark-text">ריכוז הוצאות קבועות</h2>
-                        <span className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle">{recurringTransactions.length} סה״כ</span>
-                    </div>
-                    {recurringTransactions.length === 0 ? (
-                        <p className="text-sm text-ios-subtle dark:text-ios-dark-subtle py-2">אין הוצאות חוזרות כרגע</p>
-                    ) : (
-                        <div className="bg-white dark:bg-ios-dark-card rounded-2xl shadow-card overflow-hidden divide-y divide-gray-100 dark:divide-white/10">
-                            {recurringTransactions.map((item) => {
-                                const icon = getCategoryIcon(categories, item.category);
-                                const isShared = item.account.type === "SHARED";
-                                const badgeColor = isShared
-                                    ? "text-ios-indigo bg-ios-indigo/8"
-                                    : "text-ios-blue bg-ios-teal/8";
-                                return (
-                                    <button
-                                        key={item.id}
-                                        type="button"
-                                        onClick={() => handleRecurringClick(item)}
-                                        className="w-full flex items-center justify-between p-4 cursor-pointer active:bg-gray-50 dark:active:bg-ios-dark-fill transition-colors"
-                                    >
-                                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                                            <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-ios-dark-fill flex items-center justify-center text-lg flex-shrink-0">
-                                                {icon}
-                                            </div>
-                                            <div className="min-w-0">
-                                                <h3 className="text-[15px] font-semibold text-ios-text dark:text-ios-dark-text truncate">{item.description || item.category}</h3>
-                                                <div className="flex items-center gap-2 mt-0.5">
-                                                    <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-md ${badgeColor}`}>
-                                                        {item.account.name}
-                                                    </span>
-                                                    <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-md text-ios-blue bg-ios-blue/10">
-                                                        קבועה
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-2 flex-shrink-0">
-                                            <span className="text-[15px] font-bold text-ios-text dark:text-ios-dark-text tabular-nums">₪{formatIlsAmount(item.amount)}</span>
-                                            <ChevronLeft className="w-4 h-4 text-gray-300 dark:text-ios-dark-subtle/60" />
-                                        </div>
-                                    </button>
-                                );
-                            })}
+                    <button
+                        type="button"
+                        onClick={() => setRecurringSectionExpanded((open) => !open)}
+                        aria-expanded={recurringSectionExpanded}
+                        className="w-full flex items-center justify-between gap-2 text-start rounded-xl -mx-1 px-1 py-0.5 active:bg-black/[0.03] dark:active:bg-white/[0.04] transition-colors"
+                    >
+                        <div className="flex items-center gap-2 min-w-0">
+                            <motion.span
+                                animate={{ rotate: recurringSectionExpanded ? 0 : -90 }}
+                                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                                className="flex-shrink-0 text-ios-subtle dark:text-ios-dark-subtle"
+                                aria-hidden
+                            >
+                                <ChevronDown className="w-5 h-5" />
+                            </motion.span>
+                            <h2 className="text-lg font-bold text-ios-text dark:text-ios-dark-text truncate">ריכוז הוצאות קבועות</h2>
                         </div>
-                    )}
+                        <span className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle flex-shrink-0">{recurringTransactions.length} סה״כ</span>
+                    </button>
+                    <AnimatePresence initial={false}>
+                        {recurringSectionExpanded && (
+                            <motion.div
+                                key="recurring-body"
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: "auto" }}
+                                exit={{ opacity: 0, height: 0 }}
+                                transition={{ duration: 0.2, ease: "easeInOut" }}
+                                className="overflow-hidden"
+                            >
+                                <div className={recurringTransactions.length === 0 ? "pt-2" : "pt-3"}>
+                                    {recurringTransactions.length === 0 ? (
+                                        <p className="text-sm text-ios-subtle dark:text-ios-dark-subtle py-2">אין הוצאות חוזרות כרגע</p>
+                                    ) : (
+                                        <div className="bg-white dark:bg-ios-dark-card rounded-2xl shadow-card overflow-hidden divide-y divide-gray-100 dark:divide-white/10">
+                                            {recurringTransactions.map((item) => {
+                                                const icon = getCategoryIcon(categories, item.category);
+                                                const isShared = item.account.type === "SHARED";
+                                                const badgeColor = isShared
+                                                    ? "text-ios-indigo bg-ios-indigo/8"
+                                                    : "text-ios-blue bg-ios-teal/8";
+                                                return (
+                                                    <button
+                                                        key={item.id}
+                                                        type="button"
+                                                        onClick={() => handleRecurringClick(item)}
+                                                        className="w-full flex items-center justify-between p-4 cursor-pointer active:bg-gray-50 dark:active:bg-ios-dark-fill transition-colors"
+                                                    >
+                                                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                            <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-ios-dark-fill flex items-center justify-center text-lg flex-shrink-0">
+                                                                {icon}
+                                                            </div>
+                                                            <div className="min-w-0">
+                                                                <h3 className="text-[15px] font-semibold text-ios-text dark:text-ios-dark-text truncate">{item.description || item.category}</h3>
+                                                                <div className="flex items-center gap-2 mt-0.5">
+                                                                    <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-md ${badgeColor}`}>
+                                                                        {item.account.name}
+                                                                    </span>
+                                                                    <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-md text-ios-blue bg-ios-blue/10">
+                                                                        קבועה
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-2 flex-shrink-0">
+                                                            <span className="text-[15px] font-bold text-ios-text dark:text-ios-dark-text tabular-nums">₪{formatIlsAmount(item.amount)}</span>
+                                                            <ChevronLeft className="w-4 h-4 text-gray-300 dark:text-ios-dark-subtle/60" />
+                                                        </div>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </motion.div>
             </div>
 

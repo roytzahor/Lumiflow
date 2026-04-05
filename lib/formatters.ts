@@ -57,3 +57,17 @@ export function getHourInTimezone(value: Date | string, timeZone: string): numbe
   const hour = Number(parts.find((part) => part.type === 'hour')?.value ?? '0');
   return Number.isFinite(hour) ? hour : 0;
 }
+
+/** Calendar date as YYYY-MM-DD in the given IANA timezone (e.g. Asia/Jerusalem). */
+export function getCalendarDateKeyInTimeZone(value: Date | string, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date(value));
+  const y = parts.find((p) => p.type === 'year')?.value ?? '1970';
+  const m = parts.find((p) => p.type === 'month')?.value ?? '01';
+  const d = parts.find((p) => p.type === 'day')?.value ?? '01';
+  return `${y}-${m}-${d}`;
+}

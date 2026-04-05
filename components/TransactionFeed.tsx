@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft } from 'lucide-react';
-import { formatIlsAmount, formatUtcDateLabel, getUtcDateKey } from '@/lib/formatters';
+import { formatIlsAmount, formatUtcDateLabel, getCalendarDateKeyInTimeZone, getUtcDateKey } from '@/lib/formatters';
 import type { TransactionListItem, Category, Account } from '@/lib/types';
 
 interface TransactionFeedProps {
@@ -13,8 +13,11 @@ interface TransactionFeedProps {
     onTransactionClick?: (transaction: TransactionListItem) => void;
 }
 
+const JERUSALEM_TZ = 'Asia/Jerusalem';
+
 export default function TransactionFeed({ transactions = [], accounts = [], categories = [], onTransactionClick }: TransactionFeedProps) {
     const [filter, setFilter] = useState('All');
+    const todayJerusalemKey = useMemo(() => getCalendarDateKeyInTimeZone(new Date(), JERUSALEM_TZ), []);
 
     const accountFilters = useMemo(() => {
         return accounts.map((account) => ({
@@ -43,6 +46,12 @@ export default function TransactionFeed({ transactions = [], accounts = [], cate
     const getAccountBadge = (t: TransactionListItem) => {
         if (t.account?.type === 'SHARED') return { label: t.account?.name || 'משותף', color: 'text-ios-indigo bg-ios-indigo/8' };
         return { label: t.account?.name || '', color: 'text-ios-blue bg-ios-teal/8' };
+    };
+
+    const isPlannedFutureRecurring = (t: TransactionListItem) => {
+        if (!t.isRecurring || !t.isProjected) return false;
+        const occurrenceKey = getUtcDateKey(t.date);
+        return occurrenceKey > todayJerusalemKey;
     };
 
     // Group transactions by date
@@ -106,6 +115,7 @@ export default function TransactionFeed({ transactions = [], accounts = [], cate
                                 <div className="bg-white dark:bg-ios-dark-card rounded-2xl shadow-card overflow-hidden divide-y divide-gray-100 dark:divide-white/10">
                                     {groupedByDate[dateKey].map((t) => {
                                         const badge = getAccountBadge(t);
+                                        const plannedFutureRecurring = isPlannedFutureRecurring(t);
                                         return (
                                             <motion.div
                                                 key={t.id}
@@ -132,8 +142,14 @@ export default function TransactionFeed({ transactions = [], accounts = [], cate
                                                                 {badge.label}
                                                             </span>
                                                             {t.isRecurring && (
-                                                                <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-md ${t.isProjected ? 'text-ios-orange bg-ios-orange/10' : 'text-ios-blue bg-ios-blue/10'}`}>
-                                                                    {t.isProjected ? 'קבועה מתוכננת' : 'קבועה'}
+                                                                <span
+                                                                    className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-md ${
+                                                                        plannedFutureRecurring
+                                                                            ? 'text-ios-orange bg-ios-orange/10'
+                                                                            : 'text-ios-blue bg-ios-blue/10'
+                                                                    }`}
+                                                                >
+                                                                    {plannedFutureRecurring ? 'קבועה מתוכננת' : 'קבועה'}
                                                                 </span>
                                                             )}
                                                         </div>
