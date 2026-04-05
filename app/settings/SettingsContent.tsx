@@ -26,13 +26,14 @@ import {
 } from '../actions';
 import type { SettingsSectionKey } from '../actions';
 import type { AccountMemberSummary } from '../actions';
-import { User, MoonStar, Pencil, Check, X, Trash2, Plus, Wallet, Share2, LogOut, Copy, SendHorizontal, Info, ChevronDown } from 'lucide-react';
+import { User, MoonStar, Pencil, Check, X, Trash2, Plus, Wallet, Share2, LogOut, Copy, SendHorizontal, Info, ChevronDown, Landmark, Tag } from 'lucide-react';
 import type { BudgetSettings, Account, Category } from '@/lib/types';
 import AccountPopup from '@/components/AccountPopup';
 import ProfileEditSheet from '@/components/ProfileEditSheet';
 import AccountShareSheet from '@/components/AccountShareSheet';
 import AccountInfoSheet from '@/components/AccountInfoSheet';
 import { cn } from '@/lib/utils';
+import { CATEGORY_EMOJIS } from '@/lib/category-emojis';
 
 type SettingsAccount = Account & { income?: number; members?: AccountMemberSummary[] };
 
@@ -46,8 +47,6 @@ const DEFAULT_BUDGET: BudgetSettings = {
   savingsGoal: null,
   savingsGoalAmount: null,
 };
-
-const CATEGORY_EMOJIS = ['🍕', '🛒', '🚗', '🏠', '💡', '🍽️', '☕', '🎁', '🎉', '💊', '🧾', '✈️', '📦', '🧒', '🐶', '💸', '✨', '🏖️', '🍔', '🎮', '📱', '🎬', '🧑‍🍳', '🏋️', '🧹', '🐱', '🌿', '📚', '💼', '🛍️', '🚕', '🏥', '🧠', '❤️', '🎵', '🎯', '🔧', '🛠️'];
 
 function mapThemePreferenceToClientTheme(theme: 'LIGHT' | 'DARK' | 'SYSTEM'): 'light' | 'dark' | 'system' {
   if (theme === 'LIGHT') return 'light';
@@ -80,9 +79,7 @@ function SettingsCollapsibleSection({
           'sticky top-0 z-[2] flex w-full items-center gap-2.5 px-5 pt-5 pb-3 text-right',
           'bg-ios-card/95 dark:bg-ios-dark-card/95 backdrop-blur-md',
           'transition-[border-radius] duration-300 ease-out',
-          open
-            ? 'rounded-t-3xl rounded-b-none border-b border-gray-200/40 dark:border-white/10'
-            : 'rounded-3xl border-b border-transparent',
+          open ? 'rounded-t-3xl rounded-b-none' : 'rounded-3xl',
         )}
       >
         {headerStart}
@@ -605,8 +602,8 @@ export default function SettingsContent({
         onToggle={() => toggleSettingsSection('profile')}
         title="פרופיל משתמש"
         headerStart={
-          <div className="w-8 h-8 bg-ios-indigo/10 rounded-lg flex items-center justify-center shrink-0">
-            <User className="w-4 h-4 text-ios-indigo" />
+          <div className="w-8 h-8 bg-ios-blue/12 rounded-lg flex items-center justify-center shrink-0">
+            <User className="w-4 h-4 text-ios-blue" />
           </div>
         }
       >
@@ -702,6 +699,11 @@ export default function SettingsContent({
         open={settingsSectionOpen.accounts}
         onToggle={() => toggleSettingsSection('accounts')}
         title="חשבונות"
+        headerStart={
+          <div className="w-8 h-8 bg-ios-teal/15 rounded-lg flex items-center justify-center shrink-0">
+            <Landmark className="w-4 h-4 text-ios-teal" />
+          </div>
+        }
       >
         <div className="space-y-3">
           <button
@@ -768,6 +770,11 @@ export default function SettingsContent({
         open={settingsSectionOpen.categories}
         onToggle={() => toggleSettingsSection('categories')}
         title="קטגוריות"
+        headerStart={
+          <div className="w-8 h-8 bg-ios-orange/15 rounded-lg flex items-center justify-center shrink-0">
+            <Tag className="w-4 h-4 text-ios-orange" />
+          </div>
+        }
       >
         <div className="space-y-3">
           <div className="flex gap-2">

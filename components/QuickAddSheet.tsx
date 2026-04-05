@@ -11,6 +11,7 @@ import { useHaptic } from '@/hooks/useHaptic';
 import { detectAllCategoryMatches } from '@/lib/category-dictionary';
 import { formatDateInputForDisplay, getTodayDateInputValue, toDateInputValueFromUtc } from '@/lib/date-only';
 import type { TransactionListItem, Account, Category, RecurringMonthPolicy } from '@/lib/types';
+import { CATEGORY_EMOJIS } from '@/lib/category-emojis';
 
 interface QuickAddSheetProps {
     isOpen: boolean;
@@ -36,8 +37,6 @@ function getAccountIcon(account: Account): string {
     return '👤';
 }
 
-const CATEGORY_EMOJIS = ['🍕', '🛒', '🚗', '🏠', '💡', '🍽️', '☕', '🎁', '🎉', '💊', '🧾', '✈️', '📦', '🧒', '🐶', '💸', '✨'];
-
 export default function QuickAddSheet({ isOpen, onClose, initialData, categories = [], accounts = [], openWithRecurring = false }: QuickAddSheetProps) {
     const router = useRouter();
     const [amount, setAmount] = useState('');
@@ -55,10 +54,8 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [availableCategories, setAvailableCategories] = useState<Category[]>(categories);
     const [categorySearch, setCategorySearch] = useState('');
-    const [showCreateCategory, setShowCreateCategory] = useState(false);
     const [newCategoryName, setNewCategoryName] = useState('');
-    const [newCategoryIcon, setNewCategoryIcon] = useState('✨');
-    const [newCategoryCustomIcon, setNewCategoryCustomIcon] = useState('');
+    const [newCategoryEmojiInput, setNewCategoryEmojiInput] = useState('');
     const [isAddingCategory, setIsAddingCategory] = useState(false);
     const [isCategoryTouched, setIsCategoryTouched] = useState(false);
     const [isAccountListExpanded, setIsAccountListExpanded] = useState(false);
@@ -134,10 +131,8 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
             setAccountError('');
             setDateError('');
             setCategorySearch('');
-            setShowCreateCategory(false);
             setNewCategoryName('');
-            setNewCategoryIcon('✨');
-            setNewCategoryCustomIcon('');
+            setNewCategoryEmojiInput('');
             setIsAccountListExpanded(false);
         }
     }, [isOpen, initialData, accounts, openWithRecurring]);
@@ -273,7 +268,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
         }
 
         setIsAddingCategory(true);
-        const resolvedIcon = (newCategoryCustomIcon || newCategoryIcon).trim() || '✨';
+        const resolvedIcon = newCategoryEmojiInput.trim() || '✨';
         const res = await addCategory(candidate, resolvedIcon, 'expense');
         setIsAddingCategory(false);
         if (!res.success) {
@@ -295,10 +290,8 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
         setCategory(createdCategory.name);
         setIsCategoryTouched(true);
         setCategorySearch('');
-        setShowCreateCategory(false);
         setNewCategoryName('');
-        setNewCategoryIcon('✨');
-        setNewCategoryCustomIcon('');
+        setNewCategoryEmojiInput('');
         toast.success('קטגוריה נוספה');
         router.refresh();
     };
@@ -526,6 +519,40 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                             {/* Category */}
                             <div className="bg-white dark:bg-ios-dark-card rounded-2xl shadow-card mb-4 p-4">
                                 <p className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle uppercase tracking-wider mb-3">קטגוריה</p>
+                                <div className="flex gap-2 mb-3">
+                                    <input
+                                        type="text"
+                                        placeholder="שם קטגוריה חדשה"
+                                        value={newCategoryName}
+                                        onChange={(e) => setNewCategoryName(e.target.value)}
+                                        className="flex-1 bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-3.5 py-2.5 text-sm text-ios-text dark:text-ios-dark-text placeholder-gray-400 dark:placeholder-ios-dark-subtle focus:outline-none focus:ring-2 focus:ring-ios-blue/30"
+                                    />
+                                    <input
+                                        type="text"
+                                        value={newCategoryEmojiInput}
+                                        onChange={(e) => setNewCategoryEmojiInput(e.target.value)}
+                                        placeholder="בחר/י או הקלד/י 😀"
+                                        list="quickadd-category-emoji-list"
+                                        className="w-20 text-center bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-1 py-2.5 text-sm text-ios-text dark:text-ios-dark-text focus:outline-none focus:ring-2 focus:ring-ios-blue/30"
+                                        aria-label="בחירת אימוג׳י לקטגוריה"
+                                    />
+                                    <datalist id="quickadd-category-emoji-list">
+                                        {CATEGORY_EMOJIS.map((emoji) => (
+                                            <option key={emoji} value={emoji}>
+                                                {emoji}
+                                            </option>
+                                        ))}
+                                    </datalist>
+                                    <button
+                                        type="button"
+                                        onClick={() => void handleCreateCategory()}
+                                        disabled={isAddingCategory}
+                                        className="w-11 shrink-0 bg-ios-blue text-white rounded-xl flex items-center justify-center disabled:opacity-50"
+                                        aria-label="הוספת קטגוריה"
+                                    >
+                                        <Plus className="w-5 h-5" />
+                                    </button>
+                                </div>
                                 <div className="flex gap-2 mb-2">
                                     <div className="flex-1 relative">
                                         <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-ios-subtle dark:text-ios-dark-subtle" />
@@ -537,63 +564,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                             className="w-full bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl py-2.5 pr-9 pl-3 text-sm text-ios-text dark:text-ios-dark-text placeholder-gray-400 dark:placeholder-ios-dark-subtle focus:outline-none focus:ring-2 focus:ring-ios-blue/30"
                                         />
                                     </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setShowCreateCategory((prev) => !prev);
-                                            if (!showCreateCategory) {
-                                                setNewCategoryName(categorySearch.trim());
-                                            }
-                                        }}
-                                        className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-                                            showCreateCategory
-                                                ? 'bg-ios-indigo text-white'
-                                                : 'bg-ios-blue text-white'
-                                        }`}
-                                        aria-label="פתיחת הוספת קטגוריה חדשה"
-                                        aria-expanded={showCreateCategory}
-                                    >
-                                        <Plus className="w-4 h-4" />
-                                    </button>
                                 </div>
-
-                                {showCreateCategory && (
-                                    <div className="bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl p-2.5 mb-3">
-                                        <div className="flex gap-2">
-                                            <input
-                                                type="text"
-                                                value={newCategoryName}
-                                                onChange={(e) => setNewCategoryName(e.target.value)}
-                                                placeholder="שם קטגוריה חדשה"
-                                                className="flex-1 bg-white dark:bg-ios-dark-card rounded-lg px-3 py-2 text-sm text-ios-text dark:text-ios-dark-text"
-                                            />
-                                            <input
-                                                type="text"
-                                                value={newCategoryCustomIcon}
-                                                onChange={(e) => setNewCategoryCustomIcon(e.target.value)}
-                                                placeholder="😀"
-                                                className="w-12 text-center bg-white dark:bg-ios-dark-card rounded-lg px-1 py-2 text-sm text-ios-text dark:text-ios-dark-text"
-                                                aria-label="אימוג׳י מותאם אישית"
-                                            />
-                                            <select
-                                                value={newCategoryIcon}
-                                                onChange={(e) => setNewCategoryIcon(e.target.value)}
-                                                className="w-14 text-center bg-white dark:bg-ios-dark-card rounded-lg px-1 py-2 text-sm text-ios-text dark:text-ios-dark-text"
-                                                aria-label="בחירת אמוג׳י"
-                                            >
-                                                {CATEGORY_EMOJIS.map((emoji) => <option key={emoji} value={emoji}>{emoji}</option>)}
-                                            </select>
-                                            <button
-                                                type="button"
-                                                onClick={handleCreateCategory}
-                                                disabled={isAddingCategory}
-                                                className="px-3 py-2 rounded-lg bg-ios-blue text-white text-xs font-semibold disabled:opacity-50"
-                                            >
-                                                {isAddingCategory ? 'מוסיף...' : 'הוסף'}
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
 
                                 <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1" style={{ WebkitOverflowScrolling: 'touch' }}>
                                     {filteredCategories.map((cat) => (
@@ -635,7 +606,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                 </div>
                                 {filteredCategories.length === 0 && (
                                     <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle mt-2">
-                                        לא נמצאו קטגוריות. אפשר להוסיף קטגוריה חדשה עם כפתור +
+                                        לא נמצאו קטגוריות תואמות לחיפוש. ניתן להוסיף קטגוריה חדשה בשורה למעלה.
                                     </p>
                                 )}
                             </div>
