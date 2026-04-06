@@ -2,7 +2,6 @@ import Dashboard from "@/components/Dashboard";
 import DashboardLoadError from "@/components/DashboardLoadError";
 import {
   getTransactions,
-  getBudgetSettings,
   getCategories,
   getAccounts,
   getRecurringTransactions,
@@ -34,9 +33,8 @@ export default async function Home({
     const month = Number.isFinite(parsedMonth) && parsedMonth >= 0 && parsedMonth <= 11 ? parsedMonth : now.getMonth();
     const selectedMonthIso = new Date(Date.UTC(year, month, 1)).toISOString();
 
-    const [transactions, budgetSettings, categories, accounts, recurringTransactions, contributionTotals, currentUser] = await Promise.all([
+    const [transactions, categories, accounts, recurringTransactions, contributionTotals, currentUser] = await Promise.all([
       getTransactions('All', year, month),
-      getBudgetSettings(),
       getCategories(),
       getAccounts(),
       getRecurringTransactions(),
@@ -49,7 +47,6 @@ export default async function Home({
           initialTransactions={transactions}
           nowIso={now.toISOString()}
           selectedMonthIso={selectedMonthIso}
-          budgetSettings={budgetSettings}
           categories={categories}
           accounts={accounts}
           recurringTransactions={recurringTransactions}

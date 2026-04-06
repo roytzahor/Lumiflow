@@ -1043,7 +1043,7 @@ export async function getInsightsAdvancedAnalysis() {
     const accountIds = await getUserAccountIds(userId);
     if (accountIds.length === 0) return { success: true, analysis: 'אין נתונים לניתוח מתקדם כרגע.' };
 
-    const [transactions, recurring, budget] = await Promise.all([
+    const [transactions, recurring, contributionPlans] = await Promise.all([
       prisma.transaction.findMany({
         where: { accountId: { in: accountIds } },
         select: { amount: true, category: true, date: true, description: true },
@@ -1054,7 +1054,10 @@ export async function getInsightsAdvancedAnalysis() {
         where: { active: true, accountId: { in: accountIds } },
         select: { amount: true, category: true, dayOfMonth: true, monthPolicy: true },
       }),
-      prisma.budgetSettings.findUnique({ where: { userId } }),
+      prisma.accountContributionPlan.findMany({
+        where: { userId },
+        select: { monthlyAmount: true },
+      }),
     ]);
 
     const now = new Date();
@@ -1086,6 +1089,7 @@ export async function getInsightsAdvancedAnalysis() {
       .map((row) => `${row.category}: ₪${Math.round(row.amount).toLocaleString()} ביום ${row.dayOfMonth}`)
       .join(', ');
     const concentrationRisk = totalRecent > 0 ? ((summarizeByCategory(recentRows)[0]?.total ?? 0) / totalRecent) * 100 : 0;
+    const totalPlannedMonthlyInflow = contributionPlans.reduce((sum, row) => sum + row.monthlyAmount, 0);
 
     const prompt = `אתה אנליסט פיננסי מתקדם מאוד. נתח עומק בעברית ברמת מקבל החלטות.
 נתוני בסיס:
@@ -1093,7 +1097,7 @@ export async function getInsightsAdvancedAnalysis() {
 - הוצאות 3 חודשים אחרונים: ₪${Math.round(totalRecent).toLocaleString()}
 - מגמת 6 חודשים: ${monthTrend || 'אין'}
 - מספר פעולות כולל: ${transactions.length}
-- הכנסה חודשית (אם קיימת): ₪${Math.round(budget?.monthlyIncome ?? 0).toLocaleString()}
+- סה"כ תרומות חודשיות לחשבונות (אם הוגדרו): ₪${Math.round(totalPlannedMonthlyInflow).toLocaleString()}
 - קטגוריות מובילות לאחרונה: ${categoriesRecent || 'אין'}
 - ריכוז בקטגוריה מובילה ב-3 חודשים: ${concentrationRisk.toFixed(1)}%
 - הוראות קבע פעילות: ${recurring.length}
@@ -1976,22 +1980,6 @@ export async function completeOnboarding(input: {
 
       if (createdAccounts.length === 0) {
         return { createdAccounts: [], inviteUrl, error: 'No accounts were created' };
-      }
-
-      if (hasMonthlyIncomeInput && normalizedMonthlyIncome != null) {
-        await tx.budgetSettings.upsert({
-          where: { userId },
-          create: {
-            userId,
-            monthlyIncome: normalizedMonthlyIncome,
-            needsPercent: 50,
-            wantsPercent: 30,
-            savingsPercent: 20,
-          },
-          update: {
-            monthlyIncome: normalizedMonthlyIncome,
-          },
-        });
       }
 
       if (createdAccounts.length > 0) {

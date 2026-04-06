@@ -1,4 +1,4 @@
-import { getBudgetSettings, getCategories, getAccountsWithMembersForSettings, getCurrentUserProfile, getContributionPlans } from '../actions';
+import { getCategories, getAccountsWithMembersForSettings, getCurrentUserProfile, getContributionPlans } from '../actions';
 import SettingsContent from './SettingsContent';
 import BottomNav from '@/components/BottomNav';
 import { redirectToOnboardingIfNeeded } from '@/lib/onboarding';
@@ -7,8 +7,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function SettingsPage() {
   await redirectToOnboardingIfNeeded();
-  const [budgetSettings, categories, accounts, contributionPlans, currentUser] = await Promise.all([
-    getBudgetSettings(),
+  const [categories, accounts, contributionPlans, currentUser] = await Promise.all([
     getCategories(),
     getAccountsWithMembersForSettings(),
     getContributionPlans(),
@@ -28,7 +27,6 @@ export default async function SettingsPage() {
 
         <main className="px-5 py-2 space-y-6">
           <SettingsContent
-            initialBudget={budgetSettings}
             initialCategories={categories}
             initialAccounts={accounts}
             initialContributionPlans={contributionPlans}

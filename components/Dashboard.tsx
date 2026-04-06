@@ -11,14 +11,13 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, ChevronLeft, Lock } from "lucide-react";
 import MonthSelector from "./MonthSelector";
-import type { TransactionListItem, Account, Category, BudgetSettings, RecurringWithAccount } from "@/lib/types";
+import type { TransactionListItem, Account, Category, RecurringWithAccount } from "@/lib/types";
 import { parseScopeAccountId } from "@/lib/scope-account";
 
 interface DashboardProps {
     initialTransactions: TransactionListItem[];
     nowIso: string;
     selectedMonthIso?: string;
-    budgetSettings?: BudgetSettings | null;
     categories: Category[];
     accounts: Account[];
     recurringTransactions?: RecurringWithAccount[];
@@ -156,7 +155,6 @@ export default function Dashboard({
     initialTransactions = [],
     nowIso,
     selectedMonthIso,
-    budgetSettings,
     categories = [],
     accounts = [],
     recurringTransactions = [],
@@ -288,6 +286,14 @@ export default function Dashboard({
         return accountBalancesAll.filter((row) => row.account.id === scopeAccountId);
     }, [accountBalancesAll, scopeAccountId]);
 
+    const totalMonthlyInflowScope = useMemo(() => {
+        if (scopeAccountId === "all") {
+            return accountBalancesAll.reduce((sum, row) => sum + row.monthlyInflow, 0);
+        }
+        const row = accountBalancesAll.find((r) => r.account.id === scopeAccountId);
+        return row?.monthlyInflow ?? 0;
+    }, [accountBalancesAll, scopeAccountId]);
+
     useEffect(() => {
         if (searchParams.get('quickAdd') !== '1') return;
         setQuickAddIntent({ recurring: searchParams.get('recurring') === '1' });
@@ -304,7 +310,7 @@ export default function Dashboard({
     });
 
     const totalSpent = scopedTransactions.reduce((sum, t) => sum + t.amount, 0);
-    const income = budgetSettings?.monthlyIncome ?? 0;
+    const income = totalMonthlyInflowScope;
     const hasIncomeConfigured = income > 0;
     const savedSoFar = hasIncomeConfigured ? income - totalSpent : 0;
     const rawRatio = hasIncomeConfigured ? (savedSoFar / income) * 100 : 0;
@@ -447,7 +453,7 @@ export default function Dashboard({
                                 </div>
                                 <div className="flex gap-6">
                                     <div>
-                                        <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">הכנסה</p>
+                                        <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">הכנסות לחשבונות</p>
                                         <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text">₪{formatIlsAmount(income)}</p>
                                     </div>
                                     <div>
@@ -469,7 +475,7 @@ export default function Dashboard({
                                         </div>
                                         <div className="flex gap-6">
                                             <div>
-                                                <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">הכנסה</p>
+                                                <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">הכנסות לחשבונות</p>
                                                 <p className="text-sm font-semibold text-ios-subtle dark:text-ios-dark-subtle">₪0</p>
                                             </div>
                                             <div>
@@ -486,13 +492,13 @@ export default function Dashboard({
                                         <Lock className="w-4 h-4" />
                                     </div>
                                     <p className="text-xs text-ios-text dark:text-ios-dark-text leading-relaxed">
-                                        הוסיפו לחשבון הכנסות או הוצאות כדי לפתוח את המאזן
+                                        הגדירו תרומה חודשית לכל חשבון בהגדרות כדי לראות כמה חסכתם החודש
                                     </p>
                                     <Link
                                         href="/settings"
                                         className="mt-3 inline-flex items-center justify-center w-full rounded-xl bg-ios-blue text-white text-xs font-semibold py-2.5 active:opacity-90"
                                     >
-                                        הגדר הכנסה חודשית
+                                        הגדרות חשבונות
                                     </Link>
                                 </div>
                             </div>

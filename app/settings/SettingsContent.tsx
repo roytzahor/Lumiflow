@@ -7,7 +7,6 @@ import { signOut } from 'next-auth/react';
 import { useTheme } from 'next-themes';
 import { toast } from 'sonner';
 import {
-  updateBudgetSettings,
   updateCurrentUserProfile,
   updateCurrentUserPassword,
   updateThemePreference,
@@ -26,8 +25,8 @@ import {
 } from '../actions';
 import type { SettingsSectionKey } from '../actions';
 import type { AccountMemberSummary } from '../actions';
-import { User, MoonStar, Pencil, Check, X, Trash2, Plus, Wallet, Share2, LogOut, Copy, SendHorizontal, Info, ChevronDown, Landmark, Tag } from 'lucide-react';
-import type { BudgetSettings, Account, Category } from '@/lib/types';
+import { User, MoonStar, Pencil, Check, X, Trash2, Plus, Share2, LogOut, Copy, SendHorizontal, Info, ChevronDown, Landmark, Tag } from 'lucide-react';
+import type { Account, Category } from '@/lib/types';
 import AccountPopup from '@/components/AccountPopup';
 import ProfileEditSheet from '@/components/ProfileEditSheet';
 import AccountShareSheet from '@/components/AccountShareSheet';
@@ -36,17 +35,6 @@ import { cn } from '@/lib/utils';
 import { CATEGORY_EMOJIS } from '@/lib/category-emojis';
 
 type SettingsAccount = Account & { income?: number; members?: AccountMemberSummary[] };
-
-const DEFAULT_BUDGET: BudgetSettings = {
-  id: '',
-  userId: '',
-  monthlyIncome: 0,
-  needsPercent: 50,
-  wantsPercent: 30,
-  savingsPercent: 20,
-  savingsGoal: null,
-  savingsGoalAmount: null,
-};
 
 function mapThemePreferenceToClientTheme(theme: 'LIGHT' | 'DARK' | 'SYSTEM'): 'light' | 'dark' | 'system' {
   if (theme === 'LIGHT') return 'light';
@@ -114,7 +102,6 @@ function SettingsCollapsibleSection({
 }
 
 interface SettingsContentProps {
-  initialBudget: BudgetSettings | null;
   initialCategories: Category[];
   initialAccounts: SettingsAccount[];
   initialContributionPlans: Array<{ accountId: string; monthlyAmount: number }>;
@@ -131,7 +118,6 @@ interface SettingsContentProps {
 }
 
 export default function SettingsContent({
-  initialBudget,
   initialCategories,
   initialAccounts,
   initialContributionPlans,
@@ -141,7 +127,6 @@ export default function SettingsContent({
   const searchParams = useSearchParams();
   const { setTheme } = useTheme();
 
-  const [budget, setBudget] = useState<BudgetSettings>(initialBudget ?? DEFAULT_BUDGET);
   const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [accounts, setAccounts] = useState<SettingsAccount[]>(initialAccounts);
   const [newCatName, setNewCatName] = useState('');
@@ -197,7 +182,6 @@ export default function SettingsContent({
   useEffect(() => {
     setCategories(initialCategories);
     setAccounts(initialAccounts);
-    setBudget(initialBudget ?? DEFAULT_BUDGET);
     const preference = currentUser?.themePreference ?? 'SYSTEM';
     setThemePreference(preference);
     if (!themeInitializedRef.current) {
@@ -210,7 +194,7 @@ export default function SettingsContent({
         return acc;
       }, {}),
     );
-  }, [initialBudget, initialCategories, initialAccounts, initialContributionPlans, currentUser, setTheme]);
+  }, [initialCategories, initialAccounts, initialContributionPlans, currentUser, setTheme]);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -221,6 +205,7 @@ export default function SettingsContent({
       categories: currentUser.settingsCategoriesSectionExpanded ?? true,
     });
   }, [
+    currentUser,
     currentUser?.settingsProfileSectionExpanded,
     currentUser?.settingsAppearanceSectionExpanded,
     currentUser?.settingsAccountsSectionExpanded,
@@ -517,33 +502,19 @@ export default function SettingsContent({
     setProfileSheetMode(null);
   };
 
-  const saveProfileDetails = async (payload: { name: string; email: string; monthlyIncome: number }) => {
+  const saveProfileDetails = async (payload: { name: string; email: string }) => {
     setIsProfileSaving(true);
     const profileRes = await updateCurrentUserProfile({
       name: payload.name,
       email: payload.email,
     });
 
+    setIsProfileSaving(false);
     if (!profileRes.success) {
-      setIsProfileSaving(false);
       toast.error(profileRes.error ?? 'עדכון פרופיל נכשל');
       return false;
     }
 
-    const budgetRes = await updateBudgetSettings({
-      monthlyIncome: Number(payload.monthlyIncome),
-      needsPercent: budget.needsPercent,
-      wantsPercent: budget.wantsPercent,
-      savingsPercent: budget.savingsPercent,
-      savingsGoal: budget.savingsGoal ?? undefined,
-      savingsGoalAmount: budget.savingsGoalAmount ?? undefined,
-    });
-    setIsProfileSaving(false);
-    if (!budgetRes.success) {
-      toast.error(budgetRes.error ?? 'עדכון תקציב נכשל');
-      return false;
-    }
-    setBudget((prev) => ({ ...prev, monthlyIncome: Number(payload.monthlyIncome) || 0 }));
     toast.success('הפרופיל עודכן בהצלחה');
     router.refresh();
     return true;
@@ -614,16 +585,6 @@ export default function SettingsContent({
             <div className="my-2 border-t border-gray-200/70 dark:border-white/10" />
             <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle">אימייל</p>
             <p dir="ltr" className="text-[13px] text-ios-text dark:text-ios-dark-text">{currentUser?.email ?? '—'}</p>
-          </div>
-
-          <div className="rounded-xl bg-ios-gray-6 dark:bg-ios-dark-fill px-4 py-3 space-y-3">
-            <div className="flex items-center gap-2 text-ios-text dark:text-ios-dark-text">
-              <Wallet className="w-4 h-4 text-ios-blue" />
-              <p className="text-sm font-semibold">תקציב</p>
-            </div>
-            <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle">הכנסה חודשית (נטו)</p>
-            <p dir="ltr" className="text-lg font-bold text-ios-text dark:text-ios-dark-text">₪{Math.round(budget.monthlyIncome || 0).toLocaleString('he-IL')}</p>
-            <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">ניתן לערוך את הסכום מתוך ״עריכת פרטים״.</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -963,7 +924,6 @@ export default function SettingsContent({
         mode={profileSheetMode ?? 'details'}
         initialName={currentUser?.name ?? ''}
         initialEmail={currentUser?.email ?? ''}
-        initialMonthlyIncome={budget.monthlyIncome ?? 0}
         isSaving={profileSheetMode === 'details' ? isProfileSaving : isPasswordSaving}
         onClose={closeProfileSheet}
         onSaveDetails={saveProfileDetails}

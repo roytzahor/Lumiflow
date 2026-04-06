@@ -4,16 +4,7 @@ import { buildRetentionSignals } from '../lib/retention-signals';
 describe('buildRetentionSignals', () => {
   it('returns warning/critical style outputs near budget limits', () => {
     const output = buildRetentionSignals({
-      budgetSettings: {
-        id: 'b',
-        userId: 'u',
-        monthlyIncome: 1000,
-        needsPercent: 50,
-        wantsPercent: 30,
-        savingsPercent: 20,
-        savingsGoal: null,
-        savingsGoalAmount: null,
-      },
+      totalMonthlyInflow: 1000,
       now: new Date('2026-03-20T00:00:00.000Z'),
       transactions: [
         {
