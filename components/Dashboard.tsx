@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { motion, AnimatePresence, useReducedMotion, useScroll, useMotionValueEvent } from "framer-motion";
 import QuickAddSheet from "./QuickAddSheet";
 import RecurringEditSheet from "./RecurringEditSheet";
@@ -12,6 +12,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, ChevronLeft, Lock } from "lucide-react";
 import MonthSelector from "./MonthSelector";
 import type { TransactionListItem, Account, Category, BudgetSettings, RecurringWithAccount } from "@/lib/types";
+import { parseScopeAccountId } from "@/lib/scope-account";
 
 interface DashboardProps {
     initialTransactions: TransactionListItem[];
@@ -176,20 +177,59 @@ export default function Dashboard({
     }, [initialRecurringSectionExpanded]);
     const router = useRouter();
     const searchParams = useSearchParams();
+    const accountParam = searchParams.get("account");
+    const scopeAccountId = useMemo(
+        () => parseScopeAccountId(accountParam, accounts),
+        [accountParam, accounts]
+    );
+
+    useEffect(() => {
+        if (!accountParam) return;
+        if (accounts.some((a) => a.id === accountParam)) return;
+        const params = new URLSearchParams(searchParams.toString());
+        params.delete("account");
+        const q = params.toString();
+        router.replace(q ? `/?${q}` : "/", { scroll: false });
+    }, [accountParam, accounts, searchParams, router]);
+
+    const setScopeAccount = useCallback(
+        (next: "all" | string) => {
+            const params = new URLSearchParams(searchParams.toString());
+            if (next === "all") {
+                params.delete("account");
+            } else {
+                params.set("account", next);
+            }
+            const q = params.toString();
+            router.replace(q ? `/?${q}` : "/", { scroll: false });
+        },
+        [router, searchParams]
+    );
+
     const stableNow = useMemo(() => new Date(nowIso), [nowIso]);
     const selectedMonth = useMemo(() => selectedMonthIso ? new Date(selectedMonthIso) : stableNow, [selectedMonthIso, stableNow]);
 
     const { scrollY } = useScroll();
     const reduceMotion = useReducedMotion();
 
+    const scopedTransactions = useMemo(() => {
+        if (scopeAccountId === "all") return initialTransactions;
+        return initialTransactions.filter((t) => t.accountId === scopeAccountId);
+    }, [initialTransactions, scopeAccountId]);
+
+    const recurringForScope = useMemo(() => {
+        if (scopeAccountId === "all") return recurringTransactions;
+        return recurringTransactions.filter((r) => r.accountId === scopeAccountId);
+    }, [recurringTransactions, scopeAccountId]);
+
     const recurringTotalAmount = useMemo(
-        () => recurringTransactions.reduce((sum, r) => sum + r.amount, 0),
-        [recurringTransactions]
+        () => recurringForScope.reduce((sum, r) => sum + r.amount, 0),
+        [recurringForScope]
     );
 
     const chartData = useMemo(() => {
         const categoryMap = new Map();
-        initialTransactions.forEach(t => {
+        scopedTransactions.forEach((t) => {
             if (t.amount > 0) {
                 const current = categoryMap.get(t.category) || 0;
                 categoryMap.set(t.category, current + t.amount);
@@ -212,7 +252,7 @@ export default function Dashboard({
                 };
             })
             .sort((a, b) => b.value - a.value);
-    }, [initialTransactions, categories]);
+    }, [scopedTransactions, categories]);
     const shouldShowSpendingTeaser = chartData.length < 2;
     const spendingTeaserData = useMemo(() => {
         if (!shouldShowSpendingTeaser) return chartData;
@@ -231,17 +271,22 @@ export default function Dashboard({
         ];
     }, [chartData, shouldShowSpendingTeaser]);
 
-    const accountBalances = useMemo(() => {
+    const accountBalancesAll = useMemo(() => {
         const inflowByAccountId = new Map(contributionTotals.map((row) => [row.accountId, row.totalMonthlyInflow]));
-        return accounts.map(acc => {
+        return accounts.map((acc) => {
             const expenses = initialTransactions
-                .filter(t => t.accountId === acc.id && t.amount > 0)
+                .filter((t) => t.accountId === acc.id && t.amount > 0)
                 .reduce((sum, t) => sum + t.amount, 0);
             const monthlyInflow = inflowByAccountId.get(acc.id) ?? 0;
             const balance = monthlyInflow - expenses;
             return { account: acc, expenses, monthlyInflow, balance };
         });
     }, [accounts, initialTransactions, contributionTotals]);
+
+    const accountBalances = useMemo(() => {
+        if (scopeAccountId === "all") return accountBalancesAll;
+        return accountBalancesAll.filter((row) => row.account.id === scopeAccountId);
+    }, [accountBalancesAll, scopeAccountId]);
 
     useEffect(() => {
         if (searchParams.get('quickAdd') !== '1') return;
@@ -258,7 +303,7 @@ export default function Dashboard({
         setShowStickyHeader(latest > 280);
     });
 
-    const totalSpent = initialTransactions.reduce((sum, t) => sum + t.amount, 0);
+    const totalSpent = scopedTransactions.reduce((sum, t) => sum + t.amount, 0);
     const income = budgetSettings?.monthlyIncome ?? 0;
     const hasIncomeConfigured = income > 0;
     const savedSoFar = hasIncomeConfigured ? income - totalSpent : 0;
@@ -319,9 +364,38 @@ export default function Dashboard({
                     </h1>
                 </header>
 
-                <div className="mb-8">
+                <div className="mb-8 min-w-0">
                     <MonthSelector basePath="/" />
                 </div>
+
+                {accounts.length > 1 ? (
+                    <div className="mb-6 min-w-0 max-w-full flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+                        <h2 className="text-lg font-bold text-ios-text dark:text-ios-dark-text shrink-0">תצוגה לפי חשבון</h2>
+                        <div className="relative w-full sm:w-auto sm:min-w-[11rem] shrink-0">
+                            <label htmlFor="dashboard-scope-account" className="sr-only">
+                                חשבון לתצוגה בסקירה
+                            </label>
+                            <select
+                                id="dashboard-scope-account"
+                                value={scopeAccountId === "all" ? "all" : scopeAccountId}
+                                onChange={(e) => {
+                                    const v = e.target.value;
+                                    setScopeAccount(v === "all" ? "all" : v);
+                                }}
+                                aria-label="חשבון לתצוגה בסקירה"
+                                className="w-full appearance-none rounded-xl border border-gray-200/90 dark:border-white/10 bg-white/90 dark:bg-ios-dark-fill/90 text-sm font-semibold text-ios-text dark:text-ios-dark-text py-2.5 ps-3 pe-9 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ios-blue/40"
+                            >
+                                <option value="all">כל החשבונות</option>
+                                {accounts.map((acc) => (
+                                    <option key={acc.id} value={acc.id}>
+                                        {getAccountLabel(acc)}
+                                    </option>
+                                ))}
+                            </select>
+                            <ChevronDown className="pointer-events-none absolute end-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ios-subtle dark:text-ios-dark-subtle" aria-hidden />
+                        </div>
+                    </div>
+                ) : null}
 
                 {/* Savings Ring */}
                 <motion.div
@@ -538,9 +612,9 @@ export default function Dashboard({
                             </motion.span>
                             <h2 className="text-lg font-bold text-ios-text dark:text-ios-dark-text truncate">ריכוז הוצאות קבועות</h2>
                         </div>
-                        <span className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle flex-shrink-0">{recurringTransactions.length} סה״כ</span>
+                        <span className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle flex-shrink-0">{recurringForScope.length} סה״כ</span>
                     </button>
-                    {!recurringSectionExpanded && recurringTransactions.length > 0 && (
+                    {!recurringSectionExpanded && recurringForScope.length > 0 && (
                         <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle mt-2 pr-7">
                             סה״כ קבועות חודשיות:{" "}
                             <span className="font-bold text-ios-text dark:text-ios-dark-text tabular-nums">
@@ -561,12 +635,12 @@ export default function Dashboard({
                                 }}
                                 className="overflow-hidden"
                             >
-                                <div className={recurringTransactions.length === 0 ? "pt-2" : "pt-3"}>
-                                    {recurringTransactions.length === 0 ? (
+                                <div className={recurringForScope.length === 0 ? "pt-2" : "pt-3"}>
+                                    {recurringForScope.length === 0 ? (
                                         <p className="text-sm text-ios-subtle dark:text-ios-dark-subtle py-2">אין הוצאות חוזרות כרגע</p>
                                     ) : (
                                         <div className="bg-white dark:bg-ios-dark-card rounded-2xl shadow-card overflow-hidden divide-y divide-gray-100 dark:divide-white/10">
-                                            {recurringTransactions.map((item) => {
+                                            {recurringForScope.map((item) => {
                                                 const icon = getCategoryIcon(categories, item.category);
                                                 const isShared = item.account.type === "SHARED";
                                                 const badgeColor = isShared

@@ -19,8 +19,19 @@ export default function BottomNav() {
 
     const month = searchParams.get("month");
     const year = searchParams.get("year");
-    const historyHref = month && year ? `/history?month=${month}&year=${year}` : "/history";
-    const homeHref = month && year ? `/?month=${month}&year=${year}` : "/";
+    const account = searchParams.get("account");
+
+    const buildMainHref = (path: string) => {
+        const params = new URLSearchParams();
+        if (month) params.set("month", month);
+        if (year) params.set("year", year);
+        if (account) params.set("account", account);
+        const q = params.toString();
+        return q ? `${path}?${q}` : path;
+    };
+
+    const historyHref = buildMainHref("/history");
+    const homeHref = buildMainHref("/");
 
     const navItems = [
         { name: "סקירה", path: homeHref, basePath: "/", icon: Home, col: "col-start-1" },
@@ -56,11 +67,12 @@ export default function BottomNav() {
             const qs = new URLSearchParams();
             if (month) qs.set("month", month);
             if (year) qs.set("year", year);
+            if (account) qs.set("account", account);
             qs.set("quickAdd", "1");
             if (recurring) qs.set("recurring", "1");
             router.push(`/?${qs.toString()}`);
         },
-        [router, trigger, closeFabMenu, month, year]
+        [router, trigger, closeFabMenu, month, year, account]
     );
 
     const onFabPointerDown = () => {

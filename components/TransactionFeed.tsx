@@ -1,42 +1,21 @@
 "use client";
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft } from 'lucide-react';
 import { formatIlsAmount, formatUtcDateLabel, getCalendarDateKeyInTimeZone, getUtcDateKey } from '@/lib/formatters';
-import type { TransactionListItem, Category, Account } from '@/lib/types';
+import type { TransactionListItem, Category } from '@/lib/types';
 
 interface TransactionFeedProps {
     transactions: TransactionListItem[];
-    accounts?: Account[];
     categories?: Category[];
     onTransactionClick?: (transaction: TransactionListItem) => void;
 }
 
 const JERUSALEM_TZ = 'Asia/Jerusalem';
 
-export default function TransactionFeed({ transactions = [], accounts = [], categories = [], onTransactionClick }: TransactionFeedProps) {
-    const [filter, setFilter] = useState('All');
+export default function TransactionFeed({ transactions = [], categories = [], onTransactionClick }: TransactionFeedProps) {
     const todayJerusalemKey = useMemo(() => getCalendarDateKeyInTimeZone(new Date(), JERUSALEM_TZ), []);
-
-    const accountFilters = useMemo(() => {
-        return accounts.map((account) => ({
-            id: account.id,
-            label: account.name || 'חשבון',
-            isShared: account.type === 'SHARED',
-        })).sort((a, b) => {
-            if (a.isShared === b.isShared) return a.label.localeCompare(b.label, 'he');
-            return a.isShared ? -1 : 1;
-        });
-    }, [accounts]);
-
-    const filters = [{ id: 'All', label: 'הכל' }, ...accountFilters];
-    const activeFilterLabel = filters.find((f) => f.id === filter)?.label || 'החשבון שנבחר';
-
-    const filteredTransactions = transactions.filter((t) => {
-        if (filter === 'All') return true;
-        return t.accountId === filter;
-    });
 
     const getIcon = (categoryName: string) => {
         const cat = categories.find(c => c.name === categoryName);
@@ -55,7 +34,7 @@ export default function TransactionFeed({ transactions = [], accounts = [], cate
     };
 
     // Group transactions by date
-    const groupedByDate = filteredTransactions.reduce<Record<string, TransactionListItem[]>>((groups, t) => {
+    const groupedByDate = transactions.reduce<Record<string, TransactionListItem[]>>((groups, t) => {
         const dateKey = getUtcDateKey(t.date);
         if (!groups[dateKey]) groups[dateKey] = [];
         groups[dateKey].push(t);
@@ -65,30 +44,9 @@ export default function TransactionFeed({ transactions = [], accounts = [], cate
     const sortedDates = Object.keys(groupedByDate).sort((a, b) => b.localeCompare(a));
 
     return (
-        <div className="w-full mt-4 pb-6">
-            {/* Section Header */}
-            <h2 className="text-lg font-bold text-ios-text dark:text-ios-dark-text mb-3">פעולות אחרונות</h2>
-
-            {/* Segmented Control */}
-            <div className="segmented-control mb-4">
-                {filters.map((f) => (
-                    <button
-                        key={f.id}
-                        onClick={() => setFilter(f.id)}
-                        className={`segmented-control-item ${
-                            filter === f.id
-                                ? 'segmented-control-item-active'
-                                : 'segmented-control-item-inactive'
-                        }`}
-                    >
-                        {f.label}
-                    </button>
-                ))}
-            </div>
-
-            {/* Grouped Transaction List */}
+        <div className="w-full mt-3 pb-6 min-w-0">
             <AnimatePresence mode="popLayout">
-                {filteredTransactions.length === 0 ? (
+                {transactions.length === 0 ? (
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
@@ -99,17 +57,8 @@ export default function TransactionFeed({ transactions = [], accounts = [], cate
                             <span className="text-2xl opacity-60">💸</span>
                         </div>
                         <p className="text-sm font-medium text-center px-2">
-                            {filter === 'All' ? 'לא נוספו עדיין הוצאות לחשבונות' : `לא נוספו עדיין הוצאות לחשבון ${activeFilterLabel}`}
+                            לא נוספו עדיין הוצאות
                         </p>
-                        {filter !== 'All' && (
-                            <button
-                                type="button"
-                                onClick={() => setFilter('All')}
-                                className="mt-4 text-sm font-semibold text-ios-blue active:opacity-80"
-                            >
-                                הצג את כל החשבונות
-                            </button>
-                        )}
                     </motion.div>
                 ) : (
                     <div className="space-y-5">

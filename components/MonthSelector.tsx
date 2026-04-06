@@ -45,8 +45,14 @@ export default function MonthSelector({ basePath = '/history' }: MonthSelectorPr
     }, [currentMonth, currentYear]);
 
     const withQuery = (m: number, y: number) => {
-        const path = basePath === '/' ? `/?month=${m}&year=${y}` : `${basePath}?month=${m}&year=${y}`;
-        return path;
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('month', String(m));
+        params.set('year', String(y));
+        const q = params.toString();
+        if (basePath === '/') {
+            return q ? `/?${q}` : '/';
+        }
+        return q ? `${basePath}?${q}` : basePath;
     };
 
     const handleSelect = (date: Date) => {
