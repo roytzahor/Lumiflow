@@ -10,6 +10,7 @@ function shouldAutoRecover(message: string): boolean {
   return (
     normalized.includes("chunkloaderror") ||
     normalized.includes("loading chunk") ||
+    (normalized.includes("timeout") && normalized.includes("chunk")) ||
     normalized.includes("module_not_found") ||
     normalized.includes("cannot find module") ||
     normalized.includes("failed to fetch dynamically imported module")

@@ -12,7 +12,8 @@ import type { AccountMemberRole, AccountType, RecurringMonthPolicy, Transaction 
 import bcrypt from 'bcryptjs';
 import { randomBytes, randomUUID } from 'crypto';
 import { getServerSession } from 'next-auth';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache';
+import type { AccountSummary } from '@/lib/types';
 
 const DEFAULT_CATEGORIES = [
   { name: 'כללי', icon: '✨', type: 'expense' },
@@ -21,6 +22,15 @@ const DEFAULT_CATEGORIES = [
   { name: 'תחבורה', icon: '🚗', type: 'expense' },
   { name: 'בילויים', icon: '🎉', type: 'expense' },
 ];
+
+const DEFAULT_SAVINGS_LABELS = [
+  { name: 'תיק מסחר עצמאי', icon: '📈' },
+  { name: 'פיקדון', icon: '🏦' },
+  { name: 'BTB', icon: '💰' },
+  { name: 'קופת גמל', icon: '🔐' },
+  { name: 'קרן השתלמות', icon: '📋' },
+  { name: 'חיסכון כללי', icon: '🐖' },
+] as const;
 
 async function requireUserId() {
   const session = await getServerSession(authOptions);
@@ -93,6 +103,19 @@ async function ensureUserBootstrap(userId: string) {
       })),
     });
   }
+
+  const savingsLabelCount = await prisma.savingsLabel.count({ where: { userId } });
+  if (savingsLabelCount === 0) {
+    await prisma.savingsLabel.createMany({
+      data: DEFAULT_SAVINGS_LABELS.map((row) => ({
+        userId,
+        name: row.name,
+        icon: row.icon,
+        isCustom: false,
+        hidden: false,
+      })),
+    });
+  }
 }
 
 async function getUserAccountIds(userId: string) {
@@ -113,12 +136,24 @@ async function assertUserHasAccount(userId: string, accountId: string) {
   return member;
 }
 
-function refreshAllViews() {
+function userDataCacheTags(userId: string) {
+  return [
+    `lumiflow-categories-${userId}`,
+    `lumiflow-accounts-${userId}`,
+    `lumiflow-recurring-${userId}`,
+    `lumiflow-savings-labels-${userId}`,
+  ] as const;
+}
+
+function refreshAllViews(userId: string) {
   revalidatePath('/', 'layout');
   revalidatePath('/', 'page');
   revalidatePath('/history');
   revalidatePath('/settings');
   revalidatePath('/insights');
+  for (const tag of userDataCacheTags(userId)) {
+    revalidateTag(tag);
+  }
 }
 
 async function logActionMetric(eventName: string, userId: string, payload: Record<string, unknown> = {}) {
@@ -131,7 +166,9 @@ async function logActionMetric(eventName: string, userId: string, payload: Recor
   console.info(`[metric] ${line}`);
 }
 
-async function decorateRecurringFlags(transactions: (Transaction & { recurringTransactionId: string | null; account: { id: string; name: string; type: AccountType; income: number; balance: number; color: string | null; icon: string | null; isArchived: boolean; createdAt: Date; updatedAt: Date } })[]) {
+async function decorateRecurringFlags<
+  T extends Transaction & { recurringTransactionId: string | null; account: { id: string; name: string; type: AccountType } },
+>(transactions: T[]) {
   return transactions.map((t) => ({
     ...t,
     isRecurring: Boolean(t.recurringTransactionId),
@@ -187,7 +224,7 @@ export async function addTransaction(formData: FormData) {
         installmentCount,
         hasDescription: Boolean(description),
       });
-      refreshAllViews();
+      refreshAllViews(userId);
       return { success: true };
     }
 
@@ -232,7 +269,7 @@ export async function addTransaction(formData: FormData) {
       isRecurring,
       hasDescription: Boolean(description),
     });
-    refreshAllViews();
+    refreshAllViews(userId);
     return { success: true, transaction };
   } catch {
     return { success: false, error: 'Failed to add transaction' };
@@ -266,8 +303,27 @@ export async function getTransactions(filter: string = 'All', year?: number, mon
     const transactions = await prisma.transaction.findMany({
       where,
       orderBy: { date: 'desc' },
-      include: {
-        account: true,
+      select: {
+        id: true,
+        amount: true,
+        category: true,
+        date: true,
+        accountId: true,
+        paidByUserId: true,
+        attributedToUserId: true,
+        description: true,
+        recurringTransactionId: true,
+        installmentGroupId: true,
+        installmentNumber: true,
+        installmentTotal: true,
+        createdAt: true,
+        account: {
+          select: {
+            id: true,
+            name: true,
+            type: true,
+          },
+        },
         paidByUser: { select: { id: true, name: true, email: true } },
       },
     });
@@ -282,7 +338,26 @@ export async function getTransactions(filter: string = 'All', year?: number, mon
         accountId: accountFilterId ? accountFilterId : { in: accountIds },
         startDate: { lte: to! },
       },
-      include: { account: true },
+      select: {
+        id: true,
+        amount: true,
+        category: true,
+        description: true,
+        accountId: true,
+        startDate: true,
+        nextRun: true,
+        dayOfMonth: true,
+        monthPolicy: true,
+        active: true,
+        lastRun: true,
+        account: {
+          select: {
+            id: true,
+            name: true,
+            type: true,
+          },
+        },
+      },
     });
 
     const projected = recurring
@@ -545,7 +620,7 @@ export async function updateAccountNames(updates: { id: string; name: string }[]
         data: { name: update.name.trim() || 'Untitled account' },
       });
     }
-    refreshAllViews();
+    refreshAllViews(userId);
     return { success: true };
   } catch {
     return { success: false, error: 'Failed to update account names' };
@@ -584,7 +659,7 @@ export async function createAccount(input: { name: string; type: AccountType; co
       },
     });
 
-    refreshAllViews();
+    refreshAllViews(userId);
     return { success: true, account };
   } catch {
     return { success: false, error: 'Failed to create account' };
@@ -612,7 +687,7 @@ export async function updateAccount(accountId: string, input: { name?: string; t
       where: { id: accountId },
       data: updateData,
     });
-    refreshAllViews();
+    refreshAllViews(userId);
     return { success: true };
   } catch {
     return { success: false, error: 'Failed to update account' };
@@ -629,24 +704,35 @@ export async function archiveAccount(accountId: string) {
       where: { id: accountId },
       data: { isArchived: true },
     });
-    refreshAllViews();
+    refreshAllViews(userId);
     return { success: true };
   } catch {
     return { success: false, error: 'Failed to archive account' };
   }
 }
 
-export async function getAccounts() {
+export async function getAccounts(): Promise<AccountSummary[]> {
   try {
     const userId = await requireUserId();
     await ensureUserBootstrap(userId);
-    return prisma.account.findMany({
-      where: {
-        isArchived: false,
-        members: { some: { userId } },
-      },
-      orderBy: [{ type: 'asc' }, { name: 'asc' }],
-    });
+    return unstable_cache(
+      async () =>
+        prisma.account.findMany({
+          where: {
+            isArchived: false,
+            members: { some: { userId } },
+          },
+          orderBy: [{ type: 'asc' }, { name: 'asc' }],
+          select: {
+            id: true,
+            name: true,
+            type: true,
+            income: true,
+          },
+        }),
+      ['getAccounts', userId],
+      { revalidate: 60, tags: [`lumiflow-accounts-${userId}`] },
+    )();
   } catch {
     return [];
   }
@@ -659,7 +745,7 @@ export type AccountMemberSummary = {
   email: string;
 };
 
-export type AccountWithMembersForSettings = Awaited<ReturnType<typeof getAccounts>>[number] & {
+export type AccountWithMembersForSettings = AccountSummary & {
   members: AccountMemberSummary[];
 };
 
@@ -673,9 +759,16 @@ export async function getAccountsWithMembersForSettings(): Promise<AccountWithMe
         members: { some: { userId } },
       },
       orderBy: [{ type: 'asc' }, { name: 'asc' }],
-      include: {
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        income: true,
         members: {
-          include: {
+          select: {
+            userId: true,
+            role: true,
+            createdAt: true,
             user: { select: { id: true, name: true, email: true } },
           },
           orderBy: { createdAt: 'asc' },
@@ -730,7 +823,7 @@ export async function removeAccountMember(accountId: string, memberUserId: strin
     ]);
 
     await recalculateAccountIncome(accountId);
-    refreshAllViews();
+    refreshAllViews(userId);
     return { success: true };
   } catch {
     return { success: false, error: 'הסרת המשתמש נכשלה' };
@@ -788,6 +881,7 @@ export async function upsertContributionPlan(input: { accountId: string; monthly
     revalidatePath('/');
     revalidatePath('/settings');
     revalidatePath('/insights');
+    revalidateTag(`lumiflow-accounts-${userId}`);
     return { success: true };
   } catch {
     return { success: false, error: 'שמירת התרומה החודשית נכשלה' };
@@ -822,7 +916,7 @@ export async function addIncomeEntry(formData: FormData) {
     });
 
     await logActionMetric('income_entry_created', userId, { accountId, hasDescription: Boolean(description) });
-    refreshAllViews();
+    refreshAllViews(userId);
     return { success: true };
   } catch {
     return { success: false, error: 'הוספת ההכנסה נכשלה' };
@@ -873,7 +967,7 @@ export async function deleteIncomeEntry(id: string) {
     const entry = await prisma.incomeEntry.findFirst({ where: { id, userId } });
     if (!entry) return { success: false, error: 'רשומה לא נמצאה' };
     await prisma.incomeEntry.delete({ where: { id } });
-    refreshAllViews();
+    refreshAllViews(userId);
     return { success: true };
   } catch {
     return { success: false, error: 'מחיקת ההכנסה נכשלה' };
@@ -1032,10 +1126,15 @@ export async function getCategories() {
   try {
     const userId = await requireUserId();
     await ensureUserBootstrap(userId);
-    return prisma.category.findMany({
-      where: { userId },
-      orderBy: { name: 'asc' },
-    });
+    return unstable_cache(
+      async () =>
+        prisma.category.findMany({
+          where: { userId },
+          orderBy: { name: 'asc' },
+        }),
+      ['getCategories', userId],
+      { revalidate: 60, tags: [`lumiflow-categories-${userId}`] },
+    )();
   } catch {
     return [];
   }
@@ -1047,7 +1146,7 @@ export async function addCategory(name: string, icon: string, type: string) {
     await prisma.category.create({
       data: { userId, name: name.trim(), icon, type, isCustom: true },
     });
-    refreshAllViews();
+    refreshAllViews(userId);
     return { success: true };
   } catch (error) {
     if (
@@ -1081,6 +1180,7 @@ export async function updateCategory(input: { id: string; name: string; icon: st
     revalidatePath('/');
     revalidatePath('/history');
     revalidatePath('/insights');
+    revalidateTag(`lumiflow-categories-${userId}`);
     return { success: true };
   } catch {
     return { success: false, error: 'עדכון קטגוריה נכשל' };
@@ -1092,9 +1192,299 @@ export async function deleteCategory(id: string) {
     const userId = await requireUserId();
     await prisma.category.deleteMany({ where: { id, userId } });
     revalidatePath('/settings');
+    revalidatePath('/');
+    revalidatePath('/history');
+    revalidatePath('/insights');
+    revalidateTag(`lumiflow-categories-${userId}`);
     return { success: true };
   } catch {
     return { success: false, error: 'Failed to delete category' };
+  }
+}
+
+export async function getSavingsLabels() {
+  try {
+    const userId = await requireUserId();
+    await ensureUserBootstrap(userId);
+    return unstable_cache(
+      async () =>
+        prisma.savingsLabel.findMany({
+          where: { userId },
+          orderBy: { name: 'asc' },
+        }),
+      ['getSavingsLabels', userId],
+      { revalidate: 60, tags: [`lumiflow-savings-labels-${userId}`] },
+    )();
+  } catch {
+    return [];
+  }
+}
+
+export async function getSavingsAllocations(year?: number, month?: number) {
+  try {
+    const userId = await requireUserId();
+    await ensureUserBootstrap(userId);
+    const accountIds = await getUserAccountIds(userId);
+    if (accountIds.length === 0) return [];
+
+    const where: {
+      userId: string;
+      accountId: { in: string[] };
+      date?: { gte: Date; lte: Date };
+    } = {
+      userId,
+      accountId: { in: accountIds },
+    };
+
+    if (year != null && month != null) {
+      where.date = { gte: startOfMonth(year, month), lte: endOfMonth(year, month) };
+    }
+
+    return prisma.savingsAllocation.findMany({
+      where,
+      orderBy: { date: 'desc' },
+      select: {
+        id: true,
+        amount: true,
+        label: true,
+        description: true,
+        date: true,
+        accountId: true,
+        account: { select: { id: true, name: true, type: true } },
+      },
+    });
+  } catch {
+    return [];
+  }
+}
+
+export async function addSavingsAllocation(formData: FormData) {
+  try {
+    const userId = await requireUserId();
+    await ensureUserBootstrap(userId);
+
+    const amount = parseFloat(String(formData.get('amount') ?? '0'));
+    const label = String(formData.get('label') ?? '').trim();
+    const description = String(formData.get('description') ?? '').trim();
+    const rawDate = String(formData.get('date') ?? '');
+    const date = parseDateInputToUtc(rawDate);
+    let accountId = String(formData.get('accountId') ?? '');
+
+    const accountIds = await getUserAccountIds(userId);
+    if (!accountId) accountId = accountIds[0] ?? '';
+    if (!amount || Number.isNaN(amount) || amount <= 0 || !label || !accountId || !date) {
+      return { success: false, error: 'Missing required fields' };
+    }
+    if (!accountIds.includes(accountId)) return { success: false, error: 'Forbidden' };
+
+    await assertUserHasAccount(userId, accountId);
+
+    await prisma.savingsAllocation.create({
+      data: {
+        amount,
+        label,
+        description: description || null,
+        date,
+        accountId,
+        userId,
+      },
+    });
+
+    await logActionMetric('savings_allocation_created', userId, { accountId, label });
+    refreshAllViews(userId);
+    return { success: true };
+  } catch {
+    return { success: false, error: 'Failed to add savings allocation' };
+  }
+}
+
+export async function updateSavingsAllocation(id: string, formData: FormData) {
+  try {
+    const userId = await requireUserId();
+    const existing = await prisma.savingsAllocation.findFirst({ where: { id, userId } });
+    if (!existing) return { success: false, error: 'Not found' };
+
+    const amount = parseFloat(String(formData.get('amount') ?? '0'));
+    const label = String(formData.get('label') ?? '').trim();
+    const description = String(formData.get('description') ?? '').trim();
+    const rawDate = String(formData.get('date') ?? '');
+    const date = parseDateInputToUtc(rawDate);
+    const accountId = String(formData.get('accountId') ?? '');
+
+    if (!amount || Number.isNaN(amount) || amount <= 0 || !label || !accountId || !date) {
+      return { success: false, error: 'Missing required fields' };
+    }
+
+    await assertUserHasAccount(userId, accountId);
+
+    await prisma.savingsAllocation.update({
+      where: { id },
+      data: {
+        amount,
+        label,
+        description: description || null,
+        date,
+        accountId,
+      },
+    });
+
+    refreshAllViews(userId);
+    return { success: true };
+  } catch {
+    return { success: false, error: 'Failed to update savings allocation' };
+  }
+}
+
+export async function deleteSavingsAllocation(id: string) {
+  try {
+    const userId = await requireUserId();
+    const deleted = await prisma.savingsAllocation.deleteMany({ where: { id, userId } });
+    if (deleted.count === 0) return { success: false, error: 'Not found' };
+    refreshAllViews(userId);
+    return { success: true };
+  } catch {
+    return { success: false, error: 'Failed to delete' };
+  }
+}
+
+export async function addSavingsLabel(name: string, icon: string) {
+  try {
+    const userId = await requireUserId();
+    await ensureUserBootstrap(userId);
+    const trimmed = name.trim();
+    if (!trimmed) return { success: false, error: 'שם נדרש' };
+
+    await prisma.savingsLabel.create({
+      data: {
+        userId,
+        name: trimmed,
+        icon: icon.trim() || '💰',
+        isCustom: true,
+        hidden: false,
+      },
+    });
+    refreshAllViews(userId);
+    revalidateTag(`lumiflow-savings-labels-${userId}`);
+    return { success: true };
+  } catch (error) {
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      (error as { code?: string }).code === 'P2002'
+    ) {
+      return { success: false, error: 'יעד בשם הזה כבר קיים' };
+    }
+    return { success: false, error: 'הוספה לא הצליחה' };
+  }
+}
+
+export async function deleteSavingsLabel(id: string) {
+  try {
+    const userId = await requireUserId();
+    const deleted = await prisma.savingsLabel.deleteMany({ where: { id, userId, isCustom: true } });
+    if (deleted.count === 0) return { success: false, error: 'לא ניתן למחוק יעד זה' };
+    refreshAllViews(userId);
+    revalidateTag(`lumiflow-savings-labels-${userId}`);
+    return { success: true };
+  } catch {
+    return { success: false, error: 'מחיקה נכשלה' };
+  }
+}
+
+export async function setSavingsLabelHidden(id: string, hidden: boolean) {
+  try {
+    const userId = await requireUserId();
+    const label = await prisma.savingsLabel.findFirst({ where: { id, userId } });
+    if (!label) return { success: false, error: 'לא נמצא' };
+    if (label.isCustom) {
+      return { success: false, error: 'יעדים מותאמים אישית נמחקים במקום להסתיר' };
+    }
+    await prisma.savingsLabel.updateMany({
+      where: { id, userId, isCustom: false },
+      data: { hidden },
+    });
+    refreshAllViews(userId);
+    revalidateTag(`lumiflow-savings-labels-${userId}`);
+    return { success: true };
+  } catch {
+    return { success: false, error: 'עדכון נכשל' };
+  }
+}
+
+export async function getSavingsAllocationInsights() {
+  try {
+    const userId = await requireUserId();
+    await ensureUserBootstrap(userId);
+    const accountIds = await getUserAccountIds(userId);
+    if (accountIds.length === 0) return null;
+
+    const now = new Date();
+    const thisYear = now.getUTCFullYear();
+    const thisMonth = now.getUTCMonth();
+
+    const prev = new Date(Date.UTC(thisYear, thisMonth - 1, 15));
+    const prevYear = prev.getUTCFullYear();
+    const prevMonth = prev.getUTCMonth();
+
+    const [plans, thisAlloc, prevAlloc, thisOneTime, prevOneTime] = await Promise.all([
+      prisma.accountContributionPlan.findMany({
+        where: { accountId: { in: accountIds } },
+        select: { monthlyAmount: true },
+      }),
+      prisma.savingsAllocation.aggregate({
+        where: {
+          userId,
+          accountId: { in: accountIds },
+          date: { gte: startOfMonth(thisYear, thisMonth), lte: endOfMonth(thisYear, thisMonth) },
+        },
+        _sum: { amount: true },
+      }),
+      prisma.savingsAllocation.aggregate({
+        where: {
+          userId,
+          accountId: { in: accountIds },
+          date: { gte: startOfMonth(prevYear, prevMonth), lte: endOfMonth(prevYear, prevMonth) },
+        },
+        _sum: { amount: true },
+      }),
+      prisma.incomeEntry.aggregate({
+        where: {
+          userId,
+          accountId: { in: accountIds },
+          date: { gte: startOfMonth(thisYear, thisMonth), lte: endOfMonth(thisYear, thisMonth) },
+        },
+        _sum: { amount: true },
+      }),
+      prisma.incomeEntry.aggregate({
+        where: {
+          userId,
+          accountId: { in: accountIds },
+          date: { gte: startOfMonth(prevYear, prevMonth), lte: endOfMonth(prevYear, prevMonth) },
+        },
+        _sum: { amount: true },
+      }),
+    ]);
+
+    const totalContributions = plans.reduce((s, p) => s + p.monthlyAmount, 0);
+    const thisMonthIncome = totalContributions + (thisOneTime._sum.amount ?? 0);
+    const prevMonthIncome = totalContributions + (prevOneTime._sum.amount ?? 0);
+
+    const thisMonthTotal = thisAlloc._sum.amount ?? 0;
+    const prevMonthTotal = prevAlloc._sum.amount ?? 0;
+
+    const percentOfIncomeThisMonth =
+      thisMonthIncome > 0 ? Math.round((thisMonthTotal / thisMonthIncome) * 1000) / 10 : null;
+
+    return {
+      thisMonthTotal,
+      prevMonthTotal,
+      thisMonthIncome,
+      prevMonthIncome,
+      percentOfIncomeThisMonth,
+    };
+  } catch {
+    return null;
   }
 }
 
@@ -1474,7 +1864,19 @@ export async function updateTransaction(id: string, formData: FormData) {
 
     const existing = await prisma.transaction.findUnique({
       where: { id },
-      include: { account: { include: { members: true } } },
+      select: {
+        paidByUserId: true,
+        attributedToUserId: true,
+        recurringTransactionId: true,
+        installmentGroupId: true,
+        installmentNumber: true,
+        installmentTotal: true,
+        account: {
+          select: {
+            members: { select: { userId: true } },
+          },
+        },
+      },
     });
     if (!existing) return { success: false, error: 'Transaction not found' };
     if (!existing.account.members.some((m) => m.userId === userId)) return { success: false, error: 'Forbidden' };
@@ -1554,7 +1956,7 @@ export async function updateTransaction(id: string, formData: FormData) {
       isRecurring,
       transactionId: id,
     });
-    refreshAllViews();
+    refreshAllViews(userId);
     return { success: true };
   } catch {
     return { success: false, error: 'Failed to update transaction' };
@@ -1566,7 +1968,14 @@ export async function deleteTransaction(id: string, scope: 'single' | 'installme
     const userId = await requireUserId();
     const existing = await prisma.transaction.findUnique({
       where: { id },
-      include: { account: { include: { members: true } } },
+      select: {
+        installmentGroupId: true,
+        account: {
+          select: {
+            members: { select: { userId: true } },
+          },
+        },
+      },
     });
     if (!existing) return { success: false, error: 'Transaction not found' };
     if (!existing.account.members.some((m) => m.userId === userId)) return { success: false, error: 'Forbidden' };
@@ -1586,7 +1995,7 @@ export async function deleteTransaction(id: string, scope: 'single' | 'installme
       await prisma.transaction.delete({ where: { id } });
       await logActionMetric('transaction_deleted', userId, { transactionId: id });
     }
-    refreshAllViews();
+    refreshAllViews(userId);
     return { success: true };
   } catch {
     return { success: false, error: 'Failed to delete transaction' };
@@ -1598,11 +2007,35 @@ export async function getRecurringTransactions() {
     const userId = await requireUserId();
     const accountIds = await getUserAccountIds(userId);
     if (accountIds.length === 0) return [];
-    return prisma.recurringTransaction.findMany({
-      where: { active: true, accountId: { in: accountIds } },
-      include: { account: true },
-      orderBy: { nextRun: 'asc' },
-    });
+    return unstable_cache(
+      async () =>
+        prisma.recurringTransaction.findMany({
+          where: { active: true, accountId: { in: accountIds } },
+          select: {
+            id: true,
+            amount: true,
+            category: true,
+            description: true,
+            accountId: true,
+            startDate: true,
+            nextRun: true,
+            dayOfMonth: true,
+            monthPolicy: true,
+            active: true,
+            lastRun: true,
+            account: {
+              select: {
+                id: true,
+                name: true,
+                type: true,
+              },
+            },
+          },
+          orderBy: { nextRun: 'asc' },
+        }),
+      ['getRecurringTransactions', userId],
+      { revalidate: 30, tags: [`lumiflow-recurring-${userId}`] },
+    )();
   } catch {
     return [];
   }
@@ -1613,13 +2046,19 @@ export async function deleteRecurringTransaction(id: string) {
     const userId = await requireUserId();
     const recurring = await prisma.recurringTransaction.findUnique({
       where: { id },
-      include: { account: { include: { members: true } } },
+      select: {
+        account: {
+          select: {
+            members: { select: { userId: true } },
+          },
+        },
+      },
     });
     if (!recurring) return { success: false, error: 'Not found' };
     if (!recurring.account.members.some((m) => m.userId === userId)) return { success: false, error: 'Forbidden' };
 
     await prisma.recurringTransaction.delete({ where: { id } });
-    refreshAllViews();
+    refreshAllViews(userId);
     return { success: true };
   } catch {
     return { success: false, error: 'Failed to delete recurring transaction' };
@@ -1631,7 +2070,13 @@ export async function updateRecurringTransaction(id: string, formData: FormData)
     const userId = await requireUserId();
     const recurring = await prisma.recurringTransaction.findUnique({
       where: { id },
-      include: { account: { include: { members: true } } },
+      select: {
+        account: {
+          select: {
+            members: { select: { userId: true } },
+          },
+        },
+      },
     });
     if (!recurring) return { success: false, error: 'Not found' };
     if (!recurring.account.members.some((m) => m.userId === userId)) return { success: false, error: 'Forbidden' };
@@ -1671,7 +2116,7 @@ export async function updateRecurringTransaction(id: string, formData: FormData)
       accountId,
       category,
     });
-    refreshAllViews();
+    refreshAllViews(userId);
     return { success: true };
   } catch {
     return { success: false, error: 'Failed to update recurring transaction' };
@@ -1681,9 +2126,10 @@ export async function updateRecurringTransaction(id: string, formData: FormData)
 export async function getMonthlyStats(year: number, month: number) {
   try {
     const userId = await requireUserId();
+    await ensureUserBootstrap(userId);
     const accountIds = await getUserAccountIds(userId);
     if (accountIds.length === 0) {
-      return { total: 0, accountTotals: [], transactions: [] };
+      return { total: 0, accountTotals: [], transactions: [], savingsAllocations: [], savingsTotal: 0 };
     }
 
     const userAccounts = await prisma.account.findMany({
@@ -1701,13 +2147,56 @@ export async function getMonthlyStats(year: number, month: number) {
     const from = startOfMonth(year, month);
     const to = endOfMonth(year, month);
 
+    const savingsAllocations = await prisma.savingsAllocation.findMany({
+      where: {
+        userId,
+        accountId: { in: accountIds },
+        date: { gte: from, lte: to },
+      },
+      select: {
+        id: true,
+        amount: true,
+        label: true,
+        description: true,
+        date: true,
+        accountId: true,
+        account: {
+          select: {
+            id: true,
+            name: true,
+            type: true,
+          },
+        },
+      },
+      orderBy: { date: 'desc' },
+    });
+
     const transactions = await prisma.transaction.findMany({
       where: {
         accountId: { in: accountIds },
         date: { gte: from, lte: to },
       },
-      include: {
-        account: true,
+      select: {
+        id: true,
+        amount: true,
+        category: true,
+        date: true,
+        accountId: true,
+        paidByUserId: true,
+        attributedToUserId: true,
+        description: true,
+        recurringTransactionId: true,
+        installmentGroupId: true,
+        installmentNumber: true,
+        installmentTotal: true,
+        createdAt: true,
+        account: {
+          select: {
+            id: true,
+            name: true,
+            type: true,
+          },
+        },
         paidByUser: { select: { id: true, name: true, email: true } },
       },
       orderBy: { date: 'desc' },
@@ -1719,7 +2208,26 @@ export async function getMonthlyStats(year: number, month: number) {
         accountId: { in: accountIds },
         startDate: { lte: to },
       },
-      include: { account: true },
+      select: {
+        id: true,
+        amount: true,
+        category: true,
+        description: true,
+        accountId: true,
+        startDate: true,
+        nextRun: true,
+        dayOfMonth: true,
+        monthPolicy: true,
+        active: true,
+        lastRun: true,
+        account: {
+          select: {
+            id: true,
+            name: true,
+            type: true,
+          },
+        },
+      },
     });
 
     const projected = recurring
@@ -1791,9 +2299,11 @@ export async function getMonthlyStats(year: number, month: number) {
         return a.accountName.localeCompare(b.accountName, 'he');
       }),
       transactions: all,
+      savingsAllocations,
+      savingsTotal: savingsAllocations.reduce((sum, row) => sum + row.amount, 0),
     };
   } catch {
-    return { total: 0, accountTotals: [], transactions: [] };
+    return { total: 0, accountTotals: [], transactions: [], savingsAllocations: [], savingsTotal: 0 };
   }
 }
 
@@ -1903,7 +2413,7 @@ export async function acceptAccountInvite(rawToken: string) {
       return { success: false, error: 'Invite already used' };
     }
 
-    refreshAllViews();
+    refreshAllViews(userId);
     return { success: true };
   } catch {
     return { success: false, error: 'Failed to accept invite' };
@@ -1987,7 +2497,7 @@ export async function acceptPendingAccountInvite(inviteId: string) {
       return { success: false, error: 'Invite already used' };
     }
 
-    refreshAllViews();
+    refreshAllViews(userId);
     return { success: true };
   } catch {
     return { success: false, error: 'Failed to accept invite' };
@@ -2272,7 +2782,7 @@ export async function completeOnboarding(input: {
 
     await Promise.all(result.createdAccounts.map((account) => recalculateAccountIncome(account.id)));
 
-    refreshAllViews();
+    refreshAllViews(userId);
     return {
       success: true,
       createdAccounts: result.createdAccounts,

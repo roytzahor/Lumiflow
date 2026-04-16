@@ -57,6 +57,8 @@ model User {
   incomeEntries     IncomeEntry[]
   paidTransactions Transaction[]   @relation("TransactionPaidByUser")
   attributedTransactions Transaction[] @relation("TransactionAttributedToUser")
+  savingsLabels       SavingsLabel[]
+  savingsAllocations SavingsAllocation[]
 }
 
 model Account {
@@ -76,6 +78,7 @@ model Account {
   invites               AccountInvite[]
   contributionPlans     AccountContributionPlan[]
   incomeEntries         IncomeEntry[]
+  savingsAllocations    SavingsAllocation[]
 }
 
 model AccountMember {
@@ -190,6 +193,39 @@ model AccountContributionPlan {
 model IncomeEntry {
   id          String   @id @default(uuid())
   amount      Float
+  description String?
+  date        DateTime
+  accountId   String
+  userId      String
+  createdAt   DateTime @default(now())
+  account     Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, date])
+  @@index([userId])
+}
+
+/// User-defined or seeded savings target names (for allocation picker).
+model SavingsLabel {
+  id       String  @id @default(uuid())
+  userId   String
+  name     String
+  icon     String
+  /// User-created labels can be deleted; seeded defaults cannot.
+  isCustom Boolean @default(false)
+  /// Hide built-in labels from picker without deleting.
+  hidden   Boolean @default(false)
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name])
+}
+
+/// Money moved to savings/investments — not counted as expenses.
+model SavingsAllocation {
+  id          String   @id @default(uuid())
+  amount      Float
+  /// Display label name (matches SavingsLabel.name when applicable).
+  label       String
   description String?
   date        DateTime
   accountId   String

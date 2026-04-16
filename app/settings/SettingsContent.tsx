@@ -25,11 +25,14 @@ import {
   addIncomeEntry,
   getIncomeEntries,
   deleteIncomeEntry,
+  addSavingsLabel,
+  deleteSavingsLabel,
+  setSavingsLabelHidden,
 } from '../actions';
 import type { SettingsSectionKey } from '../actions';
 import type { AccountMemberSummary } from '../actions';
-import { User, MoonStar, Pencil, Check, X, Trash2, Plus, Share2, LogOut, Copy, SendHorizontal, Info, ChevronDown, Landmark, Tag, TrendingUp } from 'lucide-react';
-import type { Account, Category, IncomeEntryItem } from '@/lib/types';
+import { User, MoonStar, Pencil, Check, X, Trash2, Plus, Share2, LogOut, Copy, SendHorizontal, Info, ChevronDown, Landmark, Tag, TrendingUp, PiggyBank, Eye, EyeOff } from 'lucide-react';
+import type { AccountSummary, Category, IncomeEntryItem, SavingsLabel } from '@/lib/types';
 import AccountPopup from '@/components/AccountPopup';
 import ProfileEditSheet from '@/components/ProfileEditSheet';
 import AccountShareSheet from '@/components/AccountShareSheet';
@@ -37,7 +40,7 @@ import AccountInfoSheet from '@/components/AccountInfoSheet';
 import { cn } from '@/lib/utils';
 import { CATEGORY_EMOJIS } from '@/lib/category-emojis';
 
-type SettingsAccount = Account & { income?: number; members?: AccountMemberSummary[] };
+type SettingsAccount = AccountSummary & { members?: AccountMemberSummary[] };
 
 function mapThemePreferenceToClientTheme(theme: 'LIGHT' | 'DARK' | 'SYSTEM'): 'light' | 'dark' | 'system' {
   if (theme === 'LIGHT') return 'light';
@@ -108,6 +111,7 @@ interface SettingsContentProps {
   initialCategories: Category[];
   initialAccounts: SettingsAccount[];
   initialContributionPlans: Array<{ accountId: string; monthlyAmount: number }>;
+  initialSavingsLabels: SavingsLabel[];
   currentUser: {
     id: string;
     name: string | null;
@@ -124,6 +128,7 @@ export default function SettingsContent({
   initialCategories,
   initialAccounts,
   initialContributionPlans,
+  initialSavingsLabels,
   currentUser,
 }: SettingsContentProps) {
   const router = useRouter();
@@ -131,6 +136,10 @@ export default function SettingsContent({
   const { setTheme } = useTheme();
 
   const [categories, setCategories] = useState<Category[]>(initialCategories);
+  const [savingsLabels, setSavingsLabels] = useState<SavingsLabel[]>(initialSavingsLabels);
+  const [savingsTargetsOpen, setSavingsTargetsOpen] = useState(true);
+  const [newSavingsName, setNewSavingsName] = useState('');
+  const [newSavingsEmoji, setNewSavingsEmoji] = useState('💰');
   const [accounts, setAccounts] = useState<SettingsAccount[]>(initialAccounts);
   const [newCatName, setNewCatName] = useState('');
   const [newCatEmojiInput, setNewCatEmojiInput] = useState('');
@@ -194,6 +203,7 @@ export default function SettingsContent({
 
   useEffect(() => {
     setCategories(initialCategories);
+    setSavingsLabels(initialSavingsLabels);
     setAccounts(initialAccounts);
     const preference = currentUser?.themePreference ?? 'SYSTEM';
     setThemePreference(preference);
@@ -207,7 +217,7 @@ export default function SettingsContent({
         return acc;
       }, {}),
     );
-  }, [initialCategories, initialAccounts, initialContributionPlans, currentUser, setTheme]);
+  }, [initialCategories, initialSavingsLabels, initialAccounts, initialContributionPlans, currentUser, setTheme]);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -293,7 +303,7 @@ export default function SettingsContent({
     }
 
     const createdAccount = accountPopupMode === 'create'
-      ? (res as { account?: Account }).account
+      ? (res as { account?: AccountSummary }).account
       : null;
     const accountId = accountPopupMode === 'create'
       ? createdAccount?.id ?? null
@@ -433,6 +443,44 @@ export default function SettingsContent({
       toast.success('הקטגוריה נמחקה');
     } else {
       toast.error(res.error ?? 'מחיקת קטגוריה נכשלה');
+    }
+  };
+
+  const handleAddSavingsLabel = async () => {
+    if (!newSavingsName.trim()) return;
+    const icon = newSavingsEmoji.trim() || '💰';
+    const res = await addSavingsLabel(newSavingsName.trim(), icon);
+    if (res.success) {
+      toast.success('יעד חיסכון נוסף');
+      setNewSavingsName('');
+      setNewSavingsEmoji('💰');
+      router.refresh();
+    } else {
+      toast.error(res.error ?? 'הוספה נכשלה');
+    }
+  };
+
+  const handleDeleteSavingsLabel = async (id: string) => {
+    const res = await deleteSavingsLabel(id);
+    if (res.success) {
+      setSavingsLabels((prev) => prev.filter((l) => l.id !== id));
+      toast.success('נמחק');
+      router.refresh();
+    } else {
+      toast.error(res.error ?? 'מחיקה נכשלה');
+    }
+  };
+
+  const handleToggleSavingsBuiltinHidden = async (label: SavingsLabel) => {
+    if (label.isCustom) return;
+    const res = await setSavingsLabelHidden(label.id, !label.hidden);
+    if (res.success) {
+      setSavingsLabels((prev) =>
+        prev.map((l) => (l.id === label.id ? { ...l, hidden: !l.hidden } : l)),
+      );
+      router.refresh();
+    } else {
+      toast.error(res.error ?? 'עדכון נכשל');
     }
   };
 
@@ -884,6 +932,104 @@ export default function SettingsContent({
           </div>
         </div>
       </SettingsCollapsibleSection>
+
+      <section className="rounded-3xl shadow-card bg-ios-card dark:bg-ios-dark-card">
+        <button
+          type="button"
+          onClick={() => setSavingsTargetsOpen((o) => !o)}
+          aria-expanded={savingsTargetsOpen}
+          className={cn(
+            'sticky top-0 z-[2] flex w-full items-center gap-2.5 px-5 pt-5 pb-3 text-right',
+            'bg-ios-card/95 dark:bg-ios-dark-card/95 backdrop-blur-md',
+            'transition-[border-radius] duration-300 ease-out',
+            savingsTargetsOpen ? 'rounded-t-3xl rounded-b-none' : 'rounded-3xl',
+          )}
+        >
+          <div className="w-8 h-8 bg-ios-green/15 rounded-lg flex items-center justify-center shrink-0">
+            <PiggyBank className="w-4 h-4 text-ios-green" />
+          </div>
+          <h2 className="text-base font-bold text-ios-text dark:text-ios-dark-text flex-1 min-w-0">יעדי חיסכון</h2>
+          <ChevronDown
+            className={cn(
+              'w-5 h-5 shrink-0 text-ios-subtle dark:text-ios-dark-subtle transition-transform duration-200',
+              savingsTargetsOpen ? 'rotate-0' : '-rotate-90',
+            )}
+            aria-hidden
+          />
+        </button>
+        {savingsTargetsOpen && (
+          <div className="px-5 pb-5 pt-1 rounded-b-3xl space-y-3">
+            <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle">
+              שמות ואייקונים לבחירה כשמוסיפים הפרשה לחיסכון מהדשבורד. יעדים מובנים ניתן להסתיר מהרשימה בלי למחוק.
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="שם יעד חדש"
+                value={newSavingsName}
+                onChange={(e) => setNewSavingsName(e.target.value)}
+                className="flex-1 bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-3.5 py-2.5 text-sm text-ios-text dark:text-ios-dark-text"
+              />
+              <input
+                type="text"
+                value={newSavingsEmoji}
+                onChange={(e) => setNewSavingsEmoji(e.target.value)}
+                placeholder="😀"
+                list="settings-category-emoji-list"
+                className="w-20 text-center bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-1 py-2.5 text-sm text-ios-text dark:text-ios-dark-text"
+                aria-label="אימוג׳י ליעד חיסכון"
+              />
+              <button
+                type="button"
+                onClick={handleAddSavingsLabel}
+                className="w-11 bg-ios-green text-white rounded-xl flex items-center justify-center"
+                aria-label="הוספת יעד חיסכון"
+              >
+                <Plus className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl divide-y divide-gray-200/50 dark:divide-white/10 overflow-hidden max-h-52 overflow-y-auto">
+              {savingsLabels.map((label) => (
+                <div
+                  key={label.id}
+                  className={`flex items-center justify-between px-4 py-3 gap-2 ${label.hidden ? 'opacity-60' : ''}`}
+                >
+                  <span className="flex items-center gap-2.5 text-sm font-medium text-ios-text dark:text-ios-dark-text min-w-0">
+                    <span className="text-lg shrink-0">{label.icon}</span>
+                    <span className="truncate">{label.name}</span>
+                    {!label.isCustom ? (
+                      <span className="text-[10px] font-semibold text-ios-subtle dark:text-ios-dark-subtle shrink-0">
+                        מובנה
+                      </span>
+                    ) : null}
+                  </span>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {!label.isCustom ? (
+                      <button
+                        type="button"
+                        onClick={() => void handleToggleSavingsBuiltinHidden(label)}
+                        className="text-ios-blue/80 hover:text-ios-blue p-1"
+                        aria-label={label.hidden ? 'הצג בבחירה' : 'הסתר מהבחירה'}
+                      >
+                        {label.hidden ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => void handleDeleteSavingsLabel(label.id)}
+                        className="text-ios-red/70 hover:text-ios-red p-1"
+                        aria-label="מחיקת יעד"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
 
       {/* One-time Income Section */}
       <section className="rounded-3xl shadow-card bg-ios-card dark:bg-ios-dark-card">

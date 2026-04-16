@@ -11,7 +11,7 @@ import { useHaptic } from '@/hooks/useHaptic';
 import { detectAllCategoryMatches } from '@/lib/category-dictionary';
 import { formatDateInputForDisplay, getTodayDateInputValue, toDateInputValueFromUtc } from '@/lib/date-only';
 import { formatIlsAmount } from '@/lib/formatters';
-import type { TransactionListItem, Account, Category, RecurringMonthPolicy } from '@/lib/types';
+import type { TransactionListItem, AccountSummary, Category, RecurringMonthPolicy } from '@/lib/types';
 import { CATEGORY_EMOJIS } from '@/lib/category-emojis';
 import { splitInstallmentAmounts } from '@/lib/installment-utils';
 
@@ -20,21 +20,21 @@ interface QuickAddSheetProps {
     onClose: () => void;
     initialData?: TransactionListItem | null;
     categories?: Category[];
-    accounts?: Account[];
+    accounts?: AccountSummary[];
     /** When opening a new transaction (no initialData), start in recurring mode */
     openWithRecurring?: boolean;
 }
 
-function getDefaultAccountId(accounts: Account[]): string {
+function getDefaultAccountId(accounts: AccountSummary[]): string {
     const joint = accounts.find((a) => a.type === 'SHARED');
     return joint?.id ?? accounts[0]?.id ?? '';
 }
 
-function getAccountLabel(account: Account): string {
+function getAccountLabel(account: AccountSummary): string {
     return account.name;
 }
 
-function getAccountIcon(account: Account): string {
+function getAccountIcon(account: AccountSummary): string {
     if (account.type === 'SHARED') return '👥';
     return '👤';
 }

@@ -6,15 +6,19 @@ import { AnimatePresence, motion, PanInfo, useDragControls } from 'framer-motion
 import { Calendar, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDateInputForDisplay, toDateInputValueFromUtc } from '@/lib/date-only';
-import type { AccountSummary, Category, RecurringMonthPolicy, RecurringWithAccount } from '@/lib/types';
-import { updateRecurringTransaction } from '@/app/actions';
+import type { AccountSummary, SavingsAllocationListItem, SavingsLabel } from '@/lib/types';
+import {
+  addSavingsAllocation,
+  updateSavingsAllocation,
+  deleteSavingsAllocation,
+} from '@/app/actions';
 
-interface RecurringEditSheetProps {
+interface SavingsAllocationSheetProps {
   isOpen: boolean;
-  recurring: RecurringWithAccount | null;
   onClose: () => void;
+  initialData: SavingsAllocationListItem | null;
   accounts: AccountSummary[];
-  categories: Category[];
+  savingsLabels: SavingsLabel[];
 }
 
 function getAccountIcon(account: AccountSummary): string {
@@ -22,37 +26,30 @@ function getAccountIcon(account: AccountSummary): string {
   return '👤';
 }
 
-export default function RecurringEditSheet({
+export default function SavingsAllocationSheet({
   isOpen,
-  recurring,
   onClose,
+  initialData,
   accounts,
-  categories,
-}: RecurringEditSheetProps) {
+  savingsLabels,
+}: SavingsAllocationSheetProps) {
   const router = useRouter();
   const dragControls = useDragControls();
   const sheetRef = useRef<HTMLDivElement>(null);
 
+  const visibleLabels = useMemo(
+    () => savingsLabels.filter((l) => !l.hidden).sort((a, b) => a.name.localeCompare(b.name, 'he')),
+    [savingsLabels]
+  );
+
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('כללי');
+  const [label, setLabel] = useState('');
   const [date, setDate] = useState('');
   const [accountId, setAccountId] = useState('');
-  const [monthPolicy, setMonthPolicy] = useState<RecurringMonthPolicy>('ROLL_TO_LAST_DAY');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
-  useEffect(() => {
-    if (!isOpen || !recurring) return;
-    setAmount(recurring.amount.toString());
-    setDescription(recurring.description || '');
-    setCategory(recurring.category || 'כללי');
-    setDate(toDateInputValueFromUtc(new Date(recurring.startDate)));
-    setAccountId(recurring.accountId);
-    setMonthPolicy(recurring.monthPolicy);
-    setShowDeleteConfirm(false);
-  }, [isOpen, recurring]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -65,23 +62,31 @@ export default function RecurringEditSheet({
     return () => clearTimeout(timer);
   }, [isOpen]);
 
-  const selectedDay = useMemo(() => {
-    if (!date) return null;
-    const selectedDate = new Date(`${date}T00:00:00`);
-    if (Number.isNaN(selectedDate.getTime())) return null;
-    return selectedDate.getDate();
-  }, [date]);
-
-  const shouldShowShortMonthPolicy = selectedDay !== null && selectedDay >= 29;
+  useEffect(() => {
+    if (!isOpen) return;
+    if (initialData) {
+      setAmount(initialData.amount.toString());
+      setDescription(initialData.description || '');
+      setLabel(initialData.label);
+      setDate(toDateInputValueFromUtc(new Date(initialData.date)));
+      setAccountId(initialData.accountId);
+    } else {
+      setAmount('');
+      setDescription('');
+      setLabel(visibleLabels[0]?.name ?? '');
+      setDate(toDateInputValueFromUtc(new Date()));
+      setAccountId(accounts.find((a) => a.type === 'SHARED')?.id ?? accounts[0]?.id ?? '');
+    }
+    setShowDeleteConfirm(false);
+  }, [isOpen, initialData, accounts, visibleLabels]);
 
   const handleSave = async () => {
-    if (!recurring) return;
     const parsedAmount = parseFloat(amount);
     if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
       toast.error('הסכום חייב להיות גדול מ-0');
       return;
     }
-    if (!date || !accountId || !category.trim()) {
+    if (!date || !accountId || !label.trim()) {
       toast.error('יש למלא את כל השדות הנדרשים');
       return;
     }
@@ -92,32 +97,39 @@ export default function RecurringEditSheet({
     formData.append('description', description);
     formData.append('date', date);
     formData.append('accountId', accountId);
-    formData.append('category', category);
-    formData.append('monthPolicy', monthPolicy);
+    formData.append('label', label.trim());
 
-    const res = await updateRecurringTransaction(recurring.id, formData);
-    setIsSubmitting(false);
-    if (!res.success) {
-      toast.error('שמירה נכשלה. נסה שוב.');
-      return;
+    if (initialData) {
+      const res = await updateSavingsAllocation(initialData.id, formData);
+      setIsSubmitting(false);
+      if (!res.success) {
+        toast.error('שמירה נכשלה. נסה שוב.');
+        return;
+      }
+      toast.success('עודכן בהצלחה');
+    } else {
+      const res = await addSavingsAllocation(formData);
+      setIsSubmitting(false);
+      if (!res.success) {
+        toast.error('שמירה נכשלה. נסה שוב.');
+        return;
+      }
+      toast.success('נוסף בהצלחה');
     }
 
-    toast.success('עודכן בהצלחה');
     router.refresh();
     onClose();
   };
 
   const handleDelete = async () => {
-    if (!recurring) return;
+    if (!initialData) return;
     setIsDeleting(true);
-    const { deleteRecurringTransaction } = await import('@/app/actions');
-    const res = await deleteRecurringTransaction(recurring.id);
+    const res = await deleteSavingsAllocation(initialData.id);
     setIsDeleting(false);
     if (!res.success) {
       toast.error('מחיקה נכשלה. נסה שוב.');
       return;
     }
-
     toast.success('נמחק בהצלחה');
     router.refresh();
     onClose();
@@ -129,7 +141,7 @@ export default function RecurringEditSheet({
 
   return (
     <AnimatePresence>
-      {isOpen && recurring && (
+      {isOpen && (
         <>
           <motion.div
             initial={{ opacity: 0 }}
@@ -159,7 +171,9 @@ export default function RecurringEditSheet({
 
             <div className="flex-1 overflow-y-auto px-5 pb-8">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-ios-text dark:text-ios-dark-text">עריכת הוצאה קבועה</h2>
+                <h2 className="text-xl font-bold text-ios-text dark:text-ios-dark-text">
+                  {initialData ? 'עריכת הפרשת חיסכון' : 'הפרשה לחיסכון'}
+                </h2>
                 <button
                   type="button"
                   onClick={onClose}
@@ -170,8 +184,14 @@ export default function RecurringEditSheet({
                 </button>
               </div>
 
+              <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle mb-4 leading-relaxed">
+                הפרשות אלה לא נספרות כהוצאות — הן מופיעות בנפרד כחלק מהחיסכון החודשי.
+              </p>
+
               <div className="bg-white dark:bg-ios-dark-card rounded-2xl p-5 sm:p-6 shadow-card mb-4 text-center">
-                <p className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle uppercase tracking-wider mb-3">סכום</p>
+                <p className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle uppercase tracking-wider mb-3">
+                  סכום
+                </p>
                 <div className="flex items-center justify-center gap-1">
                   <span className="text-3xl sm:text-4xl text-gray-300 dark:text-ios-dark-subtle/60 font-light">₪</span>
                   <input
@@ -185,14 +205,16 @@ export default function RecurringEditSheet({
               </div>
 
               <div className="bg-white dark:bg-ios-dark-card rounded-2xl shadow-card mb-4 overflow-hidden">
-                <p className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle uppercase tracking-wider px-4 pt-4 pb-2">חשבון</p>
-                <div className="flex p-1.5 mx-3 mb-3 bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl">
+                <p className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle uppercase tracking-wider px-4 pt-4 pb-2">
+                  חשבון
+                </p>
+                <div className="flex p-1.5 mx-3 mb-3 bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl flex-wrap gap-1">
                   {accounts.map((acc) => (
                     <button
                       key={acc.id}
                       type="button"
                       onClick={() => setAccountId(acc.id)}
-                      className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                      className={`flex-1 min-w-[45%] flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-semibold transition-all ${
                         accountId === acc.id
                           ? 'bg-white dark:bg-ios-dark-card shadow-card text-ios-text dark:text-ios-dark-text'
                           : 'text-gray-400 dark:text-ios-dark-subtle'
@@ -208,10 +230,10 @@ export default function RecurringEditSheet({
               <div className="bg-white dark:bg-ios-dark-card rounded-2xl shadow-card mb-4 overflow-hidden divide-y divide-gray-100 dark:divide-white/10">
                 <div className="flex items-center justify-between p-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-ios-red/10 rounded-lg flex items-center justify-center">
-                      <Calendar className="w-4 h-4 text-ios-red" />
+                    <div className="w-8 h-8 bg-ios-green/10 rounded-lg flex items-center justify-center">
+                      <Calendar className="w-4 h-4 text-ios-green" />
                     </div>
-                    <span className="text-[15px] font-medium text-ios-text dark:text-ios-dark-text">תאריך התחלה</span>
+                    <span className="text-[15px] font-medium text-ios-text dark:text-ios-dark-text">תאריך</span>
                   </div>
                   <input
                     type="date"
@@ -231,86 +253,99 @@ export default function RecurringEditSheet({
                     <div className="w-8 h-8 bg-ios-blue/10 rounded-lg flex items-center justify-center">
                       <span className="text-sm">📝</span>
                     </div>
-                    <span className="text-[15px] font-medium text-ios-text dark:text-ios-dark-text">תיאור</span>
+                    <span className="text-[15px] font-medium text-ios-text dark:text-ios-dark-text">תיאור (אופציונלי)</span>
                   </div>
                   <input
                     type="text"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     className="w-full bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl py-3 px-4 text-[15px] text-ios-text dark:text-ios-dark-text placeholder-gray-400 dark:placeholder-ios-dark-subtle focus:outline-none focus:ring-2 focus:ring-ios-blue/30 transition"
-                    placeholder="על מה יצא הכסף?"
+                    placeholder="למשל: העברה חודשית"
                   />
                 </div>
               </div>
 
               <div className="bg-white dark:bg-ios-dark-card rounded-2xl shadow-card mb-4 p-4">
-                <p className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle uppercase tracking-wider mb-3">קטגוריה</p>
-                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1" style={{ WebkitOverflowScrolling: 'touch' }}>
-                  {categories.map((cat) => (
+                <p className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle uppercase tracking-wider mb-3">
+                  יעד חיסכון
+                </p>
+                <div
+                  className="flex gap-2 overflow-x-auto no-scrollbar pb-1"
+                  style={{ WebkitOverflowScrolling: 'touch' }}
+                >
+                  {visibleLabels.map((l) => (
                     <button
-                      key={cat.id}
+                      key={l.id}
                       type="button"
-                      onClick={() => setCategory(cat.name)}
+                      onClick={() => setLabel(l.name)}
                       className={`flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                        category === cat.name
-                          ? 'bg-ios-blue text-white shadow-sm'
+                        label === l.name
+                          ? 'bg-ios-green text-white shadow-sm'
                           : 'bg-ios-gray-6 dark:bg-ios-dark-fill text-gray-600 dark:text-ios-dark-subtle'
                       }`}
                     >
-                      <span>{cat.icon}</span>
-                      <span>{cat.name}</span>
+                      <span>{l.icon}</span>
+                      <span>{l.name}</span>
                     </button>
                   ))}
                 </div>
+                {initialData && !visibleLabels.some((l) => l.name === label) ? (
+                  <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle mt-2">
+                    נבחר: <span className="font-semibold text-ios-text dark:text-ios-dark-text">{label}</span> (יעד
+                    מוסתר בהגדרות)
+                  </p>
+                ) : null}
+                <label className="block mt-3 text-[11px] font-medium text-ios-subtle dark:text-ios-dark-subtle mb-1">
+                  או שם מותאם
+                </label>
+                <input
+                  type="text"
+                  value={label}
+                  onChange={(e) => setLabel(e.target.value)}
+                  className="w-full bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl py-2.5 px-3 text-sm text-ios-text dark:text-ios-dark-text focus:outline-none focus:ring-2 focus:ring-ios-blue/30"
+                  placeholder="שם היעד"
+                />
               </div>
-
-              {shouldShowShortMonthPolicy && (
-                <div className="bg-white dark:bg-ios-dark-card rounded-2xl shadow-card mb-6 p-4">
-                  <p className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle uppercase tracking-wider mb-2">חודש קצר</p>
-                  <select
-                    value={monthPolicy}
-                    onChange={(e) => setMonthPolicy(e.target.value as RecurringMonthPolicy)}
-                    className="w-full bg-ios-gray-6 dark:bg-ios-dark-fill border border-gray-200 dark:border-white/10 rounded-xl px-3 py-2.5 text-sm text-gray-700 dark:text-ios-dark-text focus:outline-none focus:ring-2 focus:ring-ios-blue/30"
-                  >
-                    <option value="ROLL_TO_LAST_DAY">גלישה ליום האחרון בחודש</option>
-                    <option value="SKIP_MONTH">דילוג על חודש חסר</option>
-                  </select>
-                </div>
-              )}
 
               <div className="space-y-3">
                 <button
+                  type="button"
                   onClick={handleSave}
                   disabled={isSubmitting || !amount || !accountId}
-                  className="w-full bg-ios-blue text-white font-bold text-base py-4 rounded-2xl shadow-lg shadow-ios-blue/20 hover:bg-ios-blue/90 active:scale-[0.98] transition-all disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed"
+                  className="w-full bg-ios-green text-white font-bold text-base py-4 rounded-2xl shadow-lg shadow-ios-green/20 hover:bg-ios-green/90 active:scale-[0.98] transition-all disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed"
                 >
-                  {isSubmitting ? 'שומר...' : 'עדכון'}
+                  {isSubmitting ? 'שומר...' : initialData ? 'עדכון' : 'הוספה'}
                 </button>
 
-                {showDeleteConfirm ? (
-                  <div className="flex gap-3">
+                {initialData ? (
+                  showDeleteConfirm ? (
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setShowDeleteConfirm(false)}
+                        className="flex-1 bg-gray-100 dark:bg-ios-dark-fill text-gray-700 dark:text-ios-dark-text font-bold py-3.5 rounded-2xl"
+                      >
+                        ביטול
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDelete}
+                        disabled={isDeleting}
+                        className="flex-1 bg-ios-red text-white font-bold py-3.5 rounded-2xl"
+                      >
+                        {isDeleting ? 'מוחק...' : 'מחיקה'}
+                      </button>
+                    </div>
+                  ) : (
                     <button
-                      onClick={() => setShowDeleteConfirm(false)}
-                      className="flex-1 bg-gray-100 dark:bg-ios-dark-fill text-gray-700 dark:text-ios-dark-text font-bold py-3.5 rounded-2xl"
+                      type="button"
+                      onClick={() => setShowDeleteConfirm(true)}
+                      className="w-full text-ios-red hover:text-ios-red/80 font-medium py-3 transition-colors text-sm"
                     >
-                      ביטול
+                      מחיקת הפרשה
                     </button>
-                    <button
-                      onClick={handleDelete}
-                      disabled={isDeleting}
-                      className="flex-1 bg-ios-red text-white font-bold py-3.5 rounded-2xl"
-                    >
-                      {isDeleting ? 'מוחק...' : 'מחיקה'}
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setShowDeleteConfirm(true)}
-                    className="w-full text-ios-red hover:text-ios-red/80 font-medium py-3 transition-colors text-sm"
-                  >
-                    מחיקת הוצאה
-                  </button>
-                )}
+                  )
+                ) : null}
               </div>
             </div>
           </motion.div>

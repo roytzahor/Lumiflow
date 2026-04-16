@@ -6,9 +6,10 @@ import { formatIlsAmount } from '@/lib/formatters';
 
 interface PieChartProps {
     data: { name: string; value: number; color: string; icon: string }[];
+    onSliceClick?: (categoryName: string) => void;
 }
 
-export default function PieChart({ data }: PieChartProps) {
+export default function PieChart({ data, onSliceClick }: PieChartProps) {
     const total = useMemo(() => data.reduce((acc, curr) => acc + curr.value, 0), [data]);
 
     // Calculate donut segments
@@ -61,6 +62,8 @@ export default function PieChart({ data }: PieChartProps) {
                             animate={{ scale: 1, opacity: 1 }}
                             transition={{ delay: index * 0.08, duration: 0.5, type: "spring" }}
                             className="cursor-pointer"
+                            onClick={() => onSliceClick?.(segment.name)}
+                            style={{ pointerEvents: 'all' }}
                         />
                     ))}
                     {/* Center hole */}
@@ -84,7 +87,8 @@ export default function PieChart({ data }: PieChartProps) {
                         initial={{ opacity: 0, x: 10 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.3 + index * 0.04 }}
-                        className="flex items-center justify-between py-1.5"
+                        className={`flex items-center justify-between py-1.5${onSliceClick ? ' cursor-pointer active:bg-gray-50 dark:active:bg-ios-dark-fill/60 rounded-lg -mx-1.5 px-1.5 transition-colors' : ''}`}
+                        onClick={() => onSliceClick?.(item.name)}
                     >
                         <div className="flex items-center gap-2.5">
                             <div

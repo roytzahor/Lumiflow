@@ -2,9 +2,9 @@
 
 import { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, PiggyBank } from 'lucide-react';
 import { formatIlsAmount, formatUtcDateLabel, getCalendarDateKeyInTimeZone, getUtcDateKey } from '@/lib/formatters';
-import type { TransactionListItem, Category } from '@/lib/types';
+import type { TransactionListItem, Category, SavingsAllocationListItem, SavingsLabel } from '@/lib/types';
 
 function addedByDisplayName(user: { name: string | null; email: string }): string {
     const name = user.name?.trim();
@@ -14,15 +14,35 @@ function addedByDisplayName(user: { name: string | null; email: string }): strin
     return at > 0 ? email.slice(0, at) : email;
 }
 
+type FeedRow =
+    | { kind: 'transaction'; transaction: TransactionListItem }
+    | { kind: 'savings'; savings: SavingsAllocationListItem };
+
 interface TransactionFeedProps {
     transactions: TransactionListItem[];
     categories?: Category[];
     onTransactionClick?: (transaction: TransactionListItem) => void;
+    savingsAllocations?: SavingsAllocationListItem[];
+    savingsLabels?: SavingsLabel[];
+    showSavingsInFeed?: boolean;
+    onSavingsClick?: (savings: SavingsAllocationListItem) => void;
 }
 
 const JERUSALEM_TZ = 'Asia/Jerusalem';
 
-export default function TransactionFeed({ transactions = [], categories = [], onTransactionClick }: TransactionFeedProps) {
+function savingsIcon(labels: SavingsLabel[] | undefined, labelName: string): string {
+    return labels?.find((l) => l.name === labelName)?.icon ?? '🐖';
+}
+
+export default function TransactionFeed({
+    transactions = [],
+    categories = [],
+    onTransactionClick,
+    savingsAllocations = [],
+    savingsLabels = [],
+    showSavingsInFeed = false,
+    onSavingsClick,
+}: TransactionFeedProps) {
     const todayJerusalemKey = useMemo(() => getCalendarDateKeyInTimeZone(new Date(), JERUSALEM_TZ), []);
 
     const getIcon = (categoryName: string) => {
@@ -35,26 +55,60 @@ export default function TransactionFeed({ transactions = [], categories = [], on
         return { label: t.account?.name || '', color: 'text-ios-blue bg-ios-teal/8' };
     };
 
+    const getSavingsAccountBadge = (s: SavingsAllocationListItem) => {
+        if (s.account?.type === 'SHARED') return { label: s.account?.name || 'משותף', color: 'text-ios-indigo bg-ios-indigo/8' };
+        return { label: s.account?.name || '', color: 'text-ios-blue bg-ios-teal/8' };
+    };
+
     const isPlannedFutureRecurring = (t: TransactionListItem) => {
         if (!t.isRecurring || !t.isProjected) return false;
         const occurrenceKey = getUtcDateKey(t.date);
         return occurrenceKey > todayJerusalemKey;
     };
 
-    // Group transactions by date
-    const groupedByDate = transactions.reduce<Record<string, TransactionListItem[]>>((groups, t) => {
-        const dateKey = getUtcDateKey(t.date);
-        if (!groups[dateKey]) groups[dateKey] = [];
-        groups[dateKey].push(t);
+    const groupedByDate = useMemo(() => {
+        const rows: FeedRow[] = [];
+        for (const t of transactions) {
+            rows.push({ kind: 'transaction', transaction: t });
+        }
+        if (showSavingsInFeed) {
+            for (const s of savingsAllocations) {
+                rows.push({ kind: 'savings', savings: s });
+            }
+        }
+        const groups = rows.reduce<Record<string, FeedRow[]>>((acc, row) => {
+            const dateKey = getUtcDateKey(
+                row.kind === 'transaction' ? row.transaction.date : row.savings.date
+            );
+            if (!acc[dateKey]) acc[dateKey] = [];
+            acc[dateKey].push(row);
+            return acc;
+        }, {});
+        for (const k of Object.keys(groups)) {
+            groups[k].sort((a, b) => {
+                const ta =
+                    a.kind === 'transaction'
+                        ? new Date(a.transaction.date).getTime()
+                        : new Date(a.savings.date).getTime();
+                const tb =
+                    b.kind === 'transaction'
+                        ? new Date(b.transaction.date).getTime()
+                        : new Date(b.savings.date).getTime();
+                return tb - ta;
+            });
+        }
         return groups;
-    }, {});
+    }, [transactions, savingsAllocations, showSavingsInFeed]);
 
     const sortedDates = Object.keys(groupedByDate).sort((a, b) => b.localeCompare(a));
+
+    const isEmpty =
+        transactions.length === 0 && (!showSavingsInFeed || savingsAllocations.length === 0);
 
     return (
         <div className="w-full mt-3 pb-6 min-w-0">
             <AnimatePresence mode="popLayout">
-                {transactions.length === 0 ? (
+                {isEmpty ? (
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
@@ -72,14 +126,56 @@ export default function TransactionFeed({ transactions = [], categories = [], on
                     <div className="space-y-5">
                         {sortedDates.map((dateKey) => (
                             <div key={dateKey}>
-                                {/* Date Header */}
                                 <p className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle uppercase tracking-wider mb-2 px-1">
                                     {formatUtcDateLabel(dateKey)}
                                 </p>
 
-                                {/* Transactions Card */}
                                 <div className="bg-white dark:bg-ios-dark-card rounded-2xl shadow-card overflow-hidden divide-y divide-gray-100 dark:divide-white/10">
-                                    {groupedByDate[dateKey].map((t) => {
+                                    {groupedByDate[dateKey].map((row) => {
+                                        if (row.kind === 'savings') {
+                                            const s = row.savings;
+                                            const badge = getSavingsAccountBadge(s);
+                                            return (
+                                                <motion.button
+                                                    key={`savings-${s.id}`}
+                                                    type="button"
+                                                    layout
+                                                    onClick={() => onSavingsClick?.(s)}
+                                                    initial={{ opacity: 0 }}
+                                                    animate={{ opacity: 1 }}
+                                                    exit={{ opacity: 0, scale: 0.98 }}
+                                                    whileTap={{ scale: 0.98 }}
+                                                    className="w-full flex items-center justify-between min-h-[44px] py-3 px-4 transition-colors cursor-pointer active:bg-ios-green/5 dark:active:bg-ios-green/10 border-s-4 border-ios-green"
+                                                >
+                                                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                        <div className="w-10 h-10 rounded-xl bg-ios-green/12 flex items-center justify-center flex-shrink-0 text-ios-green">
+                                                            <PiggyBank className="w-5 h-5" strokeWidth={2} />
+                                                        </div>
+                                                        <div className="flex-1 min-w-0 text-start">
+                                                            <h3 className="text-[15px] font-semibold text-ios-text dark:text-ios-dark-text truncate">
+                                                                {s.description || s.label}
+                                                            </h3>
+                                                            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                                                <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-md text-ios-green bg-ios-green/10">
+                                                                    הפרשה לחיסכון · {savingsIcon(savingsLabels, s.label)} {s.label}
+                                                                </span>
+                                                                <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-md ${badge.color}`}>
+                                                                    {badge.label}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                                        <span className="text-[15px] font-bold text-ios-green tabular-nums">
+                                                            ₪{formatIlsAmount(s.amount)}
+                                                        </span>
+                                                        <ChevronLeft className="w-4 h-4 text-gray-300 dark:text-ios-dark-subtle/60" />
+                                                    </div>
+                                                </motion.button>
+                                            );
+                                        }
+
+                                        const t = row.transaction;
                                         const badge = getAccountBadge(t);
                                         const plannedFutureRecurring = isPlannedFutureRecurring(t);
                                         const addedBy =

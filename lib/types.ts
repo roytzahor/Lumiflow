@@ -9,6 +9,7 @@ import type {
   AccountType,
   AccountMemberRole,
   RecurringMonthPolicy,
+  SavingsLabel,
 } from "@prisma/client";
 
 // Re-export Prisma models for app use
@@ -21,13 +22,20 @@ export type {
   AccountType,
   AccountMemberRole,
   RecurringMonthPolicy,
+  SavingsLabel,
 };
+
+/** Account fields loaded with transaction / recurring list queries (narrow Prisma select). */
+export type TransactionAccountPreview = Pick<Account, "id" | "name" | "type">;
+
+/** Lightweight account row for dashboard / history / quick-add pickers */
+export type AccountSummary = Pick<Account, "id" | "name" | "type" | "income">;
 
 /** Transaction with account relation (from findMany with include: { account: true }) */
 export type TransactionWithAccount = Transaction & { account: Account };
 
 /** Recurring transaction with account relation */
-export type RecurringWithAccount = RecurringTransaction & { account: Account };
+export type RecurringWithAccount = RecurringTransaction & { account: TransactionAccountPreview };
 
 /** Minimal user info for “who added this expense” (from `paidByUser` include). */
 export type TransactionAddedByUser = {
@@ -37,7 +45,7 @@ export type TransactionAddedByUser = {
 };
 
 /** Feed/list item for transactions, including projected recurring rows */
-export type TransactionListItem = (Transaction & { account: Account }) & {
+export type TransactionListItem = (Transaction & { account: TransactionAccountPreview }) & {
   isRecurring?: boolean;
   isProjected?: boolean;
   paidByUser?: TransactionAddedByUser | null;
@@ -100,7 +108,10 @@ export type ContributionRatio = {
 export type MyMoneyCategory = {
   name: string;
   amount: number;
-  source: 'personal' | 'shared';
+  /** Sum of expenses from private accounts attributed 100% to the user */
+  personalPortion: number;
+  /** Sum of expenses from shared accounts attributed by contribution ratio */
+  sharedPortion: number;
 };
 
 /** Full "My Money" breakdown for the current month */
@@ -109,4 +120,19 @@ export type MyMoneyBreakdown = {
   totalAttributedExpenses: number;
   balance: number;
   categories: MyMoneyCategory[];
+  /** Savings transfers attributed like expenses (private 100%, shared by ratio). */
+  totalAttributedSavingsAllocations: number;
+  /** Income minus expenses minus savings allocations (cash left). */
+  freeBalance: number;
+};
+
+/** Savings allocation row for lists / history (dates from server are ISO strings in JSON). */
+export type SavingsAllocationListItem = {
+  id: string;
+  amount: number;
+  label: string;
+  description: string | null;
+  date: Date;
+  accountId: string;
+  account: TransactionAccountPreview;
 };

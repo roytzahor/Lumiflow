@@ -1,13 +1,12 @@
-import { getMonthlyStats, getAccounts, getCategories, getRecurringTransactions, getCurrentUserProfile } from "@/app/actions";
-import HistoryView from "@/components/HistoryView";
+import { Suspense } from "react";
+import HistoryPageSkeleton from "@/components/history-page-skeleton";
+import HistoryDataLoader from "@/app/history/history-data-loader";
 import { redirectToOnboardingIfNeeded } from "@/lib/onboarding";
-
-export const dynamic = 'force-dynamic';
 
 export default async function HistoryPage({
     searchParams,
 }: {
-    searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
     await redirectToOnboardingIfNeeded();
     const params = await searchParams;
@@ -18,23 +17,9 @@ export default async function HistoryPage({
     const year = Number.isFinite(parsedYear) && parsedYear >= 2020 && parsedYear <= 2100 ? parsedYear : now.getFullYear();
     const month = Number.isFinite(parsedMonth) && parsedMonth >= 0 && parsedMonth <= 11 ? parsedMonth : now.getMonth();
 
-    const [{ total, accountTotals, transactions }, accounts, categories, recurringTransactions, currentUser] = await Promise.all([
-        getMonthlyStats(year, month),
-        getAccounts(),
-        getCategories(),
-        getRecurringTransactions(),
-        getCurrentUserProfile(),
-    ]);
-
     return (
-        <HistoryView
-            transactions={transactions}
-            total={total}
-            accountTotals={accountTotals}
-            accounts={accounts}
-            categories={categories}
-            recurringTransactions={recurringTransactions}
-            initialHistoryShowRecurring={currentUser?.historyShowRecurringTransactions ?? true}
-        />
+        <Suspense fallback={<HistoryPageSkeleton />}>
+            <HistoryDataLoader year={year} month={month} />
+        </Suspense>
     );
 }

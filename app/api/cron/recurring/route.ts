@@ -21,7 +21,6 @@ export async function GET(request: NextRequest) {
     try {
         const today = new Date();
 
-        // Find active recurring transactions that are due (nextRun <= today)
         const dueTransactions = await prisma.recurringTransaction.findMany({
             where: {
                 active: true,
@@ -35,45 +34,39 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ message: 'No recurring transactions to process.' });
         }
 
-        const createdTransactions = [];
+        const createdTransactions = await prisma.$transaction(async (tx) => {
+            const results: Awaited<ReturnType<typeof tx.transaction.create>>[] = [];
+            for (const rt of dueTransactions) {
+                const newTransaction = await tx.transaction.create({
+                    data: {
+                        amount: rt.amount,
+                        description: rt.description,
+                        category: rt.category,
+                        accountId: rt.accountId,
+                        date: rt.nextRun,
+                        recurringTransactionId: rt.id,
+                    },
+                });
+                results.push(newTransaction);
 
-        for (const rt of dueTransactions) {
-            // Create the new transaction
-            // Note: We might want to set the date to today, or strictly to the nextRun date. 
-            // Usually "today" (transaction date) is good so it shows up in today's feed.
-            // But keeping consistency with the schedule (rt.nextRun) is also valid.
-            // Let's use the scheduled date `rt.nextRun` for the record accuracy.
+                const nextRunDate = getNextRunDateFromCurrent(new Date(rt.nextRun), rt.dayOfMonth, rt.monthPolicy);
 
-            const newTransaction = await prisma.transaction.create({
-                data: {
-                    amount: rt.amount,
-                    description: rt.description,
-                    category: rt.category,
-                    accountId: rt.accountId,
-                    date: rt.nextRun,
-                    recurringTransactionId: rt.id,
-                },
-            });
-
-            createdTransactions.push(newTransaction);
-
-            const nextRunDate = getNextRunDateFromCurrent(new Date(rt.nextRun), rt.dayOfMonth, rt.monthPolicy);
-
-            await prisma.recurringTransaction.update({
-                where: { id: rt.id },
-                data: {
-                    lastRun: new Date(),
-                    nextRun: nextRunDate,
-                },
-            });
-        }
+                await tx.recurringTransaction.update({
+                    where: { id: rt.id },
+                    data: {
+                        lastRun: new Date(),
+                        nextRun: nextRunDate,
+                    },
+                });
+            }
+            return results;
+        });
 
         return NextResponse.json({
             success: true,
             processed: dueTransactions.length,
-            transactions: createdTransactions
+            transactions: createdTransactions,
         });
-
     } catch (error) {
         console.error('Error processing recurring transactions:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

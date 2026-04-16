@@ -97,7 +97,7 @@ export default function BottomNav() {
     };
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 z-50 pb-safe bg-white/80 dark:bg-ios-dark-card/85 backdrop-blur-2xl border-t border-gray-200/50 dark:border-white/10">
+        <div className="fixed bottom-0 left-0 right-0 z-50 pb-safe bg-white/80 dark:bg-ios-dark-card/85 backdrop-blur-2xl border-t border-gray-200/50 dark:border-white/10 will-change-transform">
             {fabMenuOpen ? (
                 <button
                     type="button"

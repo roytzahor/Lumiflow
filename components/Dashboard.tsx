@@ -2,25 +2,45 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { motion, AnimatePresence, useReducedMotion, useScroll, useMotionValueEvent } from "framer-motion";
-import QuickAddSheet from "./QuickAddSheet";
-import RecurringEditSheet from "./RecurringEditSheet";
-import PieChart from "./PieChart";
+import dynamic from "next/dynamic";
 import { formatIlsAmount, formatUtcMonthYear, getHourInTimezone } from "@/lib/formatters";
 import { updateDashboardRecurringSectionExpanded } from "@/app/actions";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, ChevronLeft, Lock } from "lucide-react";
-import MonthSelector from "./MonthSelector";
-import type { TransactionListItem, Account, Category, RecurringWithAccount, MonthlyIncomeTotal, ContributionRatio } from "@/lib/types";
+
+const QuickAddSheet = dynamic(() => import("./QuickAddSheet"), { ssr: false });
+const RecurringEditSheet = dynamic(() => import("./RecurringEditSheet"), { ssr: false });
+const SavingsAllocationSheet = dynamic(() => import("./SavingsAllocationSheet"), { ssr: false });
+const SavingsAllocationCard = dynamic(() => import("./SavingsAllocationCard"), { ssr: false });
+const PieChart = dynamic(() => import("./PieChart"), {
+    ssr: false,
+    loading: () => (
+        <div className="h-48 rounded-2xl bg-ios-gray-6/20 dark:bg-ios-dark-fill/30 animate-pulse" aria-hidden />
+    ),
+});
+const MonthSelector = dynamic(() => import("./MonthSelector"), { ssr: false });
+import type {
+    TransactionListItem,
+    AccountSummary,
+    Category,
+    RecurringWithAccount,
+    MonthlyIncomeTotal,
+    ContributionRatio,
+    SavingsAllocationListItem,
+    SavingsLabel,
+} from "@/lib/types";
 import { parseScopeAccountId } from "@/lib/scope-account";
 import { computeMyMoneyBreakdown } from "@/lib/my-money-utils";
 
 interface DashboardProps {
     initialTransactions: TransactionListItem[];
+    initialSavingsAllocations?: SavingsAllocationListItem[];
+    savingsLabels?: SavingsLabel[];
     nowIso: string;
     selectedMonthIso?: string;
     categories: Category[];
-    accounts: Account[];
+    accounts: AccountSummary[];
     recurringTransactions?: RecurringWithAccount[];
     contributionTotals?: Array<{
         accountId: string;
@@ -43,11 +63,11 @@ function getGreeting(now: Date): string {
     return "לילה טוב";
 }
 
-function getAccountLabel(account: Account): string {
+function getAccountLabel(account: AccountSummary): string {
     return account.name;
 }
 
-function getAccountColor(account: Account): { bg: string; text: string; ring: string } {
+function getAccountColor(account: AccountSummary): { bg: string; text: string; ring: string } {
     if (account.type === "SHARED") return { bg: "bg-ios-indigo/8", text: "text-ios-indigo", ring: "ring-ios-indigo/20" };
     return { bg: "bg-ios-teal/8", text: "text-ios-blue", ring: "ring-ios-teal/20" };
 }
@@ -58,7 +78,7 @@ function getCategoryIcon(categories: Category[], categoryName: string): string {
 }
 
 type AccountBalanceRow = {
-    account: Account;
+    account: AccountSummary;
     expenses: number;
     monthlyInflow: number;
     balance: number;
@@ -156,6 +176,8 @@ function DashboardAccountBalanceCard({
 
 export default function Dashboard({
     initialTransactions = [],
+    initialSavingsAllocations = [],
+    savingsLabels = [],
     nowIso,
     selectedMonthIso,
     categories = [],
@@ -168,6 +190,8 @@ export default function Dashboard({
     initialRecurringSectionExpanded = true,
 }: DashboardProps) {
     const [isSheetOpen, setIsSheetOpen] = useState(false);
+    const [savingsSheetOpen, setSavingsSheetOpen] = useState(false);
+    const [editingSavings, setEditingSavings] = useState<SavingsAllocationListItem | null>(null);
     const [quickAddIntent, setQuickAddIntent] = useState<{ recurring: boolean } | null>(null);
     const [showStickyHeader, setShowStickyHeader] = useState(false);
     const [selectedRecurring, setSelectedRecurring] = useState<RecurringWithAccount | null>(null);
@@ -182,12 +206,16 @@ export default function Dashboard({
     const searchParams = useSearchParams();
     const accountParam = searchParams.get("account");
     const scopeAccountId = useMemo(
-        () => parseScopeAccountId(accountParam, accounts),
-        [accountParam, accounts]
+        () =>
+            parseScopeAccountId(accountParam, accounts, {
+                defaultWhenUnset: myContributionRatios.length > 0 ? "my-money" : "all",
+            }),
+        [accountParam, accounts, myContributionRatios.length]
     );
 
     useEffect(() => {
         if (!accountParam) return;
+        if (accountParam === "my-money" || accountParam === "all") return;
         if (accounts.some((a) => a.id === accountParam)) return;
         const params = new URLSearchParams(searchParams.toString());
         params.delete("account");
@@ -199,7 +227,7 @@ export default function Dashboard({
         (next: "all" | string) => {
             const params = new URLSearchParams(searchParams.toString());
             if (next === "all") {
-                params.delete("account");
+                params.set("account", "all");
             } else {
                 params.set("account", next);
             }
@@ -216,12 +244,12 @@ export default function Dashboard({
     const reduceMotion = useReducedMotion();
 
     const scopedTransactions = useMemo(() => {
-        if (scopeAccountId === "all") return initialTransactions;
+        if (scopeAccountId === "all" || scopeAccountId === "my-money") return initialTransactions;
         return initialTransactions.filter((t) => t.accountId === scopeAccountId);
     }, [initialTransactions, scopeAccountId]);
 
     const recurringForScope = useMemo(() => {
-        if (scopeAccountId === "all") return recurringTransactions;
+        if (scopeAccountId === "all" || scopeAccountId === "my-money") return recurringTransactions;
         return recurringTransactions.filter((r) => r.accountId === scopeAccountId);
     }, [recurringTransactions, scopeAccountId]);
 
@@ -241,12 +269,15 @@ export default function Dashboard({
             const expenses = initialTransactions
                 .filter((t) => t.accountId === acc.id && t.amount > 0)
                 .reduce((sum, t) => sum + t.amount, 0);
+            const savingsOut = initialSavingsAllocations
+                .filter((s) => s.accountId === acc.id && s.amount > 0)
+                .reduce((sum, s) => sum + s.amount, 0);
             const monthlyInflow = inflowByAccountId.get(acc.id) ?? 0;
             const oneTimeIncome = oneTimeIncomeByAccountId.get(acc.id) ?? 0;
-            const balance = monthlyInflow + oneTimeIncome - expenses;
+            const balance = monthlyInflow + oneTimeIncome - expenses - savingsOut;
             return { account: acc, expenses, monthlyInflow: monthlyInflow + oneTimeIncome, balance };
         });
-    }, [accounts, initialTransactions, contributionTotals, oneTimeIncomeByAccountId]);
+    }, [accounts, initialTransactions, initialSavingsAllocations, contributionTotals, oneTimeIncomeByAccountId]);
 
     const myMoneyBreakdown = useMemo(() => {
         if (myContributionRatios.length === 0) return null;
@@ -259,8 +290,18 @@ export default function Dashboard({
                 amount: t.amount,
             })),
             monthlyIncomeEntries,
+            savingsAllocations: initialSavingsAllocations.map((s) => ({
+                accountId: s.accountId,
+                accountType: s.account.type,
+                amount: s.amount,
+            })),
         });
-    }, [myContributionRatios, initialTransactions, monthlyIncomeEntries]);
+    }, [myContributionRatios, initialTransactions, initialSavingsAllocations, monthlyIncomeEntries]);
+
+    const scopedSavings = useMemo(() => {
+        if (scopeAccountId === "all" || scopeAccountId === "my-money") return initialSavingsAllocations;
+        return initialSavingsAllocations.filter((s) => s.accountId === scopeAccountId);
+    }, [initialSavingsAllocations, scopeAccountId]);
 
     const chartColors = [
         '#007AFF', '#FF9500', '#FF2D55', '#5856D6',
@@ -319,12 +360,12 @@ export default function Dashboard({
     }, [chartData, shouldShowSpendingTeaser]);
 
     const accountBalances = useMemo(() => {
-        if (scopeAccountId === "all") return accountBalancesAll;
+        if (scopeAccountId === "all" || scopeAccountId === "my-money") return accountBalancesAll;
         return accountBalancesAll.filter((row) => row.account.id === scopeAccountId);
     }, [accountBalancesAll, scopeAccountId]);
 
     const totalMonthlyInflowScope = useMemo(() => {
-        if (scopeAccountId === "all") {
+        if (scopeAccountId === "all" || scopeAccountId === "my-money") {
             return accountBalancesAll.reduce((sum, row) => sum + row.monthlyInflow, 0);
         }
         const row = accountBalancesAll.find((r) => r.account.id === scopeAccountId);
@@ -357,6 +398,35 @@ export default function Dashboard({
     const rawRatio = hasIncomeConfigured ? (savedSoFar / income) * 100 : 0;
     const savingsRatio = Math.max(Math.min(rawRatio, 100), 0);
 
+    const totalSavingsScope =
+        scopeAccountId === "my-money" && myMoneyBreakdown
+            ? myMoneyBreakdown.totalAttributedSavingsAllocations
+            : scopedSavings.reduce((sum, s) => sum + s.amount, 0);
+
+    const freeAfterSavings =
+        hasIncomeConfigured && scopeAccountId === "my-money" && myMoneyBreakdown
+            ? myMoneyBreakdown.freeBalance
+            : hasIncomeConfigured
+              ? income - totalSpent - totalSavingsScope
+              : 0;
+
+    const handlePieSliceClick = useCallback(
+        (categoryName: string) => {
+            const params = new URLSearchParams(searchParams.toString());
+            params.set("category", categoryName);
+            if (scopeAccountId === "my-money") {
+                params.set("account", "all");
+            } else {
+                params.set("account", scopeAccountId);
+            }
+            params.delete("quickAdd");
+            params.delete("recurring");
+            const q = params.toString();
+            router.push(`/history?${q}`);
+        },
+        [router, searchParams, scopeAccountId]
+    );
+
     const handleCloseSheet = () => {
         setIsSheetOpen(false);
         setQuickAddIntent(null);
@@ -387,7 +457,7 @@ export default function Dashboard({
                 <motion.div
                     initial={reduceMotion ? false : { y: -60, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
-                    className="fixed top-0 inset-x-0 z-50 bg-white/80 dark:bg-ios-dark-card/80 backdrop-blur-xl border-b border-gray-200/60 dark:border-white/10 pt-safe"
+                    className="fixed top-0 inset-x-0 z-50 bg-white/80 dark:bg-ios-dark-card/80 backdrop-blur-xl border-b border-gray-200/60 dark:border-white/10 pt-safe will-change-transform"
                 >
                     <div className="max-w-md mx-auto px-5 py-3 flex justify-between items-center">
                         <span className="font-bold text-base text-ios-text dark:text-ios-dark-text">
@@ -511,6 +581,27 @@ export default function Dashboard({
                                         <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text">₪{formatIlsAmount(totalSpent)}</p>
                                     </div>
                                 </div>
+                                {totalSavingsScope > 0 ? (
+                                    <div className="pt-3 mt-1 space-y-2 border-t border-gray-100/80 dark:border-white/10">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle font-medium">הפרשות לחיסכון</p>
+                                            <p className="text-sm font-semibold text-ios-green tabular-nums">
+                                                ₪{formatIlsAmount(totalSavingsScope)}
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center justify-between gap-3">
+                                            <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle font-medium">יתרה פנויה</p>
+                                            <p
+                                                className={`text-sm font-semibold tabular-nums ${
+                                                    freeAfterSavings >= 0 ? "text-ios-text dark:text-ios-dark-text" : "text-ios-red"
+                                                }`}
+                                            >
+                                                {freeAfterSavings >= 0 ? "₪" : "-₪"}
+                                                {formatIlsAmount(Math.abs(freeAfterSavings))}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ) : null}
                             </div>
                         </div>
                     ) : (
@@ -556,6 +647,21 @@ export default function Dashboard({
                     )}
                 </motion.div>
 
+                <SavingsAllocationCard
+                    allocations={scopedSavings}
+                    savingsLabels={savingsLabels}
+                    totalAllocations={totalSavingsScope}
+                    reduceMotion={!!reduceMotion}
+                    onAdd={() => {
+                        setEditingSavings(null);
+                        setSavingsSheetOpen(true);
+                    }}
+                    onEdit={(row) => {
+                        setEditingSavings(row);
+                        setSavingsSheetOpen(true);
+                    }}
+                />
+
                 <motion.div
                     initial={sectionEnter}
                     animate={{ opacity: 1, y: 0 }}
@@ -593,6 +699,23 @@ export default function Dashboard({
                                             ₪{formatIlsAmount(Math.round(myMoneyBreakdown.totalAttributedExpenses))}
                                         </p>
                                     </div>
+                                    <div className="rounded-lg bg-white/70 dark:bg-ios-dark-card/70 px-2 py-2 col-span-2">
+                                        <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">הפרשות חיסכון (מיוחס)</p>
+                                        <p className="text-sm font-semibold text-ios-green tabular-nums">
+                                            ₪{formatIlsAmount(Math.round(myMoneyBreakdown.totalAttributedSavingsAllocations))}
+                                        </p>
+                                    </div>
+                                    <div className="rounded-lg bg-white/70 dark:bg-ios-dark-card/70 px-2 py-2 col-span-2">
+                                        <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">יתרה פנויה אחרי הפרשות</p>
+                                        <p
+                                            className={`text-sm font-semibold tabular-nums ${
+                                                myMoneyBreakdown.freeBalance >= 0 ? "text-ios-text dark:text-ios-dark-text" : "text-ios-red"
+                                            }`}
+                                        >
+                                            {myMoneyBreakdown.freeBalance >= 0 ? "₪" : "-₪"}
+                                            {formatIlsAmount(Math.abs(Math.round(myMoneyBreakdown.freeBalance)))}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                             {myMoneyBreakdown.categories.length > 0 && (
@@ -603,26 +726,54 @@ export default function Dashboard({
                                             ? (cat.amount / myMoneyBreakdown.totalAttributedExpenses) * 100
                                             : 0;
                                         const icon = getCategoryIcon(categories, cat.name);
+                                        const hasShared = cat.sharedPortion > 0;
+                                        const hasPersonal = cat.personalPortion > 0;
+                                        const isMixed = hasShared && hasPersonal;
+                                        const badgeLabel = !hasShared
+                                            ? null
+                                            : isMixed
+                                              ? "משולב"
+                                              : "משותף";
                                         return (
-                                            <div key={cat.name} className="flex items-center gap-2.5">
-                                                <span className="text-base w-6 text-center flex-shrink-0">{icon}</span>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center justify-between mb-0.5">
-                                                        <span className="text-xs font-medium text-ios-text dark:text-ios-dark-text truncate">{cat.name}</span>
-                                                        <span className="text-xs font-semibold text-ios-text dark:text-ios-dark-text tabular-nums flex-shrink-0 ms-2">
-                                                            ₪{formatIlsAmount(Math.round(cat.amount))}
+                                            <div
+                                                key={cat.name}
+                                                className="grid grid-cols-[1.5rem_1fr_auto_3.75rem] grid-rows-[auto_auto] gap-x-2 gap-y-1 items-center"
+                                            >
+                                                <span className="row-span-2 text-base w-6 text-center justify-self-center">{icon}</span>
+                                                <span className="min-w-0 truncate text-xs font-medium text-ios-text dark:text-ios-dark-text col-start-2 row-start-1">
+                                                    {cat.name}
+                                                </span>
+                                                <span className="text-xs font-semibold text-ios-text dark:text-ios-dark-text tabular-nums text-end whitespace-nowrap col-start-3 row-start-1 min-w-[4.25rem]">
+                                                    ₪{formatIlsAmount(Math.round(cat.amount))}
+                                                </span>
+                                                <div className="row-span-2 col-start-4 row-start-1 flex items-center justify-center self-center min-h-[1.75rem]">
+                                                    {badgeLabel ? (
+                                                        <span className="text-[10px] font-semibold text-ios-indigo bg-ios-indigo/10 px-1.5 py-0.5 rounded-md text-center leading-tight max-w-[3.75rem]">
+                                                            {badgeLabel}
                                                         </span>
-                                                    </div>
-                                                    <div className="h-1.5 rounded-full bg-gray-200/70 dark:bg-ios-dark-fill overflow-hidden">
-                                                        <div
-                                                            className={`h-full rounded-full ${cat.source === 'shared' ? 'bg-ios-indigo/70' : 'bg-ios-blue/70'}`}
-                                                            style={{ width: `${pct}%` }}
-                                                        />
+                                                    ) : (
+                                                        <span className="w-[3.25rem]" aria-hidden />
+                                                    )}
+                                                </div>
+                                                <div className="col-start-2 col-span-2 row-start-2 min-w-0 h-2 rounded-full bg-gray-200/70 dark:bg-ios-dark-fill overflow-hidden flex">
+                                                    <div
+                                                        className="h-full flex min-w-0 rounded-full overflow-hidden"
+                                                        style={{ width: `${pct}%` }}
+                                                    >
+                                                        {hasShared ? (
+                                                            <div
+                                                                className="h-full min-w-0 bg-ios-indigo/70"
+                                                                style={{ flex: cat.sharedPortion }}
+                                                            />
+                                                        ) : null}
+                                                        {hasPersonal ? (
+                                                            <div
+                                                                className="h-full min-w-0 bg-ios-blue/70"
+                                                                style={{ flex: cat.personalPortion }}
+                                                            />
+                                                        ) : null}
                                                     </div>
                                                 </div>
-                                                {cat.source === 'shared' && (
-                                                    <span className="text-[10px] font-semibold text-ios-indigo bg-ios-indigo/10 px-1.5 py-0.5 rounded-md flex-shrink-0">משותף</span>
-                                                )}
                                             </div>
                                         );
                                     })}
@@ -687,7 +838,7 @@ export default function Dashboard({
                     <h2 className="text-lg font-bold text-ios-text dark:text-ios-dark-text mb-3">התפלגות הוצאות</h2>
                     <div className="relative rounded-2xl overflow-hidden">
                         <div className={shouldShowSpendingTeaser ? "blur-[3px] opacity-90 pointer-events-none select-none" : ""}>
-                            <PieChart data={spendingTeaserData} />
+                            <PieChart data={spendingTeaserData} onSliceClick={shouldShowSpendingTeaser ? undefined : handlePieSliceClick} />
                         </div>
                         {shouldShowSpendingTeaser && (
                             <div className="absolute inset-0 flex items-center justify-center px-4">
@@ -819,6 +970,16 @@ export default function Dashboard({
                 onClose={handleCloseRecurringSheet}
                 categories={categories}
                 accounts={accounts}
+            />
+            <SavingsAllocationSheet
+                isOpen={savingsSheetOpen}
+                onClose={() => {
+                    setSavingsSheetOpen(false);
+                    setEditingSavings(null);
+                }}
+                initialData={editingSavings}
+                accounts={accounts}
+                savingsLabels={savingsLabels}
             />
         </div>
     );

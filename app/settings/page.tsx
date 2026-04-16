@@ -1,17 +1,22 @@
-import { getCategories, getAccountsWithMembersForSettings, getCurrentUserProfile, getContributionPlans } from '../actions';
+import {
+  getCategories,
+  getAccountsWithMembersForSettings,
+  getCurrentUserProfile,
+  getContributionPlans,
+  getSavingsLabels,
+} from '../actions';
 import SettingsContent from './SettingsContent';
 import BottomNav from '@/components/BottomNav';
 import { redirectToOnboardingIfNeeded } from '@/lib/onboarding';
 
-export const dynamic = 'force-dynamic';
-
 export default async function SettingsPage() {
   await redirectToOnboardingIfNeeded();
-  const [categories, accounts, contributionPlans, currentUser] = await Promise.all([
+  const [categories, accounts, contributionPlans, currentUser, savingsLabels] = await Promise.all([
     getCategories(),
     getAccountsWithMembersForSettings(),
     getContributionPlans(),
     getCurrentUserProfile(),
+    getSavingsLabels(),
   ]);
 
   return (
@@ -30,6 +35,7 @@ export default async function SettingsPage() {
             initialCategories={categories}
             initialAccounts={accounts}
             initialContributionPlans={contributionPlans}
+            initialSavingsLabels={savingsLabels}
             currentUser={currentUser}
           />
 

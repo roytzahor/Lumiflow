@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { X, Trash2 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
-import type { Account, AccountType } from '@/lib/types';
+import type { AccountSummary, AccountType } from '@/lib/types';
 
 type AccountFormValues = {
   name: string;
@@ -14,7 +14,7 @@ type AccountFormValues = {
 interface AccountPopupProps {
   isOpen: boolean;
   mode: 'create' | 'edit';
-  account: Account | null;
+  account: AccountSummary | null;
   initialMonthlyContribution?: number;
   isSaving?: boolean;
   isDeleting?: boolean;
