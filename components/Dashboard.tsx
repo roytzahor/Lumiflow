@@ -4,7 +4,11 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { motion, AnimatePresence, useReducedMotion, useScroll, useMotionValueEvent } from "framer-motion";
 import dynamic from "next/dynamic";
 import { formatIlsAmount, formatUtcMonthYear, getHourInTimezone } from "@/lib/formatters";
-import { updateDashboardRecurringSectionExpanded } from "@/app/actions";
+import {
+    updateDashboardRecurringSectionExpanded,
+    updateDashboardSavingsSectionExpanded,
+    updateDashboardSpendingSectionExpanded,
+} from "@/app/actions";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, ChevronLeft, Lock } from "lucide-react";
@@ -53,6 +57,8 @@ interface DashboardProps {
     myContributionRatios?: ContributionRatio[];
     viewerName?: string | null;
     initialRecurringSectionExpanded?: boolean;
+    initialSavingsSectionExpanded?: boolean;
+    initialSpendingSectionExpanded?: boolean;
 }
 
 function getGreeting(now: Date): string {
@@ -188,7 +194,9 @@ export default function Dashboard({
     monthlyIncomeEntries = [],
     myContributionRatios = [],
     viewerName = null,
-    initialRecurringSectionExpanded = true,
+    initialRecurringSectionExpanded = false,
+    initialSavingsSectionExpanded = false,
+    initialSpendingSectionExpanded = true,
 }: DashboardProps) {
     const [isSheetOpen, setIsSheetOpen] = useState(false);
     const [savingsSheetOpen, setSavingsSheetOpen] = useState(false);
@@ -203,6 +211,23 @@ export default function Dashboard({
     useEffect(() => {
         setRecurringSectionExpanded(initialRecurringSectionExpanded);
     }, [initialRecurringSectionExpanded]);
+
+    const [savingsSectionExpanded, setSavingsSectionExpanded] = useState(initialSavingsSectionExpanded);
+    const savingsExpandedRef = useRef(savingsSectionExpanded);
+    savingsExpandedRef.current = savingsSectionExpanded;
+
+    useEffect(() => {
+        setSavingsSectionExpanded(initialSavingsSectionExpanded);
+    }, [initialSavingsSectionExpanded]);
+
+    const [spendingSectionExpanded, setSpendingSectionExpanded] = useState(initialSpendingSectionExpanded);
+    const spendingExpandedRef = useRef(spendingSectionExpanded);
+    spendingExpandedRef.current = spendingSectionExpanded;
+
+    useEffect(() => {
+        setSpendingSectionExpanded(initialSpendingSectionExpanded);
+    }, [initialSpendingSectionExpanded]);
+
     const router = useRouter();
     const searchParams = useSearchParams();
     const accountParam = searchParams.get("account");
@@ -361,11 +386,6 @@ export default function Dashboard({
         ];
     }, [chartData, shouldShowSpendingTeaser]);
 
-    const accountBalances = useMemo(() => {
-        if (scopeAccountId === "all" || scopeAccountId === "my-money") return accountBalancesAll;
-        return accountBalancesAll.filter((row) => row.account.id === scopeAccountId);
-    }, [accountBalancesAll, scopeAccountId]);
-
     const totalMonthlyInflowScope = useMemo(() => {
         if (scopeAccountId === "all" || scopeAccountId === "my-money") {
             return accountBalancesAll.reduce((sum, row) => sum + row.monthlyInflow, 0);
@@ -448,6 +468,34 @@ export default function Dashboard({
         void updateDashboardRecurringSectionExpanded(next);
     };
 
+    const toggleSavingsSection = () => {
+        const next = !savingsExpandedRef.current;
+        setSavingsSectionExpanded(next);
+        void updateDashboardSavingsSectionExpanded(next);
+    };
+
+    const toggleSpendingSection = () => {
+        const next = !spendingExpandedRef.current;
+        setSpendingSectionExpanded(next);
+        void updateDashboardSpendingSectionExpanded(next);
+    };
+
+    const scopeSelectorVisible = accounts.length > 1 || myContributionRatios.length > 0;
+    const perAccountBreakdownVisible = scopeAccountId === "all" && accountBalancesAll.length > 1;
+
+    const heroTitle =
+        scopeAccountId === "all"
+            ? "החודש שלי"
+            : scopeAccountId === "my-money"
+              ? "הכסף שלי"
+              : (accounts.find((a) => a.id === scopeAccountId)?.name ?? "חשבון");
+
+    const incomeTileLabel =
+        scopeAccountId === "my-money" ? "הכנסות שלי" : scopeAccountId === "all" ? "הכנסות לחשבונות" : "הכנסות";
+    const expensesTileLabel = scopeAccountId === "my-money" ? "הוצאות מיוחסות לי" : "הוצאות";
+    const savingsTileLabel = scopeAccountId === "my-money" ? "הפרשות (מיוחס)" : "הפרשות לחיסכון";
+    const freeTileLabel = scopeAccountId === "my-money" ? "יתרה אחרי הפרשות" : "יתרה פנויה";
+
     const monthName = formatUtcMonthYear(selectedMonth);
     const sectionEnter = reduceMotion ? false : ({ opacity: 0, y: 20 } as const);
     const sectionDelay = (seconds: number) => ({ delay: reduceMotion ? 0 : seconds });
@@ -489,83 +537,90 @@ export default function Dashboard({
                     <MonthSelector basePath="/" />
                 </div>
 
-                {(accounts.length > 1 || myContributionRatios.length > 0) ? (
-                    <div className="mb-6 min-w-0 max-w-full flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
-                        <h2 className="text-lg font-bold text-ios-text dark:text-ios-dark-text shrink-0">תצוגה לפי חשבון</h2>
-                        <div className="relative w-full sm:w-auto sm:min-w-[11rem] shrink-0">
-                            <label htmlFor="dashboard-scope-account" className="sr-only">
-                                חשבון לתצוגה בסקירה
-                            </label>
-                            <select
-                                id="dashboard-scope-account"
-                                value={scopeAccountId}
-                                onChange={(e) => {
-                                    const v = e.target.value;
-                                    setScopeAccount(v === "all" ? "all" : v);
-                                }}
-                                aria-label="חשבון לתצוגה בסקירה"
-                                className="w-full appearance-none rounded-xl border border-gray-200/90 dark:border-white/10 bg-white/90 dark:bg-ios-dark-fill/90 text-sm font-semibold text-ios-text dark:text-ios-dark-text py-2.5 ps-3 pe-9 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ios-blue/40"
-                            >
-                                <option value="all">כל החשבונות</option>
-                                {myContributionRatios.length > 0 && (
-                                    <option value="my-money">הכסף שלי</option>
-                                )}
-                                {accounts.map((acc) => (
-                                    <option key={acc.id} value={acc.id}>
-                                        {getAccountLabel(acc)}
-                                    </option>
-                                ))}
-                            </select>
-                            <ChevronDown className="pointer-events-none absolute end-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ios-subtle dark:text-ios-dark-subtle" aria-hidden />
-                        </div>
-                    </div>
-                ) : null}
-
-                {/* Savings Ring */}
+                {/* Hero: scope + monthly status */}
                 <motion.div
                     initial={sectionEnter}
                     animate={{ opacity: 1, y: 0 }}
                     transition={sectionDelay(0.1)}
-                    className={`bg-ios-card dark:bg-ios-dark-card rounded-3xl p-6 shadow-card mb-4 ${hasIncomeConfigured ? '' : 'opacity-80'}`}
+                    className={`bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 sm:p-6 shadow-card mb-4 ${hasIncomeConfigured ? "" : "opacity-80"}`}
                 >
-                    {hasIncomeConfigured ? (
-                        <div className="flex items-center gap-6">
-                            {/* Ring */}
-                            <div className="relative w-24 h-24 flex-shrink-0">
-                                <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                                    <circle
-                                        cx="50" cy="50" r="42"
-                                        stroke="#E5E5EA" strokeWidth="6"
-                                        fill="transparent"
-                                    />
-                                    <motion.circle
-                                        cx="50" cy="50" r="42"
-                                        stroke={savedSoFar >= 0 ? "#34C759" : "#FF3B30"}
-                                        strokeWidth="6"
-                                        fill="transparent"
-                                        strokeLinecap="round"
-                                        initial={{ pathLength: reduceMotion ? savingsRatio / 100 : 0 }}
-                                        animate={{ pathLength: savingsRatio / 100 }}
-                                        transition={
-                                            reduceMotion
-                                                ? { duration: 0 }
-                                                : { duration: 1.2, ease: "easeOut", delay: 0.3 }
-                                        }
-                                        strokeDasharray="1"
-                                    />
-                                </svg>
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                    <span className="text-sm font-bold text-ios-text dark:text-ios-dark-text">
-                                        {Math.round(savingsRatio)}%
-                                    </span>
-                                </div>
+                    <div className="mb-5 flex min-w-0 flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+                        <h2 className="min-w-0 shrink text-lg font-bold tracking-tight text-ios-text dark:text-ios-dark-text truncate">
+                            {heroTitle}
+                        </h2>
+                        {scopeSelectorVisible ? (
+                            <div className="relative w-full shrink-0 sm:w-auto sm:min-w-[11rem]">
+                                <label htmlFor="dashboard-scope-account" className="sr-only">
+                                    חשבון לתצוגה בסקירה
+                                </label>
+                                <select
+                                    id="dashboard-scope-account"
+                                    value={scopeAccountId}
+                                    onChange={(e) => {
+                                        const v = e.target.value;
+                                        setScopeAccount(v === "all" ? "all" : v);
+                                    }}
+                                    aria-label="חשבון לתצוגה בסקירה"
+                                    className="w-full appearance-none rounded-xl border border-gray-200/90 dark:border-white/10 bg-white/90 dark:bg-ios-dark-fill/90 py-2.5 ps-3 pe-9 text-sm font-semibold text-ios-text shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ios-blue/40 dark:text-ios-dark-text"
+                                >
+                                    <option value="all">כל החשבונות</option>
+                                    {myContributionRatios.length > 0 && (
+                                        <option value="my-money">הכסף שלי</option>
+                                    )}
+                                    {accounts.map((acc) => (
+                                        <option key={acc.id} value={acc.id}>
+                                            {getAccountLabel(acc)}
+                                        </option>
+                                    ))}
+                                </select>
+                                <ChevronDown
+                                    className="pointer-events-none absolute end-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ios-subtle dark:text-ios-dark-subtle"
+                                    aria-hidden
+                                />
                             </div>
+                        ) : null}
+                    </div>
 
-                            {/* Stats */}
-                            <div className="flex-1 space-y-3">
-                                <div>
+                    {hasIncomeConfigured ? (
+                        <>
+                            <div className="flex items-center gap-6">
+                                <div className="relative h-24 w-24 flex-shrink-0">
+                                    <svg className="h-full w-full -rotate-90" viewBox="0 0 100 100">
+                                        <circle
+                                            cx="50"
+                                            cy="50"
+                                            r="42"
+                                            stroke="#E5E5EA"
+                                            strokeWidth="6"
+                                            fill="transparent"
+                                        />
+                                        <motion.circle
+                                            cx="50"
+                                            cy="50"
+                                            r="42"
+                                            stroke={savedSoFar >= 0 ? "#34C759" : "#FF3B30"}
+                                            strokeWidth="6"
+                                            fill="transparent"
+                                            strokeLinecap="round"
+                                            initial={{ pathLength: reduceMotion ? savingsRatio / 100 : 0 }}
+                                            animate={{ pathLength: savingsRatio / 100 }}
+                                            transition={
+                                                reduceMotion
+                                                    ? { duration: 0 }
+                                                    : { duration: 1.2, ease: "easeOut", delay: 0.3 }
+                                            }
+                                            strokeDasharray="1"
+                                        />
+                                    </svg>
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        <span className="text-sm font-bold text-ios-text dark:text-ios-dark-text">
+                                            {Math.round(savingsRatio)}%
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="min-w-0 flex-1">
                                     <div className="flex items-center gap-1.5">
-                                        <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle font-medium">
+                                        <p className="text-xs font-medium text-ios-subtle dark:text-ios-dark-subtle">
                                             {scopeAccountId === "my-money" ? "חסכתי החודש" : "חסכנו החודש"}
                                         </p>
                                         {scopeAccountId === "my-money" ? (
@@ -573,8 +628,8 @@ export default function Dashboard({
                                                 {myMoneyBreakdown ? (
                                                     <>
                                                         הסכום משקף את ההכנסות שלך פחות הוצאות שמיוחסות אליך (כולל
-                                                        חלק יחסי מהחשבון המשותף). למטה אפשר לראות פירוט הפרשות
-                                                        חיסכון ויתרה פנויה.
+                                                        חלק יחסי מהחשבון המשותף). כאן למטה פירוט הפרשות חיסכון
+                                                        ויתרה פנויה.
                                                     </>
                                                 ) : (
                                                     <>
@@ -585,79 +640,98 @@ export default function Dashboard({
                                             </InfoHint>
                                         ) : null}
                                     </div>
-                                    <p className={`text-2xl font-bold tracking-tight ${savedSoFar >= 0 ? 'text-ios-green' : 'text-ios-red'}`}>
+                                    <p
+                                        className={`text-2xl font-bold tracking-tight ${savedSoFar >= 0 ? "text-ios-green" : "text-ios-red"}`}
+                                    >
                                         ₪{formatIlsAmount(savedSoFar)}
                                     </p>
                                 </div>
-                                <div className="flex gap-6">
-                                    <div>
-                                        <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">
-                                            {scopeAccountId === "my-money" ? "הכנסות שלי" : "הכנסות לחשבונות"}
-                                        </p>
-                                        <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text">₪{formatIlsAmount(income)}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">הוצאות</p>
-                                        <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text">₪{formatIlsAmount(totalSpent)}</p>
-                                    </div>
-                                </div>
-                                {totalSavingsScope > 0 ? (
-                                    <div className="pt-3 mt-1 space-y-2 border-t border-gray-100/80 dark:border-white/10">
-                                        <div className="flex items-center justify-between gap-3">
-                                            <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle font-medium">הפרשות לחיסכון</p>
-                                            <p className="text-sm font-semibold text-ios-green tabular-nums">
-                                                ₪{formatIlsAmount(totalSavingsScope)}
-                                            </p>
-                                        </div>
-                                        <div className="flex items-center justify-between gap-3">
-                                            <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle font-medium">יתרה פנויה</p>
-                                            <p
-                                                className={`text-sm font-semibold tabular-nums ${
-                                                    freeAfterSavings >= 0 ? "text-ios-text dark:text-ios-dark-text" : "text-ios-red"
-                                                }`}
-                                            >
-                                                {freeAfterSavings >= 0 ? "₪" : "-₪"}
-                                                {formatIlsAmount(Math.abs(freeAfterSavings))}
-                                            </p>
-                                        </div>
-                                    </div>
-                                ) : null}
                             </div>
-                        </div>
+
+                            <div className="mt-5 grid grid-cols-2 gap-2">
+                                <div className="rounded-xl bg-white/70 px-2 py-2.5 text-center dark:bg-ios-dark-card/70">
+                                    <p className="text-[11px] font-medium text-ios-subtle dark:text-ios-dark-subtle">
+                                        {incomeTileLabel}
+                                    </p>
+                                    <p className="text-sm font-semibold tabular-nums text-ios-text dark:text-ios-dark-text">
+                                        ₪{formatIlsAmount(income)}
+                                    </p>
+                                </div>
+                                <div className="rounded-xl bg-white/70 px-2 py-2.5 text-center dark:bg-ios-dark-card/70">
+                                    <p className="text-[11px] font-medium text-ios-subtle dark:text-ios-dark-subtle">
+                                        {expensesTileLabel}
+                                    </p>
+                                    <p className="text-sm font-semibold tabular-nums text-ios-text dark:text-ios-dark-text">
+                                        ₪{formatIlsAmount(totalSpent)}
+                                    </p>
+                                </div>
+                                <div className="rounded-xl bg-white/70 px-2 py-2.5 text-center dark:bg-ios-dark-card/70">
+                                    <p className="text-[11px] font-medium text-ios-subtle dark:text-ios-dark-subtle">
+                                        {savingsTileLabel}
+                                    </p>
+                                    <p className="text-sm font-semibold tabular-nums text-ios-green">
+                                        ₪{formatIlsAmount(totalSavingsScope)}
+                                    </p>
+                                </div>
+                                <div className="rounded-xl bg-white/70 px-2 py-2.5 text-center dark:bg-ios-dark-card/70">
+                                    <p className="text-[11px] font-medium text-ios-subtle dark:text-ios-dark-subtle">
+                                        {freeTileLabel}
+                                    </p>
+                                    <p
+                                        className={`text-sm font-semibold tabular-nums ${
+                                            freeAfterSavings >= 0 ? "text-ios-text dark:text-ios-dark-text" : "text-ios-red"
+                                        }`}
+                                    >
+                                        {freeAfterSavings >= 0 ? "₪" : "-₪"}
+                                        {formatIlsAmount(Math.abs(freeAfterSavings))}
+                                    </p>
+                                </div>
+                            </div>
+                        </>
                     ) : (
-                        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-ios-gray-6/40 dark:bg-ios-dark-fill/30 p-5 min-h-[152px]">
+                        <div className="relative min-h-[152px] overflow-hidden rounded-2xl border border-white/10 bg-ios-gray-6/40 p-5 dark:bg-ios-dark-fill/30">
                             <div className="pointer-events-none select-none blur-[2.5px] opacity-90">
                                 <div className="flex items-center gap-6">
-                                    <div className="relative w-24 h-24 flex-shrink-0 rounded-full bg-white/70 dark:bg-ios-dark-card/70" />
+                                    <div className="relative h-24 w-24 flex-shrink-0 rounded-full bg-white/70 dark:bg-ios-dark-card/70" />
                                     <div className="flex-1 space-y-3">
                                         <div>
-                                            <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle font-medium">חסכנו החודש</p>
-                                            <p className="text-2xl font-bold tracking-tight text-ios-subtle dark:text-ios-dark-subtle">₪0</p>
+                                            <p className="text-xs font-medium text-ios-subtle dark:text-ios-dark-subtle">
+                                                חסכנו החודש
+                                            </p>
+                                            <p className="text-2xl font-bold tracking-tight text-ios-subtle dark:text-ios-dark-subtle">
+                                                ₪0
+                                            </p>
                                         </div>
                                         <div className="flex gap-6">
                                             <div>
-                                                <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">הכנסות לחשבונות</p>
-                                                <p className="text-sm font-semibold text-ios-subtle dark:text-ios-dark-subtle">₪0</p>
+                                                <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">
+                                                    הכנסות לחשבונות
+                                                </p>
+                                                <p className="text-sm font-semibold text-ios-subtle dark:text-ios-dark-subtle">
+                                                    ₪0
+                                                </p>
                                             </div>
                                             <div>
                                                 <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">הוצאות</p>
-                                                <p className="text-sm font-semibold text-ios-subtle dark:text-ios-dark-subtle">₪0</p>
+                                                <p className="text-sm font-semibold text-ios-subtle dark:text-ios-dark-subtle">
+                                                    ₪0
+                                                </p>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            <div className="absolute inset-0 flex items-center justify-center px-4 pointer-events-none">
-                                <div className="w-[235px] rounded-xl bg-white/28 dark:bg-ios-dark-card/42 backdrop-blur-xl border border-white/20 dark:border-white/10 px-3 py-3 text-center shadow-card pointer-events-auto">
-                                    <div className="w-8 h-8 rounded-full bg-ios-blue/15 text-ios-blue flex items-center justify-center mx-auto mb-2">
-                                        <Lock className="w-4 h-4" />
+                            <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-4">
+                                <div className="pointer-events-auto w-[235px] rounded-xl border border-white/20 bg-white/28 px-3 py-3 text-center shadow-card backdrop-blur-xl dark:border-white/10 dark:bg-ios-dark-card/42">
+                                    <div className="mx-auto mb-2 flex h-8 w-8 items-center justify-center rounded-full bg-ios-blue/15 text-ios-blue">
+                                        <Lock className="h-4 w-4" />
                                     </div>
-                                    <p className="text-xs text-ios-text dark:text-ios-dark-text leading-relaxed">
+                                    <p className="text-xs leading-relaxed text-ios-text dark:text-ios-dark-text">
                                         הגדירו תרומה חודשית לכל חשבון בהגדרות כדי לראות כמה חסכתם החודש
                                     </p>
                                     <Link
                                         href="/settings"
-                                        className="mt-3 inline-flex items-center justify-center w-full rounded-xl bg-ios-blue text-white text-xs font-semibold py-2.5 active:opacity-90"
+                                        className="mt-3 inline-flex w-full items-center justify-center rounded-xl bg-ios-blue py-2.5 text-xs font-semibold text-white active:opacity-90"
                                     >
                                         הגדרות חשבונות
                                     </Link>
@@ -667,132 +741,31 @@ export default function Dashboard({
                     )}
                 </motion.div>
 
-                <SavingsAllocationCard
-                    allocations={scopedSavings}
-                    savingsLabels={savingsLabels}
-                    totalAllocations={totalSavingsScope}
-                    reduceMotion={!!reduceMotion}
-                    onAdd={() => {
-                        setEditingSavings(null);
-                        setSavingsSheetOpen(true);
-                    }}
-                    onEdit={(row) => {
-                        setEditingSavings(row);
-                        setSavingsSheetOpen(true);
-                    }}
-                />
-
-                <motion.div
-                    initial={sectionEnter}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={sectionDelay(0.2)}
-                    className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 shadow-card mb-6"
-                >
-                    <div className="flex items-center justify-between mb-3">
-                        <h2 className="text-lg font-bold text-ios-text dark:text-ios-dark-text">
-                            {scopeAccountId === "my-money" ? "הכסף שלי" : "מאזן לפי חשבון"}
-                        </h2>
-                        {scopeAccountId !== "my-money" && (
-                            <span className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle">{accountBalances.length} חשבונות</span>
-                        )}
-                    </div>
-
-                    {scopeAccountId === "my-money" && myMoneyBreakdown ? (
-                        <div className="space-y-3">
-                            <div className="rounded-2xl bg-ios-blue/8 ring-1 ring-ios-blue/20 p-4">
-                                <div className="flex items-start justify-between gap-2 mb-3">
-                                    <div className="flex min-w-0 flex-1 items-center gap-1.5">
-                                        <p className="text-sm font-semibold text-ios-blue">סיכום חודשי אישי</p>
-                                        <InfoHint ariaLabel="הסבר על סיכום חודשי אישי">
-                                            הסכומים כאן מחושבים לפי &quot;הכסף שלי&quot;: הכנסות (תרומות חודשיות
-                                            והכנסות חד־פעמיות), הוצאות אחרי ייחוד אישי, הפרשות חיסכון מיוחסות,
-                                            ויתרה פנויה לאחר ההפרשות.
-                                        </InfoHint>
-                                    </div>
-                                    <p className={`shrink-0 text-sm font-bold tabular-nums ${myMoneyBreakdown.balance >= 0 ? "text-ios-green" : "text-ios-red"}`}>
-                                        {myMoneyBreakdown.balance >= 0 ? "₪" : "-₪"}{formatIlsAmount(Math.abs(myMoneyBreakdown.balance))}
-                                    </p>
-                                </div>
-                                <div className="grid grid-cols-2 gap-2 text-center">
-                                    <div className="rounded-lg bg-white/70 dark:bg-ios-dark-card/70 px-2 py-2">
-                                        <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">סה״כ הכנסות שלי</p>
-                                        <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text tabular-nums">
-                                            ₪{formatIlsAmount(Math.round(myMoneyBreakdown.totalIncome))}
-                                        </p>
-                                    </div>
-                                    <div className="rounded-lg bg-white/70 dark:bg-ios-dark-card/70 px-2 py-2">
-                                        <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">הוצאות מיוחסות לי</p>
-                                        <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text tabular-nums">
-                                            ₪{formatIlsAmount(Math.round(myMoneyBreakdown.totalAttributedExpenses))}
-                                        </p>
-                                    </div>
-                                    <div className="rounded-lg bg-white/70 dark:bg-ios-dark-card/70 px-2 py-2 col-span-2">
-                                        <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">הפרשות חיסכון (מיוחס)</p>
-                                        <p className="text-sm font-semibold text-ios-green tabular-nums">
-                                            ₪{formatIlsAmount(Math.round(myMoneyBreakdown.totalAttributedSavingsAllocations))}
-                                        </p>
-                                    </div>
-                                    <div className="rounded-lg bg-white/70 dark:bg-ios-dark-card/70 px-2 py-2 col-span-2">
-                                        <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">יתרה פנויה אחרי הפרשות</p>
-                                        <p
-                                            className={`text-sm font-semibold tabular-nums ${
-                                                myMoneyBreakdown.freeBalance >= 0 ? "text-ios-text dark:text-ios-dark-text" : "text-ios-red"
-                                            }`}
-                                        >
-                                            {myMoneyBreakdown.freeBalance >= 0 ? "₪" : "-₪"}
-                                            {formatIlsAmount(Math.abs(Math.round(myMoneyBreakdown.freeBalance)))}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
+                {perAccountBreakdownVisible ? (
+                    <motion.div
+                        initial={sectionEnter}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={sectionDelay(0.2)}
+                        className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 shadow-card mb-6"
+                    >
+                        <div className="mb-3 flex items-center justify-between">
+                            <h2 className="text-lg font-bold text-ios-text dark:text-ios-dark-text">מאזן לפי חשבון</h2>
+                            <span className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle">
+                                {accountBalancesAll.length} חשבונות
+                            </span>
                         </div>
-                    ) : accountBalances.length === 0 ? (
-                        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-ios-gray-6/40 dark:bg-ios-dark-fill/30 p-3.5 min-h-[158px]">
-                            <div className="pointer-events-none select-none blur-[2.5px] opacity-85 space-y-2">
-                                {[0, 1, 2].map((row) => (
-                                    <div key={row} className="rounded-xl bg-white/70 dark:bg-ios-dark-card/65 p-3">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <span className="text-sm font-semibold text-ios-subtle dark:text-ios-dark-subtle">חשבון</span>
-                                            <span className="text-sm font-bold text-ios-subtle dark:text-ios-dark-subtle tabular-nums">₪0</span>
-                                        </div>
-                                        <div className="grid grid-cols-3 gap-2">
-                                            <div className="rounded-lg bg-ios-gray-6/70 dark:bg-ios-dark-fill/70 h-8" />
-                                            <div className="rounded-lg bg-ios-gray-6/70 dark:bg-ios-dark-fill/70 h-8" />
-                                            <div className="rounded-lg bg-ios-gray-6/70 dark:bg-ios-dark-fill/70 h-8" />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                            <div className="absolute inset-0 flex items-center justify-center px-4">
-                                <div className="w-[235px] rounded-xl bg-white/28 dark:bg-ios-dark-card/42 backdrop-blur-xl border border-white/20 dark:border-white/10 px-3 py-3 text-center shadow-card">
-                                    <div className="w-9 h-9 rounded-full bg-ios-blue/15 text-ios-blue flex items-center justify-center mx-auto mb-2">
-                                        <Lock className="w-4 h-4" />
-                                    </div>
-                                    <p className="text-xs text-ios-text dark:text-ios-dark-text leading-relaxed">
-                                        הוסיפו לחשבון הכנסות או הוצאות כדי לפתוח את המאזן
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    ) : accountBalances.length > 1 ? (
-                        <div className="flex flex-row-reverse gap-3 overflow-x-auto pb-2 pt-0.5 snap-x snap-mandatory no-scrollbar -mx-1 px-1">
-                            {accountBalances.map((row, index) => (
+                        <div className="-mx-1 flex snap-x snap-mandatory flex-row-reverse gap-3 overflow-x-auto px-1 pb-2 pt-0.5 no-scrollbar">
+                            {accountBalancesAll.map((row, index) => (
                                 <div
                                     key={row.account.id}
-                                    className="snap-center shrink-0 w-[min(100%,17.5rem)] max-w-[280px]"
+                                    className="w-[min(100%,17.5rem)] max-w-[280px] shrink-0 snap-center"
                                 >
                                     <DashboardAccountBalanceCard row={row} index={index} reduceMotion={!!reduceMotion} />
                                 </div>
                             ))}
                         </div>
-                    ) : (
-                        <div className="space-y-2.5">
-                            {accountBalances.map((row, index) => (
-                                <DashboardAccountBalanceCard key={row.account.id} row={row} index={index} reduceMotion={!!reduceMotion} />
-                            ))}
-                        </div>
-                    )}
-                </motion.div>
+                    </motion.div>
+                ) : null}
 
                 {/* Spending Breakdown */}
                 <motion.div
@@ -801,10 +774,34 @@ export default function Dashboard({
                     transition={sectionDelay(0.35)}
                     className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 shadow-card mb-6"
                 >
-                    <div className="mb-3 flex items-start justify-between gap-2">
-                        <h2 className="min-w-0 flex-1 text-lg font-bold text-ios-text dark:text-ios-dark-text">
-                            התפלגות הוצאות
-                        </h2>
+                    <div className="flex items-start justify-between gap-2">
+                        <button
+                            type="button"
+                            onClick={toggleSpendingSection}
+                            aria-expanded={spendingSectionExpanded}
+                            className="-mx-1 flex min-w-0 flex-1 items-center justify-between gap-2 rounded-xl px-1 py-0.5 text-start transition-colors active:bg-black/[0.03] dark:active:bg-white/[0.04]"
+                        >
+                            <div className="flex min-w-0 items-center gap-2">
+                                <motion.span
+                                    animate={{ rotate: spendingSectionExpanded ? 180 : 0 }}
+                                    transition={
+                                        reduceMotion
+                                            ? { duration: 0 }
+                                            : { type: "spring", stiffness: 400, damping: 30 }
+                                    }
+                                    className="inline-flex flex-shrink-0 text-ios-subtle dark:text-ios-dark-subtle"
+                                    aria-hidden
+                                >
+                                    <ChevronDown className="h-5 w-5" />
+                                </motion.span>
+                                <h2 className="truncate text-lg font-bold text-ios-text dark:text-ios-dark-text">
+                                    התפלגות הוצאות
+                                </h2>
+                            </div>
+                            <span className="flex-shrink-0 text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle">
+                                {chartData.length} קטגוריות
+                            </span>
+                        </button>
                         {scopeAccountId === "my-money" && myMoneyBreakdown ? (
                             <InfoHint ariaLabel="הסבר על תג משולב בהתפלגות">
                                 תג «משולב» מסמן שבקטגוריה נכלל גם חלק מהוצאות בחשבון משותף — אחרי ייחוד לפי אחוז
@@ -812,23 +809,60 @@ export default function Dashboard({
                             </InfoHint>
                         ) : null}
                     </div>
-                    <div className="relative rounded-2xl overflow-hidden">
-                        <div className={shouldShowSpendingTeaser ? "blur-[3px] opacity-90 pointer-events-none select-none" : ""}>
-                            <PieChart data={spendingTeaserData} onSliceClick={shouldShowSpendingTeaser ? undefined : handlePieSliceClick} />
-                        </div>
-                        {shouldShowSpendingTeaser && (
-                            <div className="absolute inset-0 flex items-center justify-center px-4">
-                                <div className="w-[270px] rounded-2xl bg-white/28 dark:bg-ios-dark-card/42 backdrop-blur-xl border border-white/20 dark:border-white/10 px-4 py-3.5 text-center shadow-card">
-                                    <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text mb-1">
-                                        ההתפלגות תיפתח כשתתווספנה קטגוריות נוספות
-                                    </p>
-                                    <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle leading-relaxed">
-                                        יש להוסיף הוצאות מקטגוריות נוספות כדי לראות את התפלגות ההוצאות
-                                    </p>
+                    {!spendingSectionExpanded && chartData.length >= 2 ? (
+                        <p className="mt-2 pr-7 text-xs text-ios-subtle dark:text-ios-dark-subtle">
+                            לחצו להרחבת הגרף (התפלגות לפי קטגוריות)
+                        </p>
+                    ) : null}
+                    {!spendingSectionExpanded && chartData.length < 2 ? (
+                        <p className="mt-2 pr-7 text-xs leading-relaxed text-ios-subtle dark:text-ios-dark-subtle">
+                            הוסיפו הוצאות מקטגוריות נוספות כדי לראות התפלגות מלאה.
+                        </p>
+                    ) : null}
+                    <AnimatePresence initial={false}>
+                        {spendingSectionExpanded && (
+                            <motion.div
+                                key="spending-chart-body"
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: "auto" }}
+                                exit={{ opacity: 0, height: 0 }}
+                                transition={{
+                                    duration: reduceMotion ? 0.01 : 0.2,
+                                    ease: "easeInOut",
+                                }}
+                                className="overflow-hidden"
+                            >
+                                <div className="pt-3">
+                                    <div className="relative overflow-hidden rounded-2xl">
+                                        <div
+                                            className={
+                                                shouldShowSpendingTeaser
+                                                    ? "pointer-events-none select-none blur-[3px] opacity-90"
+                                                    : ""
+                                            }
+                                        >
+                                            <PieChart
+                                                data={spendingTeaserData}
+                                                onSliceClick={shouldShowSpendingTeaser ? undefined : handlePieSliceClick}
+                                            />
+                                        </div>
+                                        {shouldShowSpendingTeaser && (
+                                            <div className="absolute inset-0 flex items-center justify-center px-4">
+                                                <div className="w-[270px] rounded-2xl border border-white/20 bg-white/28 px-4 py-3.5 text-center shadow-card backdrop-blur-xl dark:border-white/10 dark:bg-ios-dark-card/42">
+                                                    <p className="mb-1 text-sm font-semibold text-ios-text dark:text-ios-dark-text">
+                                                        ההתפלגות תיפתח כשתתווספנה קטגוריות נוספות
+                                                    </p>
+                                                    <p className="text-xs leading-relaxed text-ios-subtle dark:text-ios-dark-subtle">
+                                                        יש להוסיף הוצאות מקטגוריות נוספות כדי לראות את התפלגות ההוצאות
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
+                            </motion.div>
                         )}
-                    </div>
+                    </AnimatePresence>
                 </motion.div>
 
                 <motion.div
@@ -928,6 +962,29 @@ export default function Dashboard({
                             </motion.div>
                         )}
                     </AnimatePresence>
+                </motion.div>
+
+                <motion.div
+                    initial={sectionEnter}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={sectionDelay(0.45)}
+                >
+                    <SavingsAllocationCard
+                        allocations={scopedSavings}
+                        savingsLabels={savingsLabels}
+                        totalAllocations={totalSavingsScope}
+                        reduceMotion={!!reduceMotion}
+                        sectionExpanded={savingsSectionExpanded}
+                        onToggleSection={toggleSavingsSection}
+                        onAdd={() => {
+                            setEditingSavings(null);
+                            setSavingsSheetOpen(true);
+                        }}
+                        onEdit={(row) => {
+                            setEditingSavings(row);
+                            setSavingsSheetOpen(true);
+                        }}
+                    />
                 </motion.div>
             </div>
 

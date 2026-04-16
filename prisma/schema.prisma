@@ -37,7 +37,11 @@ model User {
   onboardingCompletedAt DateTime?
   themePreference ThemePreference @default(SYSTEM)
   /// Collapsed/expanded state for "ריכוז הוצאות קבועות" on dashboard (persisted per user).
-  dashboardRecurringSectionExpanded Boolean @default(true)
+  dashboardRecurringSectionExpanded Boolean @default(false)
+  /// Collapsed/expanded state for "הפרשות חיסכון החודש" on dashboard (persisted per user).
+  dashboardSavingsSectionExpanded Boolean @default(false)
+  /// Collapsed/expanded state for "התפלגות הוצאות" (pie) on dashboard (persisted per user).
+  dashboardSpendingSectionExpanded Boolean @default(true)
   /// Whether history view lists recurring transactions (toggle "הצג הוצאות קבועות").
   historyShowRecurringTransactions Boolean @default(true)
   /// Collapsible settings page sections (expanded = open).

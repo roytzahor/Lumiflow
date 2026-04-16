@@ -70,7 +70,9 @@ export default async function DashboardDataLoader({
                 monthlyIncomeEntries={monthlyIncomeEntries}
                 myContributionRatios={myContributionRatios}
                 viewerName={currentUser?.name ?? null}
-                initialRecurringSectionExpanded={currentUser?.dashboardRecurringSectionExpanded ?? true}
+                initialRecurringSectionExpanded={currentUser?.dashboardRecurringSectionExpanded ?? false}
+                initialSavingsSectionExpanded={currentUser?.dashboardSavingsSectionExpanded ?? false}
+                initialSpendingSectionExpanded={currentUser?.dashboardSpendingSectionExpanded ?? true}
             />
         );
     } catch (error) {

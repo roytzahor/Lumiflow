@@ -1,6 +1,5 @@
 'use client';
 
-import { useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronDown, ChevronLeft, PiggyBank, Plus } from 'lucide-react';
 import { formatIlsAmount } from '@/lib/formatters';
@@ -11,6 +10,8 @@ interface SavingsAllocationCardProps {
   savingsLabels: SavingsLabel[];
   totalAllocations: number;
   reduceMotion: boolean;
+  sectionExpanded: boolean;
+  onToggleSection: () => void;
   onAdd: () => void;
   onEdit: (row: SavingsAllocationListItem) => void;
 }
@@ -24,30 +25,25 @@ export default function SavingsAllocationCard({
   savingsLabels,
   totalAllocations,
   reduceMotion,
+  sectionExpanded,
+  onToggleSection,
   onAdd,
   onEdit,
 }: SavingsAllocationCardProps) {
   const sectionEnter = reduceMotion ? false : ({ opacity: 0, y: 20 } as const);
   const sectionDelay = (seconds: number) => ({ delay: reduceMotion ? 0 : seconds });
-  const [sectionExpanded, setSectionExpanded] = useState(true);
-  const expandedRef = useRef(sectionExpanded);
-  expandedRef.current = sectionExpanded;
-
-  const toggleSection = () => {
-    setSectionExpanded(!expandedRef.current);
-  };
 
   return (
     <motion.div
       initial={sectionEnter}
       animate={{ opacity: 1, y: 0 }}
-      transition={sectionDelay(0.15)}
-      className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 shadow-card mb-4"
+      transition={sectionDelay(0)}
+      className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 shadow-card mb-4 mt-3"
     >
       <div className="flex items-center gap-2 mb-1">
         <button
           type="button"
-          onClick={toggleSection}
+          onClick={onToggleSection}
           aria-expanded={sectionExpanded}
           className="min-w-0 flex-1 flex items-center justify-between gap-2 text-start rounded-xl -mx-1 px-1 py-0.5 active:bg-black/[0.03] dark:active:bg-white/[0.04] transition-colors"
         >

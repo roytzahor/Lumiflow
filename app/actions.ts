@@ -448,6 +448,8 @@ export async function getCurrentUserProfile() {
         email: true,
         themePreference: true,
         dashboardRecurringSectionExpanded: true,
+        dashboardSavingsSectionExpanded: true,
+        dashboardSpendingSectionExpanded: true,
         historyShowRecurringTransactions: true,
         settingsProfileSectionExpanded: true,
         settingsAppearanceSectionExpanded: true,
@@ -537,6 +539,34 @@ export async function updateDashboardRecurringSectionExpanded(expanded: boolean)
     await prisma.user.update({
       where: { id: userId },
       data: { dashboardRecurringSectionExpanded: expanded },
+    });
+    revalidatePath('/');
+    return { success: true };
+  } catch {
+    return { success: false, error: 'עדכון העדפת תצוגה נכשל' };
+  }
+}
+
+export async function updateDashboardSavingsSectionExpanded(expanded: boolean) {
+  try {
+    const userId = await requireUserId();
+    await prisma.user.update({
+      where: { id: userId },
+      data: { dashboardSavingsSectionExpanded: expanded },
+    });
+    revalidatePath('/');
+    return { success: true };
+  } catch {
+    return { success: false, error: 'עדכון העדפת תצוגה נכשל' };
+  }
+}
+
+export async function updateDashboardSpendingSectionExpanded(expanded: boolean) {
+  try {
+    const userId = await requireUserId();
+    await prisma.user.update({
+      where: { id: userId },
+      data: { dashboardSpendingSectionExpanded: expanded },
     });
     revalidatePath('/');
     return { success: true };
