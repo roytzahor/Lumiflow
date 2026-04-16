@@ -1246,6 +1246,7 @@ export async function getSavingsAllocations(year?: number, month?: number) {
       select: {
         id: true,
         amount: true,
+        standingOrderToInvestment: true,
         label: true,
         description: true,
         date: true,
@@ -1269,6 +1270,7 @@ export async function addSavingsAllocation(formData: FormData) {
     const rawDate = String(formData.get('date') ?? '');
     const date = parseDateInputToUtc(rawDate);
     let accountId = String(formData.get('accountId') ?? '');
+    const standingOrderToInvestment = String(formData.get('standingOrderToInvestment') ?? '') === 'true';
 
     const accountIds = await getUserAccountIds(userId);
     if (!accountId) accountId = accountIds[0] ?? '';
@@ -1282,6 +1284,7 @@ export async function addSavingsAllocation(formData: FormData) {
     await prisma.savingsAllocation.create({
       data: {
         amount,
+        standingOrderToInvestment,
         label,
         description: description || null,
         date,
@@ -1310,6 +1313,7 @@ export async function updateSavingsAllocation(id: string, formData: FormData) {
     const rawDate = String(formData.get('date') ?? '');
     const date = parseDateInputToUtc(rawDate);
     const accountId = String(formData.get('accountId') ?? '');
+    const standingOrderToInvestment = String(formData.get('standingOrderToInvestment') ?? '') === 'true';
 
     if (!amount || Number.isNaN(amount) || amount <= 0 || !label || !accountId || !date) {
       return { success: false, error: 'Missing required fields' };
@@ -1321,6 +1325,7 @@ export async function updateSavingsAllocation(id: string, formData: FormData) {
       where: { id },
       data: {
         amount,
+        standingOrderToInvestment,
         label,
         description: description || null,
         date,
@@ -2156,6 +2161,7 @@ export async function getMonthlyStats(year: number, month: number) {
       select: {
         id: true,
         amount: true,
+        standingOrderToInvestment: true,
         label: true,
         description: true,
         date: true,

@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion, PanInfo, useDragControls } from 'framer-motion';
-import { Calendar, X } from 'lucide-react';
+import { Calendar, ChevronDown, Landmark, Repeat, X } from 'lucide-react';
+import LiquidToggle from '@/components/ui/LiquidToggle';
 import { toast } from 'sonner';
 import { formatDateInputForDisplay, toDateInputValueFromUtc } from '@/lib/date-only';
 import type { AccountSummary, SavingsAllocationListItem, SavingsLabel } from '@/lib/types';
@@ -46,6 +47,7 @@ export default function SavingsAllocationSheet({
   const [description, setDescription] = useState('');
   const [label, setLabel] = useState('');
   const [date, setDate] = useState('');
+  const [standingOrderToInvestment, setStandingOrderToInvestment] = useState(false);
   const [accountId, setAccountId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -69,16 +71,26 @@ export default function SavingsAllocationSheet({
       setDescription(initialData.description || '');
       setLabel(initialData.label);
       setDate(toDateInputValueFromUtc(new Date(initialData.date)));
+      setStandingOrderToInvestment(initialData.standingOrderToInvestment);
       setAccountId(initialData.accountId);
     } else {
       setAmount('');
       setDescription('');
       setLabel(visibleLabels[0]?.name ?? '');
       setDate(toDateInputValueFromUtc(new Date()));
+      setStandingOrderToInvestment(false);
       setAccountId(accounts.find((a) => a.type === 'SHARED')?.id ?? accounts[0]?.id ?? '');
     }
     setShowDeleteConfirm(false);
   }, [isOpen, initialData, accounts, visibleLabels]);
+
+  /** Keep accountId valid when accounts load after open or list changes. */
+  useEffect(() => {
+    if (!isOpen || accounts.length === 0) return;
+    const stillValid = accounts.some((a) => a.id === accountId);
+    if (stillValid) return;
+    setAccountId(accounts.find((a) => a.type === 'SHARED')?.id ?? accounts[0].id);
+  }, [isOpen, accounts, accountId]);
 
   const handleSave = async () => {
     const parsedAmount = parseFloat(amount);
@@ -98,6 +110,7 @@ export default function SavingsAllocationSheet({
     formData.append('date', date);
     formData.append('accountId', accountId);
     formData.append('label', label.trim());
+    formData.append('standingOrderToInvestment', standingOrderToInvestment ? 'true' : 'false');
 
     if (initialData) {
       const res = await updateSavingsAllocation(initialData.id, formData);
@@ -188,7 +201,7 @@ export default function SavingsAllocationSheet({
                 הפרשות אלה לא נספרות כהוצאות — הן מופיעות בנפרד כחלק מהחיסכון החודשי.
               </p>
 
-              <div className="bg-white dark:bg-ios-dark-card rounded-2xl p-5 sm:p-6 shadow-card mb-4 text-center">
+              <div className="bg-white dark:bg-ios-dark-card rounded-2xl p-5 sm:p-6 shadow-card border border-gray-100/80 dark:border-white/10 mb-4 text-center">
                 <p className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle uppercase tracking-wider mb-3">
                   סכום
                 </p>
@@ -204,68 +217,121 @@ export default function SavingsAllocationSheet({
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-ios-dark-card rounded-2xl shadow-card mb-4 overflow-hidden">
-                <p className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle uppercase tracking-wider px-4 pt-4 pb-2">
-                  חשבון
-                </p>
-                <div className="flex p-1.5 mx-3 mb-3 bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl flex-wrap gap-1">
-                  {accounts.map((acc) => (
-                    <button
-                      key={acc.id}
-                      type="button"
-                      onClick={() => setAccountId(acc.id)}
-                      className={`flex-1 min-w-[45%] flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-semibold transition-all ${
-                        accountId === acc.id
-                          ? 'bg-white dark:bg-ios-dark-card shadow-card text-ios-text dark:text-ios-dark-text'
-                          : 'text-gray-400 dark:text-ios-dark-subtle'
-                      }`}
-                    >
-                      <span className="text-sm">{getAccountIcon(acc)}</span>
-                      {acc.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="bg-white dark:bg-ios-dark-card rounded-2xl shadow-card mb-4 overflow-hidden divide-y divide-gray-100 dark:divide-white/10">
-                <div className="flex items-center justify-between p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-ios-green/10 rounded-lg flex items-center justify-center">
-                      <Calendar className="w-4 h-4 text-ios-green" />
-                    </div>
-                    <span className="text-[15px] font-medium text-ios-text dark:text-ios-dark-text">תאריך</span>
+              <div className="bg-white dark:bg-ios-dark-card rounded-2xl shadow-card border border-gray-100/80 dark:border-white/10 mb-4 overflow-hidden p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-9 h-9 rounded-xl bg-ios-blue/12 flex items-center justify-center shrink-0">
+                    <Landmark className="w-5 h-5 text-ios-blue" strokeWidth={2} />
                   </div>
-                  <input
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="bg-ios-gray-6 dark:bg-ios-dark-fill border border-gray-200 dark:border-white/10 rounded-xl px-3 py-2 text-[15px] text-gray-700 dark:text-ios-dark-text focus:outline-none focus:ring-2 focus:ring-ios-blue/30 text-left"
-                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle uppercase tracking-wider">
+                      חשבון
+                    </p>
+                    <p className="text-[13px] text-ios-subtle dark:text-ios-dark-subtle mt-0.5">
+                      מאיזה חשבון בוצעה ההפרשה
+                    </p>
+                  </div>
                 </div>
-                <div className="px-4 pb-4 -mt-2">
-                  <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle">
-                    {date ? formatDateInputForDisplay(date, 'he-IL') : ''}
+                {accounts.length === 0 ? (
+                  <p className="text-sm text-ios-subtle dark:text-ios-dark-subtle rounded-xl bg-ios-gray-6 dark:bg-ios-dark-fill px-3 py-3">
+                    אין חשבונות זמינים. הוסיפו חשבון תחת הגדרות.
                   </p>
+                ) : (
+                  <div className="relative">
+                    <label htmlFor="savings-allocation-account" className="sr-only">
+                      בחירת חשבון
+                    </label>
+                    <select
+                      id="savings-allocation-account"
+                      value={accountId}
+                      onChange={(e) => setAccountId(e.target.value)}
+                      className="w-full min-h-[48px] appearance-none rounded-xl border border-gray-200/90 dark:border-white/12 bg-ios-gray-6 dark:bg-ios-dark-fill ps-3 pe-10 py-3 text-[15px] font-semibold text-ios-text dark:text-ios-dark-text shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ios-green/40"
+                    >
+                      {accounts.map((acc) => (
+                        <option key={acc.id} value={acc.id}>
+                          {`${getAccountIcon(acc)} ${acc.name}`}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      className="pointer-events-none absolute end-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ios-subtle dark:text-ios-dark-subtle"
+                      aria-hidden
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-white dark:bg-ios-dark-card rounded-2xl shadow-card border border-gray-100/80 dark:border-white/10 mb-4 overflow-hidden">
+                <div className="p-4 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 bg-ios-green/10 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
+                      <Calendar className="w-[18px] h-[18px] text-ios-green" strokeWidth={2} />
+                    </div>
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div>
+                        <p className="text-[15px] font-semibold text-ios-text dark:text-ios-dark-text">תאריך</p>
+                        <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle mt-0.5">
+                          {date ? formatDateInputForDisplay(date, 'he-IL') : 'בחרו את יום ההפרשה'}
+                        </p>
+                      </div>
+                      <input
+                        type="date"
+                        value={date}
+                        onChange={(e) => setDate(e.target.value)}
+                        className="w-full min-h-[48px] bg-ios-gray-6 dark:bg-ios-dark-fill border border-gray-200/90 dark:border-white/12 rounded-xl px-3 py-2.5 text-[15px] text-ios-text dark:text-ios-dark-text focus:outline-none focus-visible:ring-2 focus-visible:ring-ios-green/35 [color-scheme:light] dark:[color-scheme:dark]"
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                <div className="p-4">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-8 h-8 bg-ios-blue/10 rounded-lg flex items-center justify-center">
-                      <span className="text-sm">📝</span>
+                <div className="h-px bg-gray-100 dark:bg-white/10 mx-4" />
+
+                <div className="p-4 flex items-center justify-between gap-4">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="w-9 h-9 bg-ios-indigo/10 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
+                      <Repeat className="w-[18px] h-[18px] text-ios-indigo" strokeWidth={2} />
                     </div>
-                    <span className="text-[15px] font-medium text-ios-text dark:text-ios-dark-text">תיאור (אופציונלי)</span>
+                    <div className="min-w-0">
+                      <p className="text-[15px] font-semibold text-ios-text dark:text-ios-dark-text">
+                        העברת קבע להשקעה
+                      </p>
+                      <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle mt-0.5 leading-relaxed">
+                        סימון שזו הוראת קבע חודשית להשקעה (למעקב אישי שלכם)
+                      </p>
+                    </div>
                   </div>
-                  <input
-                    type="text"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    className="w-full bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl py-3 px-4 text-[15px] text-ios-text dark:text-ios-dark-text placeholder-gray-400 dark:placeholder-ios-dark-subtle focus:outline-none focus:ring-2 focus:ring-ios-blue/30 transition"
-                    placeholder="למשל: העברה חודשית"
+                  <LiquidToggle
+                    isOn={standingOrderToInvestment}
+                    onToggle={() => setStandingOrderToInvestment((v) => !v)}
+                    testId="savings-standing-order-toggle"
                   />
+                </div>
+
+                <div className="h-px bg-gray-100 dark:bg-white/10 mx-4" />
+
+                <div className="p-4 space-y-2">
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 bg-ios-blue/10 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
+                      <span className="text-base leading-none" aria-hidden>
+                        📝
+                      </span>
+                    </div>
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <p className="text-[15px] font-semibold text-ios-text dark:text-ios-dark-text">
+                        תיאור (אופציונלי)
+                      </p>
+                      <textarea
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        rows={3}
+                        className="w-full resize-none bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl py-3 px-3.5 text-[15px] text-ios-text dark:text-ios-dark-text placeholder-gray-400 dark:placeholder-ios-dark-subtle focus:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue/30 border border-transparent focus-visible:border-gray-200/80 dark:focus-visible:border-white/10 leading-normal"
+                        placeholder="למשל: העברה חודשית"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-ios-dark-card rounded-2xl shadow-card mb-4 p-4">
+              <div className="bg-white dark:bg-ios-dark-card rounded-2xl shadow-card border border-gray-100/80 dark:border-white/10 mb-4 p-4">
                 <p className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle uppercase tracking-wider mb-3">
                   יעד חיסכון
                 </p>

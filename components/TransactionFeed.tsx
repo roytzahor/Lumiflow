@@ -159,6 +159,11 @@ export default function TransactionFeed({
                                                                 <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-md text-ios-green bg-ios-green/10">
                                                                     הפרשה לחיסכון · {savingsIcon(savingsLabels, s.label)} {s.label}
                                                                 </span>
+                                                                {s.standingOrderToInvestment ? (
+                                                                    <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-md text-ios-indigo bg-ios-indigo/10">
+                                                                        קבע להשקעה
+                                                                    </span>
+                                                                ) : null}
                                                                 <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-md ${badge.color}`}>
                                                                     {badge.label}
                                                                 </span>

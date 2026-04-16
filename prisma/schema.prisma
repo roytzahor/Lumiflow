@@ -224,6 +224,8 @@ model SavingsLabel {
 model SavingsAllocation {
   id          String   @id @default(uuid())
   amount      Float
+  /// Standing order / recurring transfer into investments (informational flag for the user).
+  standingOrderToInvestment Boolean @default(false)
   /// Display label name (matches SavingsLabel.name when applicable).
   label       String
   description String?

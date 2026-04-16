@@ -130,6 +130,7 @@ export type MyMoneyBreakdown = {
 export type SavingsAllocationListItem = {
   id: string;
   amount: number;
+  standingOrderToInvestment: boolean;
   label: string;
   description: string | null;
   date: Date;

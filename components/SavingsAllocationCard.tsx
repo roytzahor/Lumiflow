@@ -79,6 +79,11 @@ export default function SavingsAllocationCard({
                       <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-md text-ios-green bg-ios-green/10">
                         {row.label}
                       </span>
+                      {row.standingOrderToInvestment ? (
+                        <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-md text-ios-indigo bg-ios-indigo/10">
+                          קבע להשקעה
+                        </span>
+                      ) : null}
                       <span
                         className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-md ${
                           row.account.type === 'SHARED'
