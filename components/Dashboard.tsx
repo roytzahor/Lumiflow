@@ -8,6 +8,7 @@ import { updateDashboardRecurringSectionExpanded } from "@/app/actions";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, ChevronLeft, Lock } from "lucide-react";
+import InfoHint from "@/components/InfoHint";
 
 const QuickAddSheet = dynamic(() => import("./QuickAddSheet"), { ssr: false });
 const RecurringEditSheet = dynamic(() => import("./RecurringEditSheet"), { ssr: false });
@@ -310,13 +311,14 @@ export default function Dashboard({
 
     const chartData = useMemo(() => {
         if (scopeAccountId === "my-money" && myMoneyBreakdown) {
-            return myMoneyBreakdown.categories.map(({ name, amount }, index) => {
+            return myMoneyBreakdown.categories.map(({ name, amount, sharedPortion }, index) => {
                 const cat = categories.find(c => c.name === name);
                 return {
                     name,
                     value: amount,
                     color: chartColors[index % chartColors.length],
                     icon: cat ? cat.icon : '✨',
+                    attributionTag: sharedPortion > 0 ? 'משולב' : null,
                 };
             });
         }
@@ -562,9 +564,27 @@ export default function Dashboard({
                             {/* Stats */}
                             <div className="flex-1 space-y-3">
                                 <div>
+                                    <div className="flex items-center gap-1.5">
                                         <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle font-medium">
                                             {scopeAccountId === "my-money" ? "חסכתי החודש" : "חסכנו החודש"}
                                         </p>
+                                        {scopeAccountId === "my-money" ? (
+                                            <InfoHint ariaLabel="הסבר על חיסכון החודש בכסף שלי">
+                                                {myMoneyBreakdown ? (
+                                                    <>
+                                                        הסכום משקף את ההכנסות שלך פחות הוצאות שמיוחסות אליך (כולל
+                                                        חלק יחסי מהחשבון המשותף). למטה אפשר לראות פירוט הפרשות
+                                                        חיסכון ויתרה פנויה.
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        מצב &quot;הכסף שלי&quot; דורש הגדרת תרומה חודשית לחשבון
+                                                        משותף בהגדרות כדי לחשב ייחוד מלא.
+                                                    </>
+                                                )}
+                                            </InfoHint>
+                                        ) : null}
+                                    </div>
                                     <p className={`text-2xl font-bold tracking-tight ${savedSoFar >= 0 ? 'text-ios-green' : 'text-ios-red'}`}>
                                         ₪{formatIlsAmount(savedSoFar)}
                                     </p>
@@ -680,9 +700,16 @@ export default function Dashboard({
                     {scopeAccountId === "my-money" && myMoneyBreakdown ? (
                         <div className="space-y-3">
                             <div className="rounded-2xl bg-ios-blue/8 ring-1 ring-ios-blue/20 p-4">
-                                <div className="flex items-center justify-between mb-3">
-                                    <p className="text-sm font-semibold text-ios-blue">סיכום חודשי אישי</p>
-                                    <p className={`text-sm font-bold tabular-nums ${myMoneyBreakdown.balance >= 0 ? "text-ios-green" : "text-ios-red"}`}>
+                                <div className="flex items-start justify-between gap-2 mb-3">
+                                    <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                                        <p className="text-sm font-semibold text-ios-blue">סיכום חודשי אישי</p>
+                                        <InfoHint ariaLabel="הסבר על סיכום חודשי אישי">
+                                            הסכומים כאן מחושבים לפי &quot;הכסף שלי&quot;: הכנסות (תרומות חודשיות
+                                            והכנסות חד־פעמיות), הוצאות אחרי ייחוד אישי, הפרשות חיסכון מיוחסות,
+                                            ויתרה פנויה לאחר ההפרשות.
+                                        </InfoHint>
+                                    </div>
+                                    <p className={`shrink-0 text-sm font-bold tabular-nums ${myMoneyBreakdown.balance >= 0 ? "text-ios-green" : "text-ios-red"}`}>
                                         {myMoneyBreakdown.balance >= 0 ? "₪" : "-₪"}{formatIlsAmount(Math.abs(myMoneyBreakdown.balance))}
                                     </p>
                                 </div>
@@ -718,67 +745,6 @@ export default function Dashboard({
                                     </div>
                                 </div>
                             </div>
-                            {myMoneyBreakdown.categories.length > 0 && (
-                                <div className="rounded-2xl bg-ios-gray-6/60 dark:bg-ios-dark-fill/60 p-3 space-y-2">
-                                    <p className="text-[11px] font-semibold text-ios-subtle dark:text-ios-dark-subtle px-1">התפלגות לפי קטגוריה (מיוחס)</p>
-                                    {myMoneyBreakdown.categories.slice(0, 5).map((cat) => {
-                                        const pct = myMoneyBreakdown.totalAttributedExpenses > 0
-                                            ? (cat.amount / myMoneyBreakdown.totalAttributedExpenses) * 100
-                                            : 0;
-                                        const icon = getCategoryIcon(categories, cat.name);
-                                        const hasShared = cat.sharedPortion > 0;
-                                        const hasPersonal = cat.personalPortion > 0;
-                                        const isMixed = hasShared && hasPersonal;
-                                        const badgeLabel = !hasShared
-                                            ? null
-                                            : isMixed
-                                              ? "משולב"
-                                              : "משותף";
-                                        return (
-                                            <div
-                                                key={cat.name}
-                                                className="grid grid-cols-[1.5rem_1fr_auto_3.75rem] grid-rows-[auto_auto] gap-x-2 gap-y-1 items-center"
-                                            >
-                                                <span className="row-span-2 text-base w-6 text-center justify-self-center">{icon}</span>
-                                                <span className="min-w-0 truncate text-xs font-medium text-ios-text dark:text-ios-dark-text col-start-2 row-start-1">
-                                                    {cat.name}
-                                                </span>
-                                                <span className="text-xs font-semibold text-ios-text dark:text-ios-dark-text tabular-nums text-end whitespace-nowrap col-start-3 row-start-1 min-w-[4.25rem]">
-                                                    ₪{formatIlsAmount(Math.round(cat.amount))}
-                                                </span>
-                                                <div className="row-span-2 col-start-4 row-start-1 flex items-center justify-center self-center min-h-[1.75rem]">
-                                                    {badgeLabel ? (
-                                                        <span className="text-[10px] font-semibold text-ios-indigo bg-ios-indigo/10 px-1.5 py-0.5 rounded-md text-center leading-tight max-w-[3.75rem]">
-                                                            {badgeLabel}
-                                                        </span>
-                                                    ) : (
-                                                        <span className="w-[3.25rem]" aria-hidden />
-                                                    )}
-                                                </div>
-                                                <div className="col-start-2 col-span-2 row-start-2 min-w-0 h-2 rounded-full bg-gray-200/70 dark:bg-ios-dark-fill overflow-hidden flex">
-                                                    <div
-                                                        className="h-full flex min-w-0 rounded-full overflow-hidden"
-                                                        style={{ width: `${pct}%` }}
-                                                    >
-                                                        {hasShared ? (
-                                                            <div
-                                                                className="h-full min-w-0 bg-ios-indigo/70"
-                                                                style={{ flex: cat.sharedPortion }}
-                                                            />
-                                                        ) : null}
-                                                        {hasPersonal ? (
-                                                            <div
-                                                                className="h-full min-w-0 bg-ios-blue/70"
-                                                                style={{ flex: cat.personalPortion }}
-                                                            />
-                                                        ) : null}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
                         </div>
                     ) : accountBalances.length === 0 ? (
                         <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-ios-gray-6/40 dark:bg-ios-dark-fill/30 p-3.5 min-h-[158px]">
@@ -835,7 +801,17 @@ export default function Dashboard({
                     transition={sectionDelay(0.35)}
                     className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 shadow-card mb-6"
                 >
-                    <h2 className="text-lg font-bold text-ios-text dark:text-ios-dark-text mb-3">התפלגות הוצאות</h2>
+                    <div className="mb-3 flex items-start justify-between gap-2">
+                        <h2 className="min-w-0 flex-1 text-lg font-bold text-ios-text dark:text-ios-dark-text">
+                            התפלגות הוצאות
+                        </h2>
+                        {scopeAccountId === "my-money" && myMoneyBreakdown ? (
+                            <InfoHint ariaLabel="הסבר על תג משולב בהתפלגות">
+                                תג «משולב» מסמן שבקטגוריה נכלל גם חלק מהוצאות בחשבון משותף — אחרי ייחוד לפי אחוז
+                                ההשתתפות שלך.
+                            </InfoHint>
+                        ) : null}
+                    </div>
                     <div className="relative rounded-2xl overflow-hidden">
                         <div className={shouldShowSpendingTeaser ? "blur-[3px] opacity-90 pointer-events-none select-none" : ""}>
                             <PieChart data={spendingTeaserData} onSliceClick={shouldShowSpendingTeaser ? undefined : handlePieSliceClick} />

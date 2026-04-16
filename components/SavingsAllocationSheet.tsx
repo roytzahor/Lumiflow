@@ -13,6 +13,7 @@ import {
   updateSavingsAllocation,
   deleteSavingsAllocation,
 } from '@/app/actions';
+import InfoHint from '@/components/InfoHint';
 
 interface SavingsAllocationSheetProps {
   isOpen: boolean;
@@ -183,23 +184,24 @@ export default function SavingsAllocationSheet({
             </div>
 
             <div className="flex-1 overflow-y-auto px-5 pb-8">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-ios-text dark:text-ios-dark-text">
-                  {initialData ? 'עריכת הפרשת חיסכון' : 'הפרשה לחיסכון'}
-                </h2>
+              <div className="flex items-center justify-between gap-2 mb-6">
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  <h2 className="text-xl font-bold text-ios-text dark:text-ios-dark-text truncate">
+                    {initialData ? 'עריכת הפרשת חיסכון' : 'הפרשה לחיסכון'}
+                  </h2>
+                  <InfoHint ariaLabel="הסבר על הפרשות חיסכון">
+                    הפרשות אלה לא נספרות כהוצאות — הן מופיעות בנפרד כחלק מהחיסכון החודשי.
+                  </InfoHint>
+                </div>
                 <button
                   type="button"
                   onClick={onClose}
-                  className="w-8 h-8 bg-gray-200 dark:bg-ios-dark-fill rounded-full flex items-center justify-center"
+                  className="w-8 h-8 bg-gray-200 dark:bg-ios-dark-fill rounded-full flex items-center justify-center shrink-0"
                   aria-label="סגור"
                 >
                   <X className="w-4 h-4 text-gray-500 dark:text-ios-dark-subtle" />
                 </button>
               </div>
-
-              <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle mb-4 leading-relaxed">
-                הפרשות אלה לא נספרות כהוצאות — הן מופיעות בנפרד כחלק מהחיסכון החודשי.
-              </p>
 
               <div className="bg-white dark:bg-ios-dark-card rounded-2xl p-5 sm:p-6 shadow-card border border-gray-100/80 dark:border-white/10 mb-4 text-center">
                 <p className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle uppercase tracking-wider mb-3">
@@ -290,13 +292,14 @@ export default function SavingsAllocationSheet({
                     <div className="w-9 h-9 bg-ios-indigo/10 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
                       <Repeat className="w-[18px] h-[18px] text-ios-indigo" strokeWidth={2} />
                     </div>
-                    <div className="min-w-0">
+                    <div className="flex min-w-0 items-center gap-1.5">
                       <p className="text-[15px] font-semibold text-ios-text dark:text-ios-dark-text">
                         העברת קבע להשקעה
                       </p>
-                      <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle mt-0.5 leading-relaxed">
-                        סימון שזו הוראת קבע חודשית להשקעה (למעקב אישי שלכם)
-                      </p>
+                      <InfoHint ariaLabel="הסבר על סימון העברת קבע להשקעה">
+                        סימון שזו הוראת קבע חודשית להשקעה — למעקב אישי בלבד; האפליקציה לא מבצעת העברות אוטומטיות
+                        בשמכם.
+                      </InfoHint>
                     </div>
                   </div>
                   <LiquidToggle

@@ -8,6 +8,7 @@ import RecurringEditSheet from "./RecurringEditSheet";
 
 const SavingsAllocationSheet = dynamic(() => import("./SavingsAllocationSheet"), { ssr: false });
 import LiquidToggle from "./ui/LiquidToggle";
+import InfoHint from "./InfoHint";
 import { useHaptic } from "@/hooks/useHaptic";
 import { formatIlsAmount } from "@/lib/formatters";
 import BottomNav from "./BottomNav";
@@ -313,19 +314,30 @@ export default function HistoryView({
             </div>
 
             <div className="px-5 mt-3 w-full min-w-0 max-w-full space-y-2.5">
-                <div className="flex w-full min-w-0 max-w-full items-center justify-between gap-3 rounded-2xl bg-white/80 dark:bg-ios-dark-card/80 py-3 px-3.5 shadow-card border border-gray-100/80 dark:border-white/10">
-                    <span className="text-sm font-semibold text-ios-text dark:text-ios-dark-text min-w-0 flex-1 truncate">
-                        הצג הוצאות קבועות
-                    </span>
+                <div className="flex w-full min-w-0 max-w-full items-center justify-between gap-2 rounded-2xl bg-white/80 dark:bg-ios-dark-card/80 py-3 px-3.5 shadow-card border border-gray-100/80 dark:border-white/10">
+                    <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                        <span className="text-sm font-semibold text-ios-text dark:text-ios-dark-text truncate">
+                            הצג הוצאות קבועות
+                        </span>
+                        <InfoHint ariaLabel="הסבר על הצגת הוצאות קבועות">
+                            כשהאפשרות פעילה, גם תנועות חוזרות צפויות מוצגות ברשימה לצד הוצאות שבוצעו בפועל.
+                        </InfoHint>
+                    </div>
                     <div className="shrink-0">
                         <LiquidToggle isOn={showRecurring} onToggle={toggleShowRecurring} testId="history-show-recurring" />
                     </div>
                 </div>
                 {savingsForView.length > 0 ? (
-                    <div className="flex w-full min-w-0 max-w-full items-center justify-between gap-3 rounded-2xl bg-white/80 dark:bg-ios-dark-card/80 py-3 px-3.5 shadow-card border border-gray-100/80 dark:border-white/10">
-                        <span className="text-sm font-semibold text-ios-text dark:text-ios-dark-text min-w-0 flex-1 truncate">
-                            הצג הפרשות חיסכון
-                        </span>
+                    <div className="flex w-full min-w-0 max-w-full items-center justify-between gap-2 rounded-2xl bg-white/80 dark:bg-ios-dark-card/80 py-3 px-3.5 shadow-card border border-gray-100/80 dark:border-white/10">
+                        <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                            <span className="text-sm font-semibold text-ios-text dark:text-ios-dark-text truncate">
+                                הצג הפרשות חיסכון
+                            </span>
+                            <InfoHint ariaLabel="הסבר על הצגת הפרשות חיסכון">
+                                הפרשות חיסכון מוצגות בתזרים לצד הוצאות; הסכום בתקציר למטה משקף את סך ההפרשות
+                                הגלויות כשהאפשרות דלוקה.
+                            </InfoHint>
+                        </div>
                         <div className="shrink-0">
                             <LiquidToggle
                                 isOn={showSavingsInFeed}

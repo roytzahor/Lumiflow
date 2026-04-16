@@ -4,8 +4,17 @@ import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { formatIlsAmount } from '@/lib/formatters';
 
+export type PieChartDatum = {
+    name: string;
+    value: number;
+    color: string;
+    icon: string;
+    /** e.g. "משולב" when spend includes attributed shared-account portion (My Money view). */
+    attributionTag?: string | null;
+};
+
 interface PieChartProps {
-    data: { name: string; value: number; color: string; icon: string }[];
+    data: PieChartDatum[];
     onSliceClick?: (categoryName: string) => void;
 }
 
@@ -97,9 +106,14 @@ export default function PieChart({ data, onSliceClick }: PieChartProps) {
                             />
                             <span className="text-sm text-gray-600 dark:text-ios-dark-text/90">{item.icon} {item.name}</span>
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                            {item.attributionTag ? (
+                                <span className="text-[10px] font-semibold text-ios-indigo bg-ios-indigo/10 px-1.5 py-0.5 rounded-md whitespace-nowrap">
+                                    {item.attributionTag}
+                                </span>
+                            ) : null}
                             <span className="text-xs text-ios-subtle dark:text-ios-dark-subtle tabular-nums">
-                                {Math.round(item.value / total * 100)}%
+                                {Math.round((item.value / total) * 100)}%
                             </span>
                             <span className="text-sm font-semibold text-ios-text dark:text-ios-dark-text tabular-nums">
                                 ₪{formatIlsAmount(item.value)}

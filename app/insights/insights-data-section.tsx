@@ -1,6 +1,7 @@
 import { getCategoryAnomalies, getCategories, getSavingsAllocationInsights } from "@/app/actions";
 import { formatIlsAmount } from "@/lib/formatters";
 import InsightsAnomalyCard from "@/components/insights-anomaly-card";
+import InfoHint from "@/components/InfoHint";
 import type { Category, CategoryAnomaly } from "@/lib/types";
 
 function getCategoryIcon(categories: Category[], categoryName: string): string {
@@ -49,7 +50,13 @@ export default async function InsightsDataSection() {
 
     return (
         <section>
-            <h2 className="text-base font-bold mb-3">שינויים בולטים החודש</h2>
+            <div className="mb-3 flex items-center gap-2">
+                <h2 className="min-w-0 flex-1 text-base font-bold">שינויים בולטים החודש</h2>
+                <InfoHint ariaLabel="הסבר על שינויים בולטים">
+                    מזוהות קטגוריות שההוצאה בהן החודש חורגת במידה ניכרת מהממוצע בחודשים קודמים. נדרשים לפחות
+                    שני חודשים עם נתונים בקטגוריה, והשוואה מבוססת על הוצאות בפועל.
+                </InfoHint>
+            </div>
 
             {!hasEnoughHistory ? (
                 <div className="space-y-5">
@@ -61,8 +68,7 @@ export default async function InsightsDataSection() {
                             עדיין אין מספיק היסטוריה
                         </p>
                         <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle leading-relaxed">
-                            כדי לזהות שינויים בולטים נדרשים לפחות שני חודשים של נתונים. המשיכו לרשום הוצאות ותובנות
-                            יופיעו כאן.
+                            המשיכו לרשום הוצאות — כשתהיה מספיק היסטוריה, תובנות יופיעו כאן.
                         </p>
                     </div>
 
@@ -106,7 +112,24 @@ export default async function InsightsDataSection() {
 
             {showSavingsBlock && savingsInsight ? (
                 <div className="mt-8">
-                    <h2 className="text-base font-bold mb-3">הפרשות חיסכון</h2>
+                    <div className="mb-3 flex items-center gap-2">
+                        <h2 className="min-w-0 flex-1 text-base font-bold">הפרשות חיסכון</h2>
+                        <InfoHint ariaLabel="הסבר על הפרשות חיסכון">
+                            {savingsInsight.percentOfIncomeThisMonth != null && savingsInsight.thisMonthTotal > 0 ? (
+                                <span>
+                                    הפרשתם כ־
+                                    <span className="font-bold">
+                                        {savingsInsight.percentOfIncomeThisMonth}%
+                                    </span>
+                                    מההכנסה החודשית (כולל תרומות חודשיות והכנסות חד־פעמיות) ליעדי חיסכון.
+                                </span>
+                            ) : savingsInsight.thisMonthIncome <= 0 && savingsInsight.thisMonthTotal > 0 ? (
+                                <span>הגדירו הכנסות חודשיות כדי לראות אחוז מההכנסה שהוקצה לחיסכון.</span>
+                            ) : (
+                                <span>סכומי ההפרשות לחודש זה מול חודש קודם; אחוזי הכנסה מופיעים כשיש בסיס הכנסה מתאים.</span>
+                            )}
+                        </InfoHint>
+                    </div>
                     <div className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 shadow-card space-y-4">
                         <div className="flex items-center justify-between gap-3">
                             <span className="text-sm text-ios-subtle dark:text-ios-dark-subtle">החודש</span>
@@ -120,19 +143,6 @@ export default async function InsightsDataSection() {
                                 ₪{formatIlsAmount(Math.round(savingsInsight.prevMonthTotal))}
                             </span>
                         </div>
-                        {savingsInsight.percentOfIncomeThisMonth != null && savingsInsight.thisMonthTotal > 0 ? (
-                            <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle leading-relaxed text-center">
-                                הפרשתם כ־
-                                <span className="font-bold text-ios-text dark:text-ios-dark-text mx-1">
-                                    {savingsInsight.percentOfIncomeThisMonth}%
-                                </span>
-                                מההכנסה החודשית (כולל תרומות חודשיות והכנסות חד־פעמיות) ליעדי חיסכון.
-                            </p>
-                        ) : savingsInsight.thisMonthIncome <= 0 && savingsInsight.thisMonthTotal > 0 ? (
-                            <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle leading-relaxed text-center">
-                                הגדירו הכנסות חודשיות כדי לראות אחוז מההכנסה שהוקצה לחיסכון.
-                            </p>
-                        ) : null}
                     </div>
                 </div>
             ) : null}
