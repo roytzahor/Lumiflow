@@ -7,6 +7,8 @@ import {
   getRecurringTransactions,
   getAccountContributionTotals,
   getCurrentUserProfile,
+  getMonthlyIncomeEntries,
+  getMyContributionRatios,
 } from "./actions";
 import BottomNav from "@/components/BottomNav";
 import { redirectToOnboardingIfNeeded } from "@/lib/onboarding";
@@ -33,13 +35,15 @@ export default async function Home({
     const month = Number.isFinite(parsedMonth) && parsedMonth >= 0 && parsedMonth <= 11 ? parsedMonth : now.getMonth();
     const selectedMonthIso = new Date(Date.UTC(year, month, 1)).toISOString();
 
-    const [transactions, categories, accounts, recurringTransactions, contributionTotals, currentUser] = await Promise.all([
+    const [transactions, categories, accounts, recurringTransactions, contributionTotals, currentUser, monthlyIncomeEntries, myContributionRatios] = await Promise.all([
       getTransactions('All', year, month),
       getCategories(),
       getAccounts(),
       getRecurringTransactions(),
       getAccountContributionTotals(),
       getCurrentUserProfile(),
+      getMonthlyIncomeEntries(year, month),
+      getMyContributionRatios(),
     ]);
     return (
       <main className="min-h-screen bg-ios-bg dark:bg-ios-dark-bg transition-colors">
@@ -51,6 +55,8 @@ export default async function Home({
           accounts={accounts}
           recurringTransactions={recurringTransactions}
           contributionTotals={contributionTotals}
+          monthlyIncomeEntries={monthlyIncomeEntries}
+          myContributionRatios={myContributionRatios}
           viewerName={currentUser?.name ?? null}
           initialRecurringSectionExpanded={currentUser?.dashboardRecurringSectionExpanded ?? true}
         />

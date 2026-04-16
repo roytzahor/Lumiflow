@@ -29,10 +29,18 @@ export type TransactionWithAccount = Transaction & { account: Account };
 /** Recurring transaction with account relation */
 export type RecurringWithAccount = RecurringTransaction & { account: Account };
 
+/** Minimal user info for “who added this expense” (from `paidByUser` include). */
+export type TransactionAddedByUser = {
+  id: string;
+  name: string | null;
+  email: string;
+};
+
 /** Feed/list item for transactions, including projected recurring rows */
 export type TransactionListItem = (Transaction & { account: Account }) & {
   isRecurring?: boolean;
   isProjected?: boolean;
+  paidByUser?: TransactionAddedByUser | null;
 };
 
 export type AccountTotal = {
@@ -62,4 +70,43 @@ export type CategoryAnomaly = {
   difference: number;
   percentChange: number;
   direction: 'up' | 'down';
+};
+
+/** Flat income entry item for use in UI lists */
+export type IncomeEntryItem = {
+  id: string;
+  amount: number;
+  description: string | null;
+  date: Date;
+  accountId: string;
+  accountName: string;
+};
+
+/** Per-account one-time income total for a given month */
+export type MonthlyIncomeTotal = {
+  accountId: string;
+  totalAmount: number;
+};
+
+/** My contribution ratio for a given account */
+export type ContributionRatio = {
+  accountId: string;
+  myAmount: number;
+  totalAmount: number;
+  ratio: number;
+};
+
+/** Category with proportional attribution for "My Money" view */
+export type MyMoneyCategory = {
+  name: string;
+  amount: number;
+  source: 'personal' | 'shared';
+};
+
+/** Full "My Money" breakdown for the current month */
+export type MyMoneyBreakdown = {
+  totalIncome: number;
+  totalAttributedExpenses: number;
+  balance: number;
+  categories: MyMoneyCategory[];
 };

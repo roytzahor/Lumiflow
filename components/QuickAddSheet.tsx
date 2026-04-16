@@ -10,8 +10,10 @@ import { addCategory, addTransaction } from '@/app/actions';
 import { useHaptic } from '@/hooks/useHaptic';
 import { detectAllCategoryMatches } from '@/lib/category-dictionary';
 import { formatDateInputForDisplay, getTodayDateInputValue, toDateInputValueFromUtc } from '@/lib/date-only';
+import { formatIlsAmount } from '@/lib/formatters';
 import type { TransactionListItem, Account, Category, RecurringMonthPolicy } from '@/lib/types';
 import { CATEGORY_EMOJIS } from '@/lib/category-emojis';
+import { splitInstallmentAmounts } from '@/lib/installment-utils';
 
 interface QuickAddSheetProps {
     isOpen: boolean;
@@ -45,6 +47,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
     const [accountId, setAccountId] = useState('');
     const [category, setCategory] = useState('כללי');
     const [isRecurring, setIsRecurring] = useState(false);
+    const [installmentCount, setInstallmentCount] = useState(1);
     const [monthPolicy, setMonthPolicy] = useState<RecurringMonthPolicy>('ROLL_TO_LAST_DAY');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [amountError, setAmountError] = useState('');
@@ -65,6 +68,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
     const { trigger } = useHaptic();
     const sheetRef = useRef<HTMLDivElement>(null);
     const amountInputRef = useRef<HTMLInputElement>(null);
+    const prevIsOpenRef = useRef(false);
 
     useEffect(() => {
         if (isOpen) {
@@ -105,36 +109,46 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
     }, [categories]);
 
     useEffect(() => {
-        if (isOpen) {
-            if (initialData) {
-                setAmount(initialData.amount.toString());
-                setDescription(initialData.description || '');
-                setDate(toDateInputValueFromUtc(new Date(initialData.date)));
-                setAccountId(initialData.account.id);
-                setHasUserPickedAccount(true);
-                setCategory(initialData.category);
-                setIsRecurring(Boolean(initialData.isRecurring));
-                setMonthPolicy('ROLL_TO_LAST_DAY');
-            } else {
-                setAmount('');
-                setDescription('');
-                setDate(getTodayDateInputValue());
-                setIsRecurring(openWithRecurring);
-                setMonthPolicy('ROLL_TO_LAST_DAY');
-                setAccountId(accounts.length > 1 ? '' : getDefaultAccountId(accounts));
-                setHasUserPickedAccount(accounts.length <= 1);
-                setCategory('כללי');
-                setIsCategoryTouched(false);
-            }
-            setShowDeleteConfirm(false);
-            setAmountError('');
-            setAccountError('');
-            setDateError('');
-            setCategorySearch('');
-            setNewCategoryName('');
-            setNewCategoryEmojiInput('');
-            setIsAccountListExpanded(false);
+        const wasOpen = prevIsOpenRef.current;
+        const justOpened = isOpen && !wasOpen;
+        prevIsOpenRef.current = isOpen;
+
+        if (!justOpened) return;
+
+        if (initialData) {
+            setAmount(initialData.amount.toString());
+            setDescription(initialData.description || '');
+            setDate(toDateInputValueFromUtc(new Date(initialData.date)));
+            setAccountId(initialData.account.id);
+            setHasUserPickedAccount(true);
+            setCategory(initialData.category);
+            setIsRecurring(Boolean(initialData.isRecurring));
+            setInstallmentCount(
+                initialData.installmentTotal != null && initialData.installmentTotal > 0
+                    ? initialData.installmentTotal
+                    : 1
+            );
+            setMonthPolicy('ROLL_TO_LAST_DAY');
+        } else {
+            setAmount('');
+            setDescription('');
+            setDate(getTodayDateInputValue());
+            setIsRecurring(openWithRecurring);
+            setInstallmentCount(1);
+            setMonthPolicy('ROLL_TO_LAST_DAY');
+            setAccountId(accounts.length > 1 ? '' : getDefaultAccountId(accounts));
+            setHasUserPickedAccount(accounts.length <= 1);
+            setCategory('כללי');
+            setIsCategoryTouched(false);
         }
+        setShowDeleteConfirm(false);
+        setAmountError('');
+        setAccountError('');
+        setDateError('');
+        setCategorySearch('');
+        setNewCategoryName('');
+        setNewCategoryEmojiInput('');
+        setIsAccountListExpanded(false);
     }, [isOpen, initialData, accounts, openWithRecurring]);
 
     useEffect(() => {
@@ -158,6 +172,20 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
         }
     }, [isOpen, accountId, accounts, initialData]);
 
+    useEffect(() => {
+        if (isRecurring) setInstallmentCount(1);
+    }, [isRecurring]);
+
+    useEffect(() => {
+        if (installmentCount >= 2) setIsRecurring(false);
+    }, [installmentCount]);
+
+    const installmentPreviewParts = useMemo(() => {
+        const num = parseFloat(amount);
+        if (!amount || Number.isNaN(num) || num <= 0 || installmentCount < 2) return null;
+        return splitInstallmentAmounts(num, installmentCount);
+    }, [amount, installmentCount]);
+
     const handleSubmit = async () => {
         const num = parseFloat(amount);
         if (!amount || isNaN(num)) { setAmountError('הזן סכום'); return; }
@@ -178,6 +206,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
         formData.append('category', category);
         formData.append('isRecurring', isRecurring ? 'true' : 'false');
         formData.append('monthPolicy', monthPolicy);
+        formData.append('installmentCount', String(installmentCount));
 
         let res;
         if (initialData) {
@@ -198,6 +227,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                 setDescription('');
                 setDate(getTodayDateInputValue());
                 setIsRecurring(false);
+                setInstallmentCount(1);
                 setMonthPolicy('ROLL_TO_LAST_DAY');
                 setAccountId(accounts.length > 1 ? '' : getDefaultAccountId(accounts));
                 setHasUserPickedAccount(accounts.length <= 1);
@@ -214,11 +244,11 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
         }
     };
 
-    const handleDelete = async () => {
+    const handleDelete = async (scope: 'single' | 'installment_group' = 'single') => {
         if (!initialData) return;
         setIsDeleting(true);
         const { deleteTransaction } = await import('@/app/actions');
-        const res = await deleteTransaction(initialData.id);
+        const res = await deleteTransaction(initialData.id, scope);
         setIsDeleting(false);
         if (res.success) {
             toast.success('נמחק בהצלחה');
@@ -249,6 +279,11 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
         [accountId, accounts]
     );
     const shouldPromptAccountChoice = accounts.length > 1 && !hasUserPickedAccount;
+
+    const isEditingInstallment =
+        Boolean(initialData?.installmentGroupId) &&
+        initialData?.installmentNumber != null &&
+        initialData?.installmentTotal != null;
 
     const handleCreateCategory = async () => {
         const candidate = newCategoryName.trim();
@@ -293,7 +328,6 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
         setNewCategoryName('');
         setNewCategoryEmojiInput('');
         toast.success('קטגוריה נוספה');
-        router.refresh();
     };
 
     return (
@@ -611,6 +645,69 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                 )}
                             </div>
 
+                            {isEditingInstallment && initialData && (
+                                <div className="bg-ios-blue/8 dark:bg-ios-blue/15 rounded-2xl shadow-card mb-4 p-4">
+                                    <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text">
+                                        תשלום {initialData.installmentNumber}/{initialData.installmentTotal}
+                                    </p>
+                                    <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle mt-1">
+                                        זוהי הוצאה מתוך סדרת תשלומים; בכל חודש מופיע חלק נפרד עם אותו מונה.
+                                    </p>
+                                </div>
+                            )}
+
+                            {!initialData && (
+                                <div className="bg-white dark:bg-ios-dark-card rounded-2xl shadow-card mb-4 p-4">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className="w-8 h-8 bg-ios-teal/10 rounded-lg flex items-center justify-center">
+                                            <span className="text-sm">📅</span>
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-[15px] font-medium text-ios-text dark:text-ios-dark-text">תשלומים</p>
+                                            <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle">
+                                                פריסה על מספר חודשים — בכל חודש יווצר תשלום בנפרד (למשל 2/5).
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <label className="block text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle uppercase tracking-wider mb-2">
+                                        מספר חודשים
+                                    </label>
+                                    <input
+                                        type="number"
+                                        inputMode="numeric"
+                                        min={1}
+                                        max={60}
+                                        value={installmentCount}
+                                        onChange={(e) => {
+                                            const v = parseInt(e.target.value, 10);
+                                            if (Number.isNaN(v)) {
+                                                setInstallmentCount(1);
+                                                return;
+                                            }
+                                            setInstallmentCount(Math.min(60, Math.max(1, v)));
+                                        }}
+                                        disabled={isRecurring}
+                                        className="w-full bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-3 py-2.5 text-sm text-ios-text dark:text-ios-dark-text focus:outline-none focus:ring-2 focus:ring-ios-blue/30 disabled:opacity-50"
+                                    />
+                                    {installmentPreviewParts && installmentPreviewParts.length > 0 && (
+                                        <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle mt-2">
+                                            סכום לכל חודש: ₪{formatIlsAmount(installmentPreviewParts[0] ?? 0)}
+                                            {installmentPreviewParts.length > 1 &&
+                                                installmentPreviewParts[0] !==
+                                                    installmentPreviewParts[installmentPreviewParts.length - 1] && (
+                                                    <span>
+                                                        {' '}
+                                                        – ₪
+                                                        {formatIlsAmount(
+                                                            installmentPreviewParts[installmentPreviewParts.length - 1] ?? 0
+                                                        )}
+                                                    </span>
+                                                )}
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+
                             {/* Recurring Toggle */}
                             <div className="bg-white dark:bg-ios-dark-card rounded-2xl shadow-card mb-6 p-4 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
@@ -624,7 +721,13 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                         </p>
                                     </div>
                                 </div>
-                                <LiquidToggle testId="quickadd-recurring-toggle" isOn={isRecurring} onToggle={() => setIsRecurring(!isRecurring)} />
+                                <LiquidToggle
+                                    testId="quickadd-recurring-toggle"
+                                    isOn={isRecurring}
+                                    onToggle={() => {
+                                        if (!isEditingInstallment) setIsRecurring(!isRecurring);
+                                    }}
+                                />
                             </div>
 
                             {shouldShowShortMonthPolicy && (
@@ -658,20 +761,38 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
 
                                 {initialData && (
                                     showDeleteConfirm ? (
-                                        <div className="flex gap-3">
-                                            <button
-                                                onClick={() => setShowDeleteConfirm(false)}
-                                                className="flex-1 bg-gray-100 dark:bg-ios-dark-fill text-gray-700 dark:text-ios-dark-text font-bold py-3.5 rounded-2xl"
-                                            >
-                                                ביטול
-                                            </button>
-                                            <button
-                                                onClick={handleDelete}
-                                                disabled={isDeleting}
-                                                className="flex-1 bg-ios-red text-white font-bold py-3.5 rounded-2xl"
-                                            >
-                                                {isDeleting ? 'מוחק...' : 'מחיקה'}
-                                            </button>
+                                        <div className="space-y-3">
+                                            <div className="flex gap-3">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowDeleteConfirm(false)}
+                                                    className="flex-1 bg-gray-100 dark:bg-ios-dark-fill text-gray-700 dark:text-ios-dark-text font-bold py-3.5 rounded-2xl"
+                                                >
+                                                    ביטול
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => void handleDelete('single')}
+                                                    disabled={isDeleting}
+                                                    className="flex-1 bg-ios-red text-white font-bold py-3.5 rounded-2xl"
+                                                >
+                                                    {isDeleting
+                                                        ? 'מוחק...'
+                                                        : initialData.installmentGroupId
+                                                          ? 'מחק תשלום זה'
+                                                          : 'מחיקה'}
+                                                </button>
+                                            </div>
+                                            {initialData.installmentGroupId && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => void handleDelete('installment_group')}
+                                                    disabled={isDeleting}
+                                                    className="w-full border border-ios-red/40 text-ios-red font-semibold py-3 rounded-2xl text-sm"
+                                                >
+                                                    מחק את כל סדרת התשלומים
+                                                </button>
+                                            )}
                                         </div>
                                     ) : (
                                         <button

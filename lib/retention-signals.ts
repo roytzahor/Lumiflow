@@ -4,14 +4,21 @@ export function buildRetentionSignals(input: {
   transactions: TransactionListItem[];
   /** Sum of per-account planned monthly inflows (preferred baseline). */
   totalMonthlyInflow?: number | null;
+  /** Sum of one-time income entries for the current month. */
+  totalOneTimeIncome?: number | null;
   budgetSettings?: BudgetSettings | null;
   now?: Date;
 }): { alerts: BudgetAlert[]; nudges: DailyNudge[] } {
   const now = input.now ?? new Date();
-  const fromInflow =
+  const recurringInflow =
     input.totalMonthlyInflow != null && Number.isFinite(input.totalMonthlyInflow) && input.totalMonthlyInflow > 0
       ? input.totalMonthlyInflow
       : null;
+  const oneTimeIncome =
+    input.totalOneTimeIncome != null && Number.isFinite(input.totalOneTimeIncome) && input.totalOneTimeIncome > 0
+      ? input.totalOneTimeIncome
+      : 0;
+  const fromInflow = recurringInflow != null ? recurringInflow + oneTimeIncome : null;
   const budget = fromInflow ?? input.budgetSettings?.monthlyIncome ?? 21000;
   const spent = input.transactions.reduce((sum, row) => sum + row.amount, 0);
   const ratio = budget > 0 ? spent / budget : 0;

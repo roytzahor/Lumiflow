@@ -3,13 +3,14 @@
 
 import { authOptions } from '@/auth';
 import { parseDateInputToUtc } from '@/lib/date-only';
+import { addCalendarMonthsUtc, splitInstallmentAmounts } from '@/lib/installment-utils';
 import { hashInviteToken } from '@/lib/invite-utils';
 import { prisma } from '@/lib/prisma';
 import { resolveMonthlyDate } from '@/lib/recurring-utils';
 import { resolveOrRestoreSessionUserId } from '@/lib/session-user';
 import type { AccountMemberRole, AccountType, RecurringMonthPolicy, Transaction } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import { randomBytes } from 'crypto';
+import { randomBytes, randomUUID } from 'crypto';
 import { getServerSession } from 'next-auth';
 import { revalidatePath } from 'next/cache';
 
@@ -150,6 +151,11 @@ export async function addTransaction(formData: FormData) {
     const isRecurring = formData.get('isRecurring') === 'true';
     const monthPolicy = (formData.get('monthPolicy') as RecurringMonthPolicy | null) ?? 'ROLL_TO_LAST_DAY';
     let accountId = String(formData.get('accountId') ?? '');
+    const rawInstallmentCount = parseInt(String(formData.get('installmentCount') ?? '1'), 10);
+    const installmentCount = Number.isFinite(rawInstallmentCount)
+      ? Math.min(60, Math.max(1, Math.floor(rawInstallmentCount)))
+      : 1;
+    const useInstallments = !isRecurring && installmentCount >= 2;
 
     const accountIds = await getUserAccountIds(userId);
     if (!accountId) accountId = accountIds[0] ?? '';
@@ -157,6 +163,33 @@ export async function addTransaction(formData: FormData) {
       return { success: false, error: 'Missing required fields' };
     }
     if (!accountIds.includes(accountId)) return { success: false, error: 'Forbidden' };
+
+    if (useInstallments) {
+      const groupId = randomUUID();
+      const parts = splitInstallmentAmounts(amount, installmentCount);
+      await prisma.transaction.createMany({
+        data: parts.map((partAmount, index) => ({
+          amount: partAmount,
+          description: description || null,
+          date: addCalendarMonthsUtc(date, index),
+          accountId,
+          category,
+          paidByUserId: userId,
+          attributedToUserId: userId,
+          installmentGroupId: groupId,
+          installmentNumber: index + 1,
+          installmentTotal: installmentCount,
+        })),
+      });
+      await logActionMetric('installment_plan_created', userId, {
+        accountId,
+        category,
+        installmentCount,
+        hasDescription: Boolean(description),
+      });
+      refreshAllViews();
+      return { success: true };
+    }
 
     let recurringTransactionId: string | undefined;
     if (isRecurring) {
@@ -233,7 +266,10 @@ export async function getTransactions(filter: string = 'All', year?: number, mon
     const transactions = await prisma.transaction.findMany({
       where,
       orderBy: { date: 'desc' },
-      include: { account: true },
+      include: {
+        account: true,
+        paidByUser: { select: { id: true, name: true, email: true } },
+      },
     });
 
     const actualDecorated = await decorateRecurringFlags(transactions);
@@ -271,6 +307,9 @@ export async function getTransactions(filter: string = 'All', year?: number, mon
           attributedToUserId: null,
           description: r.description,
           recurringTransactionId: r.id,
+          installmentGroupId: null,
+          installmentNumber: null,
+          installmentTotal: null,
           createdAt: occurrence,
           account: r.account,
           isRecurring: true,
@@ -752,6 +791,153 @@ export async function upsertContributionPlan(input: { accountId: string; monthly
     return { success: true };
   } catch {
     return { success: false, error: 'שמירת התרומה החודשית נכשלה' };
+  }
+}
+
+export async function addIncomeEntry(formData: FormData) {
+  try {
+    const userId = await requireUserId();
+    await ensureUserBootstrap(userId);
+
+    const amount = parseFloat(String(formData.get('amount') ?? '0'));
+    const description = String(formData.get('description') ?? '').trim();
+    const rawDate = String(formData.get('date') ?? '');
+    const date = parseDateInputToUtc(rawDate);
+    const accountId = String(formData.get('accountId') ?? '');
+
+    if (!amount || isNaN(amount) || amount <= 0) return { success: false, error: 'סכום לא תקין' };
+    if (!accountId) return { success: false, error: 'יש לבחור חשבון' };
+    if (!date) return { success: false, error: 'יש לבחור תאריך' };
+
+    await assertUserHasAccount(userId, accountId);
+
+    await prisma.incomeEntry.create({
+      data: {
+        amount,
+        description: description || null,
+        date,
+        accountId,
+        userId,
+      },
+    });
+
+    await logActionMetric('income_entry_created', userId, { accountId, hasDescription: Boolean(description) });
+    refreshAllViews();
+    return { success: true };
+  } catch {
+    return { success: false, error: 'הוספת ההכנסה נכשלה' };
+  }
+}
+
+export async function getIncomeEntries(accountId?: string, year?: number, month?: number) {
+  try {
+    const userId = await requireUserId();
+    const accountIds = await getUserAccountIds(userId);
+    if (accountIds.length === 0) return [];
+
+    const targetAccountIds =
+      accountId && accountIds.includes(accountId) ? [accountId] : accountIds;
+
+    const where: Record<string, unknown> = {
+      userId,
+      accountId: { in: targetAccountIds },
+    };
+
+    if (year != null && month != null) {
+      where.date = { gte: startOfMonth(year, month), lte: endOfMonth(year, month) };
+    }
+
+    const entries = await prisma.incomeEntry.findMany({
+      where,
+      include: { account: { select: { name: true } } },
+      orderBy: { date: 'desc' },
+      take: 50,
+    });
+
+    return entries.map((e) => ({
+      id: e.id,
+      amount: e.amount,
+      description: e.description,
+      date: e.date,
+      accountId: e.accountId,
+      accountName: e.account.name,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function deleteIncomeEntry(id: string) {
+  try {
+    const userId = await requireUserId();
+    const entry = await prisma.incomeEntry.findFirst({ where: { id, userId } });
+    if (!entry) return { success: false, error: 'רשומה לא נמצאה' };
+    await prisma.incomeEntry.delete({ where: { id } });
+    refreshAllViews();
+    return { success: true };
+  } catch {
+    return { success: false, error: 'מחיקת ההכנסה נכשלה' };
+  }
+}
+
+export async function getMonthlyIncomeEntries(year: number, month: number) {
+  try {
+    const userId = await requireUserId();
+    const accountIds = await getUserAccountIds(userId);
+    if (accountIds.length === 0) return [];
+
+    const entries = await prisma.incomeEntry.findMany({
+      where: {
+        userId,
+        accountId: { in: accountIds },
+        date: { gte: startOfMonth(year, month), lte: endOfMonth(year, month) },
+      },
+      select: { accountId: true, amount: true },
+    });
+
+    const byAccount = new Map<string, number>();
+    for (const e of entries) {
+      byAccount.set(e.accountId, (byAccount.get(e.accountId) ?? 0) + e.amount);
+    }
+
+    return Array.from(byAccount.entries()).map(([accountId, totalAmount]) => ({
+      accountId,
+      totalAmount,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function getMyContributionRatios() {
+  try {
+    const userId = await requireUserId();
+    const accountIds = await getUserAccountIds(userId);
+    if (accountIds.length === 0) return [];
+
+    const allPlans = await prisma.accountContributionPlan.findMany({
+      where: { accountId: { in: accountIds } },
+      select: { userId: true, accountId: true, monthlyAmount: true },
+    });
+
+    const myPlans = allPlans.filter((p) => p.userId === userId);
+
+    const totalsByAccount = new Map<string, number>();
+    for (const p of allPlans) {
+      totalsByAccount.set(p.accountId, (totalsByAccount.get(p.accountId) ?? 0) + p.monthlyAmount);
+    }
+
+    return myPlans.map((p) => ({
+      accountId: p.accountId,
+      myAmount: p.monthlyAmount,
+      totalAmount: totalsByAccount.get(p.accountId) ?? 0,
+      ratio:
+        (totalsByAccount.get(p.accountId) ?? 0) > 0
+          ? p.monthlyAmount / (totalsByAccount.get(p.accountId) ?? 1)
+          : 1,
+    }));
+  } catch {
+    return [];
   }
 }
 
@@ -1294,6 +1480,14 @@ export async function updateTransaction(id: string, formData: FormData) {
     if (!existing.account.members.some((m) => m.userId === userId)) return { success: false, error: 'Forbidden' };
     await assertUserHasAccount(userId, accountId);
 
+    const isInstallmentRow =
+      existing.installmentGroupId != null &&
+      existing.installmentNumber != null &&
+      existing.installmentTotal != null;
+    if (isInstallmentRow && isRecurring) {
+      return { success: false, error: 'Installment rows cannot be marked as recurring' };
+    }
+
     let recurringTransactionId = existing.recurringTransactionId;
     if (isRecurring && !recurringTransactionId) {
       const dayOfMonth = date.getUTCDate();
@@ -1367,7 +1561,7 @@ export async function updateTransaction(id: string, formData: FormData) {
   }
 }
 
-export async function deleteTransaction(id: string) {
+export async function deleteTransaction(id: string, scope: 'single' | 'installment_group' = 'single') {
   try {
     const userId = await requireUserId();
     const existing = await prisma.transaction.findUnique({
@@ -1377,8 +1571,21 @@ export async function deleteTransaction(id: string) {
     if (!existing) return { success: false, error: 'Transaction not found' };
     if (!existing.account.members.some((m) => m.userId === userId)) return { success: false, error: 'Forbidden' };
 
-    await prisma.transaction.delete({ where: { id } });
-    await logActionMetric('transaction_deleted', userId, { transactionId: id });
+    if (scope === 'installment_group' && existing.installmentGroupId) {
+      const accountIds = await getUserAccountIds(userId);
+      await prisma.transaction.deleteMany({
+        where: {
+          installmentGroupId: existing.installmentGroupId,
+          accountId: { in: accountIds },
+        },
+      });
+      await logActionMetric('installment_group_deleted', userId, {
+        installmentGroupId: existing.installmentGroupId,
+      });
+    } else {
+      await prisma.transaction.delete({ where: { id } });
+      await logActionMetric('transaction_deleted', userId, { transactionId: id });
+    }
     refreshAllViews();
     return { success: true };
   } catch {
@@ -1499,7 +1706,10 @@ export async function getMonthlyStats(year: number, month: number) {
         accountId: { in: accountIds },
         date: { gte: from, lte: to },
       },
-      include: { account: true },
+      include: {
+        account: true,
+        paidByUser: { select: { id: true, name: true, email: true } },
+      },
       orderBy: { date: 'desc' },
     });
 
@@ -1534,6 +1744,9 @@ export async function getMonthlyStats(year: number, month: number) {
           attributedToUserId: null,
           description: r.description,
           recurringTransactionId: r.id,
+          installmentGroupId: null,
+          installmentNumber: null,
+          installmentTotal: null,
           createdAt: occurrence,
           account: r.account,
           isRecurring: true,

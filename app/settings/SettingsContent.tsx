@@ -22,11 +22,14 @@ import {
   upsertContributionPlan,
   removeAccountMember,
   updateSettingsSectionExpanded,
+  addIncomeEntry,
+  getIncomeEntries,
+  deleteIncomeEntry,
 } from '../actions';
 import type { SettingsSectionKey } from '../actions';
 import type { AccountMemberSummary } from '../actions';
-import { User, MoonStar, Pencil, Check, X, Trash2, Plus, Share2, LogOut, Copy, SendHorizontal, Info, ChevronDown, Landmark, Tag } from 'lucide-react';
-import type { Account, Category } from '@/lib/types';
+import { User, MoonStar, Pencil, Check, X, Trash2, Plus, Share2, LogOut, Copy, SendHorizontal, Info, ChevronDown, Landmark, Tag, TrendingUp } from 'lucide-react';
+import type { Account, Category, IncomeEntryItem } from '@/lib/types';
 import AccountPopup from '@/components/AccountPopup';
 import ProfileEditSheet from '@/components/ProfileEditSheet';
 import AccountShareSheet from '@/components/AccountShareSheet';
@@ -171,6 +174,16 @@ export default function SettingsContent({
   const settingsSectionOpenRef = useRef(settingsSectionOpen);
   settingsSectionOpenRef.current = settingsSectionOpen;
   const themeInitializedRef = useRef(false);
+
+  const [incomeOpen, setIncomeOpen] = useState(false);
+  const [incomeEntries, setIncomeEntries] = useState<IncomeEntryItem[]>([]);
+  const [incomeEntriesLoaded, setIncomeEntriesLoaded] = useState(false);
+  const [incomeFormAmount, setIncomeFormAmount] = useState('');
+  const [incomeFormDescription, setIncomeFormDescription] = useState('');
+  const [incomeFormDate, setIncomeFormDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [incomeFormAccountId, setIncomeFormAccountId] = useState('');
+  const [isAddingIncome, setIsAddingIncome] = useState(false);
+  const [deletingIncomeId, setDeletingIncomeId] = useState<string | null>(null);
 
   const toggleSettingsSection = (key: SettingsSectionKey) => {
     const next = !settingsSectionOpenRef.current[key];
@@ -455,6 +468,67 @@ export default function SettingsContent({
     )));
     toast.success('הקטגוריה עודכנה');
     cancelEditCategory();
+  };
+
+  const loadIncomeEntries = async () => {
+    const entries = await getIncomeEntries();
+    setIncomeEntries(entries as IncomeEntryItem[]);
+    setIncomeEntriesLoaded(true);
+  };
+
+  const toggleIncomeSection = () => {
+    const next = !incomeOpen;
+    setIncomeOpen(next);
+    if (next && !incomeEntriesLoaded) {
+      void loadIncomeEntries();
+    }
+  };
+
+  const handleAddIncome = async () => {
+    const num = parseFloat(incomeFormAmount);
+    if (!incomeFormAmount || isNaN(num) || num <= 0) {
+      toast.error('יש להזין סכום תקין');
+      return;
+    }
+    if (!incomeFormAccountId) {
+      toast.error('יש לבחור חשבון');
+      return;
+    }
+    if (!incomeFormDate) {
+      toast.error('יש לבחור תאריך');
+      return;
+    }
+    setIsAddingIncome(true);
+    const formData = new FormData();
+    formData.append('amount', String(num));
+    formData.append('description', incomeFormDescription);
+    formData.append('date', incomeFormDate);
+    formData.append('accountId', incomeFormAccountId);
+    const res = await addIncomeEntry(formData);
+    setIsAddingIncome(false);
+    if (!res.success) {
+      toast.error(res.error ?? 'הוספת ההכנסה נכשלה');
+      return;
+    }
+    toast.success('הכנסה נוספה');
+    setIncomeFormAmount('');
+    setIncomeFormDescription('');
+    setIncomeFormDate(new Date().toISOString().slice(0, 10));
+    void loadIncomeEntries();
+    router.refresh();
+  };
+
+  const handleDeleteIncome = async (id: string) => {
+    setDeletingIncomeId(id);
+    const res = await deleteIncomeEntry(id);
+    setDeletingIncomeId(null);
+    if (!res.success) {
+      toast.error(res.error ?? 'מחיקת ההכנסה נכשלה');
+      return;
+    }
+    setIncomeEntries((prev) => prev.filter((e) => e.id !== id));
+    toast.success('ההכנסה נמחקה');
+    router.refresh();
   };
 
   const createInviteForAccount = async (payload: { accountId: string; method: 'link' | 'email'; email: string }) => {
@@ -810,6 +884,132 @@ export default function SettingsContent({
           </div>
         </div>
       </SettingsCollapsibleSection>
+
+      {/* One-time Income Section */}
+      <section className="rounded-3xl shadow-card bg-ios-card dark:bg-ios-dark-card">
+        <button
+          type="button"
+          onClick={toggleIncomeSection}
+          aria-expanded={incomeOpen}
+          className={cn(
+            'sticky top-0 z-[2] flex w-full items-center gap-2.5 px-5 pt-5 pb-3 text-right',
+            'bg-ios-card/95 dark:bg-ios-dark-card/95 backdrop-blur-md',
+            'transition-[border-radius] duration-300 ease-out',
+            incomeOpen ? 'rounded-t-3xl rounded-b-none' : 'rounded-3xl',
+          )}
+        >
+          <div className="w-8 h-8 bg-ios-green/15 rounded-lg flex items-center justify-center shrink-0">
+            <TrendingUp className="w-4 h-4 text-ios-green" />
+          </div>
+          <h2 className="text-base font-bold text-ios-text dark:text-ios-dark-text flex-1 min-w-0">הכנסות חד-פעמיות</h2>
+          <ChevronDown
+            className={cn(
+              'w-5 h-5 shrink-0 text-ios-subtle dark:text-ios-dark-subtle transition-transform duration-200',
+              incomeOpen ? 'rotate-0' : '-rotate-90',
+            )}
+            aria-hidden
+          />
+        </button>
+        {incomeOpen && (
+          <div className="px-5 pb-5 pt-1 rounded-b-3xl space-y-4">
+            <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle">
+              בונוס, פרויקט פרילנס, מתנה או כל הכנסה שאינה חלק מהשכר החודשי הקבוע.
+            </p>
+
+            {/* Add income form */}
+            <div className="bg-ios-gray-6 dark:bg-ios-dark-fill rounded-2xl p-3 space-y-2.5">
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="text-[11px] font-semibold text-ios-subtle dark:text-ios-dark-subtle mb-1 block">סכום (₪)</label>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    placeholder="0"
+                    value={incomeFormAmount}
+                    onChange={(e) => setIncomeFormAmount(e.target.value)}
+                    className="w-full bg-white dark:bg-ios-dark-card rounded-xl px-3 py-2.5 text-sm text-ios-text dark:text-ios-dark-text outline-none"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="text-[11px] font-semibold text-ios-subtle dark:text-ios-dark-subtle mb-1 block">תאריך</label>
+                  <input
+                    type="date"
+                    value={incomeFormDate}
+                    onChange={(e) => setIncomeFormDate(e.target.value)}
+                    className="w-full bg-white dark:bg-ios-dark-card rounded-xl px-3 py-2.5 text-sm text-ios-text dark:text-ios-dark-text outline-none"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-[11px] font-semibold text-ios-subtle dark:text-ios-dark-subtle mb-1 block">תיאור (אופציונלי)</label>
+                <input
+                  type="text"
+                  placeholder="בונוס שנתי, פרויקט..."
+                  value={incomeFormDescription}
+                  onChange={(e) => setIncomeFormDescription(e.target.value)}
+                  className="w-full bg-white dark:bg-ios-dark-card rounded-xl px-3 py-2.5 text-sm text-ios-text dark:text-ios-dark-text outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-semibold text-ios-subtle dark:text-ios-dark-subtle mb-1 block">חשבון</label>
+                <select
+                  value={incomeFormAccountId}
+                  onChange={(e) => setIncomeFormAccountId(e.target.value)}
+                  className="w-full bg-white dark:bg-ios-dark-card rounded-xl px-3 py-2.5 text-sm text-ios-text dark:text-ios-dark-text outline-none"
+                >
+                  <option value="">בחר חשבון...</option>
+                  {accounts.map((acc) => (
+                    <option key={acc.id} value={acc.id}>{acc.name}</option>
+                  ))}
+                </select>
+              </div>
+              <button
+                type="button"
+                onClick={handleAddIncome}
+                disabled={isAddingIncome}
+                className="w-full py-2.5 rounded-xl bg-ios-green text-white text-sm font-semibold flex items-center justify-center gap-1.5 disabled:opacity-60"
+              >
+                <Plus className="w-4 h-4" />
+                {isAddingIncome ? 'מוסיף...' : 'הוספת הכנסה'}
+              </button>
+            </div>
+
+            {/* Income entries list */}
+            {!incomeEntriesLoaded ? (
+              <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle text-center py-2">טוען...</p>
+            ) : incomeEntries.length === 0 ? (
+              <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle text-center py-2">אין הכנסות חד-פעמיות עדיין</p>
+            ) : (
+              <div className="bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl divide-y divide-gray-200/50 dark:divide-white/10 overflow-hidden">
+                {incomeEntries.map((entry) => (
+                  <div key={entry.id} className="flex items-center justify-between px-3 py-3 gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text">
+                        ₪{Math.round(entry.amount).toLocaleString('he-IL')}
+                        {entry.description && (
+                          <span className="font-normal text-ios-subtle dark:text-ios-dark-subtle"> · {entry.description}</span>
+                        )}
+                      </p>
+                      <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle mt-0.5">
+                        {new Date(entry.date).toLocaleDateString('he-IL')} · {entry.accountName}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteIncome(entry.id)}
+                      disabled={deletingIncomeId === entry.id}
+                      className="text-ios-red/70 hover:text-ios-red p-1 disabled:opacity-50 flex-shrink-0"
+                      aria-label="מחיקת הכנסה"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </section>
 
       <button
         data-testid="settings-signout"

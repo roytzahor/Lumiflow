@@ -6,6 +6,14 @@ import { ChevronLeft } from 'lucide-react';
 import { formatIlsAmount, formatUtcDateLabel, getCalendarDateKeyInTimeZone, getUtcDateKey } from '@/lib/formatters';
 import type { TransactionListItem, Category } from '@/lib/types';
 
+function addedByDisplayName(user: { name: string | null; email: string }): string {
+    const name = user.name?.trim();
+    if (name) return name;
+    const email = user.email.trim();
+    const at = email.indexOf('@');
+    return at > 0 ? email.slice(0, at) : email;
+}
+
 interface TransactionFeedProps {
     transactions: TransactionListItem[];
     categories?: Category[];
@@ -74,6 +82,10 @@ export default function TransactionFeed({ transactions = [], categories = [], on
                                     {groupedByDate[dateKey].map((t) => {
                                         const badge = getAccountBadge(t);
                                         const plannedFutureRecurring = isPlannedFutureRecurring(t);
+                                        const addedBy =
+                                            !t.isProjected && t.paidByUser
+                                                ? addedByDisplayName(t.paidByUser)
+                                                : null;
                                         return (
                                             <motion.div
                                                 key={t.id}
@@ -99,6 +111,13 @@ export default function TransactionFeed({ transactions = [], categories = [], on
                                                             <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-md ${badge.color}`}>
                                                                 {badge.label}
                                                             </span>
+                                                            {t.installmentNumber != null &&
+                                                                t.installmentTotal != null &&
+                                                                t.installmentTotal > 0 && (
+                                                                    <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-md text-ios-teal bg-ios-teal/10 tabular-nums">
+                                                                        {t.installmentNumber}/{t.installmentTotal}
+                                                                    </span>
+                                                                )}
                                                             {t.isRecurring && (
                                                                 <span
                                                                     className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-md ${
@@ -111,6 +130,11 @@ export default function TransactionFeed({ transactions = [], categories = [], on
                                                                 </span>
                                                             )}
                                                         </div>
+                                                        {addedBy ? (
+                                                            <p className="text-[10px] text-ios-subtle dark:text-ios-dark-subtle mt-1 leading-snug">
+                                                                נוסף על ידי {addedBy}
+                                                            </p>
+                                                        ) : null}
                                                     </div>
                                                 </div>
 

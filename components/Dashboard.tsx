@@ -11,8 +11,9 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, ChevronLeft, Lock } from "lucide-react";
 import MonthSelector from "./MonthSelector";
-import type { TransactionListItem, Account, Category, RecurringWithAccount } from "@/lib/types";
+import type { TransactionListItem, Account, Category, RecurringWithAccount, MonthlyIncomeTotal, ContributionRatio } from "@/lib/types";
 import { parseScopeAccountId } from "@/lib/scope-account";
+import { computeMyMoneyBreakdown } from "@/lib/my-money-utils";
 
 interface DashboardProps {
     initialTransactions: TransactionListItem[];
@@ -27,6 +28,8 @@ interface DashboardProps {
         accountType: "PRIVATE" | "SHARED";
         totalMonthlyInflow: number;
     }>;
+    monthlyIncomeEntries?: MonthlyIncomeTotal[];
+    myContributionRatios?: ContributionRatio[];
     viewerName?: string | null;
     initialRecurringSectionExpanded?: boolean;
 }
@@ -159,6 +162,8 @@ export default function Dashboard({
     accounts = [],
     recurringTransactions = [],
     contributionTotals = [],
+    monthlyIncomeEntries = [],
+    myContributionRatios = [],
     viewerName = null,
     initialRecurringSectionExpanded = true,
 }: DashboardProps) {
@@ -225,19 +230,62 @@ export default function Dashboard({
         [recurringForScope]
     );
 
+    const oneTimeIncomeByAccountId = useMemo(
+        () => new Map(monthlyIncomeEntries.map((e) => [e.accountId, e.totalAmount])),
+        [monthlyIncomeEntries]
+    );
+
+    const accountBalancesAll = useMemo(() => {
+        const inflowByAccountId = new Map(contributionTotals.map((row) => [row.accountId, row.totalMonthlyInflow]));
+        return accounts.map((acc) => {
+            const expenses = initialTransactions
+                .filter((t) => t.accountId === acc.id && t.amount > 0)
+                .reduce((sum, t) => sum + t.amount, 0);
+            const monthlyInflow = inflowByAccountId.get(acc.id) ?? 0;
+            const oneTimeIncome = oneTimeIncomeByAccountId.get(acc.id) ?? 0;
+            const balance = monthlyInflow + oneTimeIncome - expenses;
+            return { account: acc, expenses, monthlyInflow: monthlyInflow + oneTimeIncome, balance };
+        });
+    }, [accounts, initialTransactions, contributionTotals, oneTimeIncomeByAccountId]);
+
+    const myMoneyBreakdown = useMemo(() => {
+        if (myContributionRatios.length === 0) return null;
+        return computeMyMoneyBreakdown({
+            myContributions: myContributionRatios,
+            transactions: initialTransactions.map((t) => ({
+                accountId: t.accountId,
+                accountType: t.account.type,
+                category: t.category,
+                amount: t.amount,
+            })),
+            monthlyIncomeEntries,
+        });
+    }, [myContributionRatios, initialTransactions, monthlyIncomeEntries]);
+
+    const chartColors = [
+        '#007AFF', '#FF9500', '#FF2D55', '#5856D6',
+        '#34C759', '#AF52DE', '#5AC8FA', '#FF3B30', '#FFCC00',
+    ];
+
     const chartData = useMemo(() => {
-        const categoryMap = new Map();
+        if (scopeAccountId === "my-money" && myMoneyBreakdown) {
+            return myMoneyBreakdown.categories.map(({ name, amount }, index) => {
+                const cat = categories.find(c => c.name === name);
+                return {
+                    name,
+                    value: amount,
+                    color: chartColors[index % chartColors.length],
+                    icon: cat ? cat.icon : '✨',
+                };
+            });
+        }
+
+        const categoryMap = new Map<string, number>();
         scopedTransactions.forEach((t) => {
             if (t.amount > 0) {
-                const current = categoryMap.get(t.category) || 0;
-                categoryMap.set(t.category, current + t.amount);
+                categoryMap.set(t.category, (categoryMap.get(t.category) ?? 0) + t.amount);
             }
         });
-
-        const colors = [
-            '#007AFF', '#FF9500', '#FF2D55', '#5856D6',
-            '#34C759', '#AF52DE', '#5AC8FA', '#FF3B30', '#FFCC00',
-        ];
 
         return Array.from(categoryMap.entries())
             .map(([name, value], index) => {
@@ -245,12 +293,13 @@ export default function Dashboard({
                 return {
                     name,
                     value,
-                    color: colors[index % colors.length],
+                    color: chartColors[index % chartColors.length],
                     icon: cat ? cat.icon : '✨'
                 };
             })
             .sort((a, b) => b.value - a.value);
-    }, [scopedTransactions, categories]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [scopedTransactions, categories, scopeAccountId, myMoneyBreakdown]);
     const shouldShowSpendingTeaser = chartData.length < 2;
     const spendingTeaserData = useMemo(() => {
         if (!shouldShowSpendingTeaser) return chartData;
@@ -268,18 +317,6 @@ export default function Dashboard({
             { name: "בילויים", value: 25, color: "#34C759", icon: "🎉" },
         ];
     }, [chartData, shouldShowSpendingTeaser]);
-
-    const accountBalancesAll = useMemo(() => {
-        const inflowByAccountId = new Map(contributionTotals.map((row) => [row.accountId, row.totalMonthlyInflow]));
-        return accounts.map((acc) => {
-            const expenses = initialTransactions
-                .filter((t) => t.accountId === acc.id && t.amount > 0)
-                .reduce((sum, t) => sum + t.amount, 0);
-            const monthlyInflow = inflowByAccountId.get(acc.id) ?? 0;
-            const balance = monthlyInflow - expenses;
-            return { account: acc, expenses, monthlyInflow, balance };
-        });
-    }, [accounts, initialTransactions, contributionTotals]);
 
     const accountBalances = useMemo(() => {
         if (scopeAccountId === "all") return accountBalancesAll;
@@ -309,8 +346,12 @@ export default function Dashboard({
         setShowStickyHeader(latest > 280);
     });
 
-    const totalSpent = scopedTransactions.reduce((sum, t) => sum + t.amount, 0);
-    const income = totalMonthlyInflowScope;
+    const totalSpent = scopeAccountId === "my-money" && myMoneyBreakdown
+        ? myMoneyBreakdown.totalAttributedExpenses
+        : scopedTransactions.reduce((sum, t) => sum + t.amount, 0);
+    const income = scopeAccountId === "my-money" && myMoneyBreakdown
+        ? myMoneyBreakdown.totalIncome
+        : totalMonthlyInflowScope;
     const hasIncomeConfigured = income > 0;
     const savedSoFar = hasIncomeConfigured ? income - totalSpent : 0;
     const rawRatio = hasIncomeConfigured ? (savedSoFar / income) * 100 : 0;
@@ -350,7 +391,9 @@ export default function Dashboard({
                 >
                     <div className="max-w-md mx-auto px-5 py-3 flex justify-between items-center">
                         <span className="font-bold text-base text-ios-text dark:text-ios-dark-text">
-                            {savedSoFar >= 0 ? "חסכנו" : "חריגה"} החודש
+                            {savedSoFar >= 0
+                                ? (scopeAccountId === "my-money" ? "חסכתי" : "חסכנו")
+                                : "חריגה"} החודש
                         </span>
                         <span className={`font-bold tabular-nums ${savedSoFar >= 0 ? 'text-ios-green' : 'text-ios-red'}`}>
                             {savedSoFar >= 0 ? '₪' : '-₪'}{formatIlsAmount(Math.abs(savedSoFar))}
@@ -374,7 +417,7 @@ export default function Dashboard({
                     <MonthSelector basePath="/" />
                 </div>
 
-                {accounts.length > 1 ? (
+                {(accounts.length > 1 || myContributionRatios.length > 0) ? (
                     <div className="mb-6 min-w-0 max-w-full flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
                         <h2 className="text-lg font-bold text-ios-text dark:text-ios-dark-text shrink-0">תצוגה לפי חשבון</h2>
                         <div className="relative w-full sm:w-auto sm:min-w-[11rem] shrink-0">
@@ -383,7 +426,7 @@ export default function Dashboard({
                             </label>
                             <select
                                 id="dashboard-scope-account"
-                                value={scopeAccountId === "all" ? "all" : scopeAccountId}
+                                value={scopeAccountId}
                                 onChange={(e) => {
                                     const v = e.target.value;
                                     setScopeAccount(v === "all" ? "all" : v);
@@ -392,6 +435,9 @@ export default function Dashboard({
                                 className="w-full appearance-none rounded-xl border border-gray-200/90 dark:border-white/10 bg-white/90 dark:bg-ios-dark-fill/90 text-sm font-semibold text-ios-text dark:text-ios-dark-text py-2.5 ps-3 pe-9 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ios-blue/40"
                             >
                                 <option value="all">כל החשבונות</option>
+                                {myContributionRatios.length > 0 && (
+                                    <option value="my-money">הכסף שלי</option>
+                                )}
                                 {accounts.map((acc) => (
                                     <option key={acc.id} value={acc.id}>
                                         {getAccountLabel(acc)}
@@ -446,14 +492,18 @@ export default function Dashboard({
                             {/* Stats */}
                             <div className="flex-1 space-y-3">
                                 <div>
-                                    <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle font-medium">חסכנו החודש</p>
+                                        <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle font-medium">
+                                            {scopeAccountId === "my-money" ? "חסכתי החודש" : "חסכנו החודש"}
+                                        </p>
                                     <p className={`text-2xl font-bold tracking-tight ${savedSoFar >= 0 ? 'text-ios-green' : 'text-ios-red'}`}>
                                         ₪{formatIlsAmount(savedSoFar)}
                                     </p>
                                 </div>
                                 <div className="flex gap-6">
                                     <div>
-                                        <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">הכנסות לחשבונות</p>
+                                        <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">
+                                            {scopeAccountId === "my-money" ? "הכנסות שלי" : "הכנסות לחשבונות"}
+                                        </p>
                                         <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text">₪{formatIlsAmount(income)}</p>
                                     </div>
                                     <div>
@@ -513,10 +563,73 @@ export default function Dashboard({
                     className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 shadow-card mb-6"
                 >
                     <div className="flex items-center justify-between mb-3">
-                        <h2 className="text-lg font-bold text-ios-text dark:text-ios-dark-text">מאזן לפי חשבון</h2>
-                        <span className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle">{accountBalances.length} חשבונות</span>
+                        <h2 className="text-lg font-bold text-ios-text dark:text-ios-dark-text">
+                            {scopeAccountId === "my-money" ? "הכסף שלי" : "מאזן לפי חשבון"}
+                        </h2>
+                        {scopeAccountId !== "my-money" && (
+                            <span className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle">{accountBalances.length} חשבונות</span>
+                        )}
                     </div>
-                    {accountBalances.length === 0 ? (
+
+                    {scopeAccountId === "my-money" && myMoneyBreakdown ? (
+                        <div className="space-y-3">
+                            <div className="rounded-2xl bg-ios-blue/8 ring-1 ring-ios-blue/20 p-4">
+                                <div className="flex items-center justify-between mb-3">
+                                    <p className="text-sm font-semibold text-ios-blue">סיכום חודשי אישי</p>
+                                    <p className={`text-sm font-bold tabular-nums ${myMoneyBreakdown.balance >= 0 ? "text-ios-green" : "text-ios-red"}`}>
+                                        {myMoneyBreakdown.balance >= 0 ? "₪" : "-₪"}{formatIlsAmount(Math.abs(myMoneyBreakdown.balance))}
+                                    </p>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 text-center">
+                                    <div className="rounded-lg bg-white/70 dark:bg-ios-dark-card/70 px-2 py-2">
+                                        <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">סה״כ הכנסות שלי</p>
+                                        <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text tabular-nums">
+                                            ₪{formatIlsAmount(Math.round(myMoneyBreakdown.totalIncome))}
+                                        </p>
+                                    </div>
+                                    <div className="rounded-lg bg-white/70 dark:bg-ios-dark-card/70 px-2 py-2">
+                                        <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">הוצאות מיוחסות לי</p>
+                                        <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text tabular-nums">
+                                            ₪{formatIlsAmount(Math.round(myMoneyBreakdown.totalAttributedExpenses))}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            {myMoneyBreakdown.categories.length > 0 && (
+                                <div className="rounded-2xl bg-ios-gray-6/60 dark:bg-ios-dark-fill/60 p-3 space-y-2">
+                                    <p className="text-[11px] font-semibold text-ios-subtle dark:text-ios-dark-subtle px-1">התפלגות לפי קטגוריה (מיוחס)</p>
+                                    {myMoneyBreakdown.categories.slice(0, 5).map((cat) => {
+                                        const pct = myMoneyBreakdown.totalAttributedExpenses > 0
+                                            ? (cat.amount / myMoneyBreakdown.totalAttributedExpenses) * 100
+                                            : 0;
+                                        const icon = getCategoryIcon(categories, cat.name);
+                                        return (
+                                            <div key={cat.name} className="flex items-center gap-2.5">
+                                                <span className="text-base w-6 text-center flex-shrink-0">{icon}</span>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center justify-between mb-0.5">
+                                                        <span className="text-xs font-medium text-ios-text dark:text-ios-dark-text truncate">{cat.name}</span>
+                                                        <span className="text-xs font-semibold text-ios-text dark:text-ios-dark-text tabular-nums flex-shrink-0 ms-2">
+                                                            ₪{formatIlsAmount(Math.round(cat.amount))}
+                                                        </span>
+                                                    </div>
+                                                    <div className="h-1.5 rounded-full bg-gray-200/70 dark:bg-ios-dark-fill overflow-hidden">
+                                                        <div
+                                                            className={`h-full rounded-full ${cat.source === 'shared' ? 'bg-ios-indigo/70' : 'bg-ios-blue/70'}`}
+                                                            style={{ width: `${pct}%` }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                                {cat.source === 'shared' && (
+                                                    <span className="text-[10px] font-semibold text-ios-indigo bg-ios-indigo/10 px-1.5 py-0.5 rounded-md flex-shrink-0">משותף</span>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    ) : accountBalances.length === 0 ? (
                         <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-ios-gray-6/40 dark:bg-ios-dark-fill/30 p-3.5 min-h-[158px]">
                             <div className="pointer-events-none select-none blur-[2.5px] opacity-85 space-y-2">
                                 {[0, 1, 2].map((row) => (

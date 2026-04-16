@@ -54,6 +54,7 @@ model User {
   createdInvites  AccountInvite[] @relation("InviteCreatedBy")
   acceptedInvites AccountInvite[] @relation("InviteAcceptedBy")
   contributionPlans AccountContributionPlan[]
+  incomeEntries     IncomeEntry[]
   paidTransactions Transaction[]   @relation("TransactionPaidByUser")
   attributedTransactions Transaction[] @relation("TransactionAttributedToUser")
 }
@@ -74,6 +75,7 @@ model Account {
   members               AccountMember[]
   invites               AccountInvite[]
   contributionPlans     AccountContributionPlan[]
+  incomeEntries         IncomeEntry[]
 }
 
 model AccountMember {
@@ -98,6 +100,11 @@ model Transaction {
   attributedToUserId   String?
   description          String?
   recurringTransactionId String?
+  /// Shared id for rows created as one multi-month installment plan.
+  installmentGroupId   String?
+  /// 1-based index within the plan (e.g. 2 of 5).
+  installmentNumber    Int?
+  installmentTotal     Int?
   createdAt            DateTime              @default(now())
   account              Account               @relation(fields: [accountId], references: [id], onDelete: Cascade)
   paidByUser           User?                 @relation("TransactionPaidByUser", fields: [paidByUserId], references: [id], onDelete: SetNull)
@@ -107,6 +114,7 @@ model Transaction {
   @@index([accountId, date])
   @@index([paidByUserId])
   @@index([attributedToUserId])
+  @@index([installmentGroupId])
 }
 
 model RecurringTransaction {
@@ -177,4 +185,19 @@ model AccountContributionPlan {
   account       Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
   @@unique([userId, accountId])
+}
+
+model IncomeEntry {
+  id          String   @id @default(uuid())
+  amount      Float
+  description String?
+  date        DateTime
+  accountId   String
+  userId      String
+  createdAt   DateTime @default(now())
+  account     Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, date])
+  @@index([userId])
 }

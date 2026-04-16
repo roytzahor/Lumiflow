@@ -17,6 +17,9 @@ describe('buildRetentionSignals', () => {
           attributedToUserId: 'u',
           description: null,
           recurringTransactionId: null,
+          installmentGroupId: null,
+          installmentNumber: null,
+          installmentTotal: null,
           createdAt: new Date('2026-03-02T00:00:00.000Z'),
           account: {
             id: 'a1',
@@ -41,6 +44,9 @@ describe('buildRetentionSignals', () => {
           attributedToUserId: 'u',
           description: null,
           recurringTransactionId: null,
+          installmentGroupId: null,
+          installmentNumber: null,
+          installmentTotal: null,
           createdAt: new Date('2026-03-10T00:00:00.000Z'),
           account: {
             id: 'a1',
