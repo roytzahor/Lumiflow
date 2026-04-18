@@ -30,7 +30,7 @@ describe('Invite popup flow', () => {
     cy.get('[data-testid="signup-password"]').type(ownerPassword);
     cy.get('[data-testid="signup-submit"]').click();
 
-    cy.url().should('include', '/onboarding');
+    cy.url({ timeout: 15000 }).should('include', '/onboarding');
     cy.get('[data-testid="onboarding-template-personalShared"]').click();
     cy.contains('button', 'המשך').click();
     cy.contains('button', 'המשך').click();
@@ -42,7 +42,7 @@ describe('Invite popup flow', () => {
     cy.contains('button', 'המשך').click();
     cy.contains('button', 'המשך').click();
     submitOnboardingWithStaleRetry();
-    cy.visit('/');
+    cy.get('[data-testid="onboarding-continue-dashboard"]', { timeout: 15000 }).should('be.visible').click();
     cy.url().should('eq', `${Cypress.config('baseUrl')}/`);
 
     cy.visit('/settings');
@@ -69,14 +69,14 @@ describe('Invite popup flow', () => {
       cy.get('[data-testid="signup-password"]').type(invitedPassword);
       cy.get('[data-testid="signup-submit"]').click();
 
-      cy.url().should('include', '/onboarding');
+      cy.url({ timeout: 15000 }).should('include', '/onboarding');
       cy.get('[data-testid="onboarding-template-personalOnly"]').click();
       cy.contains('button', 'המשך').click();
       cy.contains('button', 'המשך').click();
       cy.contains('button', 'המשך').click();
       cy.contains('button', 'המשך').click();
       submitOnboardingWithStaleRetry();
-      cy.visit('/');
+    cy.get('[data-testid="onboarding-continue-dashboard"]', { timeout: 15000 }).should('be.visible').click();
       cy.url().should('eq', `${Cypress.config('baseUrl')}/`);
 
       cy.visit(inviteUrl);

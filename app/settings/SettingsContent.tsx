@@ -711,6 +711,7 @@ export default function SettingsContent({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <button
+              data-testid="settings-edit-profile"
               type="button"
               onClick={saveProfile}
               className="w-full py-2.5 rounded-xl bg-ios-blue text-white text-sm font-semibold"
@@ -740,6 +741,7 @@ export default function SettingsContent({
       >
         <div className="grid grid-cols-3 gap-2">
           <button
+            data-testid="settings-theme-light"
             type="button"
             onClick={() => handleThemeChange('LIGHT')}
             disabled={isThemeSaving}
@@ -752,6 +754,7 @@ export default function SettingsContent({
             בהיר
           </button>
           <button
+            data-testid="settings-theme-dark"
             type="button"
             onClick={() => handleThemeChange('DARK')}
             disabled={isThemeSaving}

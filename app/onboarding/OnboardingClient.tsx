@@ -278,8 +278,7 @@ export default function OnboardingClient() {
   };
 
   const goToDashboard = () => {
-    router.push('/');
-    router.refresh();
+    window.location.href = '/';
   };
 
   const signInCallbackPath = '/auth/signin?callbackUrl=%2Fonboarding';

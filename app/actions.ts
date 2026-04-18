@@ -2806,7 +2806,7 @@ export async function completeOnboarding(input: {
       });
 
       return { createdAccounts, inviteUrl };
-    });
+    }, { timeout: 30000, maxWait: 30000 });
 
     if ('error' in result && result.error) {
       return {

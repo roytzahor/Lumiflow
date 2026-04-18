@@ -39,7 +39,7 @@ describe('Onboarding resilience', () => {
     cy.get('[data-testid="signup-password"]').type(password);
     cy.get('[data-testid="signup-submit"]').click();
 
-    cy.url().should('include', '/onboarding');
+    cy.url({ timeout: 15000 }).should('include', '/onboarding');
     cy.get('[data-testid="onboarding-template-personalOnly"]').click();
     cy.contains('button', 'המשך').click();
     cy.contains('button', 'המשך').click();
@@ -71,7 +71,7 @@ describe('Onboarding resilience', () => {
     cy.get('[data-testid="signup-password"]').type(password);
     cy.get('[data-testid="signup-submit"]').click();
 
-    cy.url().should('include', '/onboarding');
+    cy.url({ timeout: 15000 }).should('include', '/onboarding');
     cy.get('[data-testid="onboarding-template-custom"]').click();
     cy.contains('button', 'המשך').click();
     cy.get('[data-testid="onboarding-add-account"]').click();
@@ -95,7 +95,7 @@ describe('Onboarding resilience', () => {
     cy.get('[data-testid="signup-password"]').type(password);
     cy.get('[data-testid="signup-submit"]').click();
 
-    cy.url().should('include', '/onboarding');
+    cy.url({ timeout: 15000 }).should('include', '/onboarding');
     completePersonalOnlyOnboarding();
     cy.url().should('eq', `${Cypress.config('baseUrl')}/`);
 

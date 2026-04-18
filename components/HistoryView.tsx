@@ -237,6 +237,7 @@ export default function HistoryView({
                             סינון לפי חשבון
                         </label>
                         <select
+                            data-testid="history-account-filter"
                             id="history-account-filter"
                             value={effectiveHistoryAccountId === "all" ? "all" : effectiveHistoryAccountId}
                             onChange={(e) => {
@@ -286,6 +287,7 @@ export default function HistoryView({
                             סינון לפי קטגוריה
                         </label>
                         <select
+                            data-testid="history-category-filter"
                             id="history-category-filter"
                             value=""
                             onChange={(e) => {

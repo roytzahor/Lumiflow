@@ -60,7 +60,7 @@ export async function POST(request: Request) {
           isCustom: false,
         })),
       });
-    });
+    }, { timeout: 30000, maxWait: 30000 });
 
     return NextResponse.json({ success: true });
   } catch (error) {

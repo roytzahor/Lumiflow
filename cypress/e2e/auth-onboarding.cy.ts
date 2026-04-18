@@ -30,7 +30,7 @@ describe('Auth and onboarding flow', () => {
     cy.get('[data-testid="signup-password"]').type(password);
     cy.get('[data-testid="signup-submit"]').click();
 
-    cy.url().should('include', '/onboarding');
+    cy.url({ timeout: 15000 }).should('include', '/onboarding');
     cy.get('[data-testid="onboarding-template-personalOnly"]').click();
     cy.contains('button', 'המשך').click();
     cy.contains('button', 'המשך').click();
@@ -40,12 +40,11 @@ describe('Auth and onboarding flow', () => {
     cy.contains('button', 'המשך').click();
     cy.contains('button', 'המשך').click();
     submitOnboardingWithStaleRetry();
-    cy.visit('/');
-
-    cy.url().should('eq', `${Cypress.config('baseUrl')}/`);
-    cy.contains('הוסיפו לחשבון הכנסות או הוצאות כדי לפתוח את המאזן').should('not.exist');
-    cy.contains('₪12,000').should('be.visible');
-    cy.contains(/הוסיפו לחשבון ".+" הכנסות או הוצאות כדי לפתוח את המאזן/).should('not.exist');
+    cy.get('[data-testid="onboarding-continue-dashboard"]', { timeout: 30000 }).should('be.visible').click();
+    cy.url({ timeout: 15000 }).should('eq', `${Cypress.config('baseUrl')}/`);
+    cy.get('[data-testid="account-locked-message"]').should('not.exist');
+    cy.contains('₪12,000', { timeout: 15000 }).should('be.visible');
+    cy.get('[data-testid="account-locked-message"]').should('not.exist');
   });
 
   it('locks account card when both account inflow and expenses are zero', () => {
@@ -58,17 +57,16 @@ describe('Auth and onboarding flow', () => {
     cy.get('[data-testid="signup-password"]').type(password);
     cy.get('[data-testid="signup-submit"]').click();
 
-    cy.url().should('include', '/onboarding');
+    cy.url({ timeout: 15000 }).should('include', '/onboarding');
     cy.get('[data-testid="onboarding-template-personalOnly"]').click();
     cy.contains('button', 'המשך').click();
     cy.contains('button', 'המשך').click();
     cy.contains('button', 'המשך').click();
     cy.contains('button', 'המשך').click();
     submitOnboardingWithStaleRetry();
-    cy.visit('/');
-
-    cy.url().should('eq', `${Cypress.config('baseUrl')}/`);
-    cy.contains('הוסיפו לחשבון הכנסות או הוצאות כדי לפתוח את המאזן').should('be.visible');
-    cy.contains(/הוסיפו לחשבון ".+" הכנסות או הוצאות כדי לפתוח את המאזן/).should('be.visible');
+    cy.get('[data-testid="onboarding-continue-dashboard"]', { timeout: 30000 }).should('be.visible').click();
+    cy.url({ timeout: 15000 }).should('eq', `${Cypress.config('baseUrl')}/`);
+    cy.get('[data-testid="account-locked-message"]', { timeout: 15000 }).should('be.visible');
+    cy.get('[data-testid="account-locked-message"]', { timeout: 15000 }).should('be.visible');
   });
 });

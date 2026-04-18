@@ -517,6 +517,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                         <span className="text-[15px] font-medium text-ios-text dark:text-ios-dark-text">תיאור</span>
                                     </div>
                                     <input
+                                        data-testid="quickadd-description"
                                         type="text"
                                         value={description}
                                         onChange={(e) => setDescription(e.target.value)}

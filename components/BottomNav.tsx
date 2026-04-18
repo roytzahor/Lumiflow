@@ -119,6 +119,7 @@ export default function BottomNav() {
                         role="menuitem"
                         className="w-full flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-ios-text dark:text-ios-dark-text hover:bg-ios-gray-6/80 dark:hover:bg-ios-dark-fill/80"
                         onClick={() => openQuickAdd(false)}
+                        data-testid="fab-quick-add"
                     >
                         <span className="w-9 h-9 rounded-full bg-ios-blue/15 text-ios-blue flex items-center justify-center shrink-0">
                             <Plus className="w-4 h-4" strokeWidth={2.4} />
@@ -130,6 +131,7 @@ export default function BottomNav() {
                         role="menuitem"
                         className="w-full flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-ios-text dark:text-ios-dark-text hover:bg-ios-gray-6/80 dark:hover:bg-ios-dark-fill/80"
                         onClick={() => openQuickAdd(true)}
+                        data-testid="fab-recurring-add"
                     >
                         <span className="w-9 h-9 rounded-full bg-ios-indigo/15 text-ios-indigo flex items-center justify-center shrink-0">
                             <Repeat className="w-4 h-4" strokeWidth={2.4} />
@@ -156,6 +158,7 @@ export default function BottomNav() {
                         aria-label="הוספת הוצאה"
                         aria-haspopup="menu"
                         aria-expanded={fabMenuOpen}
+                        data-testid="fab-add-button"
                     >
                         <Plus className="w-6 h-6 text-white" strokeWidth={2.8} />
                     </button>

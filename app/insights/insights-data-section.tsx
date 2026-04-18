@@ -49,7 +49,7 @@ export default async function InsightsDataSection() {
             savingsInsight.thisMonthIncome > 0);
 
     return (
-        <section>
+        <section data-testid="insights-data-section">
             <div className="mb-3 flex items-center gap-2">
                 <h2 className="min-w-0 flex-1 text-base font-bold">שינויים בולטים החודש</h2>
                 <InfoHint ariaLabel="הסבר על שינויים בולטים">

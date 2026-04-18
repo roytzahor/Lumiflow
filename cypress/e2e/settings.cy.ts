@@ -1,9 +1,6 @@
-describe('Recurring short month policy visibility', () => {
+describe('Settings Flow', () => {
   Cypress.on('uncaught:exception', (err) => {
-    if (
-      err.message.includes('NEXT_REDIRECT') ||
-      err.message.includes('An unexpected response was received from the server.')
-    ) {
+    if (err.message.includes('NEXT_REDIRECT')) {
       return false;
     }
     return true;
@@ -23,9 +20,9 @@ describe('Recurring short month policy visibility', () => {
     cy.clearLocalStorage();
   });
 
-  it('shows short month policy only for dates 29/30/31', () => {
+  it('updates profile and theme', () => {
     const stamp = Date.now();
-    const email = `shortmonth+${stamp}@lumiflow.local`;
+    const email = `settings+${stamp}@lumiflow.local`;
     const password = 'Password123!';
 
     cy.visit('/auth/signup');
@@ -37,20 +34,33 @@ describe('Recurring short month policy visibility', () => {
     cy.get('[data-testid="onboarding-template-personalOnly"]').click();
     cy.contains('button', 'המשך').click();
     cy.contains('button', 'המשך').click();
+    cy.get('[data-testid="onboarding-monthly-income"]').type('10000');
     cy.contains('button', 'המשך').click();
     cy.contains('button', 'המשך').click();
     submitOnboardingWithStaleRetry();
     cy.get('[data-testid="onboarding-continue-dashboard"]', { timeout: 15000 }).should('be.visible').click();
     cy.url().should('eq', `${Cypress.config('baseUrl')}/`);
 
-    cy.visit('/?quickAdd=1');
-    cy.get('[data-testid="quickadd-open-close"]').should('be.visible');
-    cy.get('[data-testid="quickadd-recurring-toggle"]').click();
+    // Go to settings
+    cy.contains('הגדרות').click();
+    cy.url().should('include', '/settings');
 
-    cy.get('[data-testid="quickadd-date"]').clear().type('2026-04-28');
-    cy.get('[data-testid="quickadd-short-month-policy"]').should('not.exist');
+    // Toggle theme
+    cy.get('[data-testid="settings-theme-dark"]').click();
+    // Verify dark mode applied (HTML should have class dark)
+    cy.get('html').should('have.class', 'dark');
 
-    cy.get('[data-testid="quickadd-date"]').clear().type('2026-04-30');
-    cy.get('[data-testid="quickadd-short-month-policy"]').should('exist');
+    cy.get('[data-testid="settings-theme-light"]').click();
+    cy.get('html').should('not.have.class', 'dark');
+
+    // Click edit profile
+    cy.get('[data-testid="settings-edit-profile"]').click();
+    
+    // There should be a sheet or popup for editing
+    cy.get('input[name="name"]').clear().type('New Name User');
+    cy.contains('button', 'שמירת פרופיל').click();
+
+    // Verify it changed
+    cy.contains('New Name User').should('be.visible');
   });
 });

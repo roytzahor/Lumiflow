@@ -190,6 +190,7 @@ export default function TransactionFeed({
                                         return (
                                             <motion.div
                                                 key={t.id}
+                                                data-testid={`transaction-row-${t.id}`}
                                                 layout
                                                 onClick={() => (t.isRecurring || !t.isProjected) ? onTransactionClick?.(t) : undefined}
                                                 initial={{ opacity: 0 }}

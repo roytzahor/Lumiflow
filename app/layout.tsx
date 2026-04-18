@@ -56,7 +56,7 @@ export default async function RootLayout({
     return (
         <html lang="he" dir="rtl" suppressHydrationWarning className={htmlThemeClass}>
             <body className={`${assistant.variable} font-sans antialiased min-h-screen bg-ios-bg dark:bg-ios-dark-bg text-ios-text dark:text-ios-dark-text transition-colors`}>
-                <Script id="lumiflow-chunk-load-recovery" strategy="beforeInteractive">
+                <Script id="lumiflow-chunk-load-recovery" strategy="afterInteractive">
                     {`(function(){var k='lumiflow:chunk-timeout-retry';function tryRecover(msg){var m=String(msg||'').toLowerCase();if((m.indexOf('loading chunk')!==-1||m.indexOf('chunkloaderror')!==-1)&&m.indexOf('timeout')!==-1){try{if(sessionStorage.getItem(k)==='1')return;sessionStorage.setItem(k,'1');location.reload();}catch(e){}}}window.addEventListener('error',function(e){tryRecover(e.message||(e.error&&e.error.message)||'');},true);window.addEventListener('unhandledrejection',function(e){var r=e.reason;tryRecover(typeof r==='string'?r:(r&&r.message)?r.message:'');});})();`}
                 </Script>
                 <ProvidersClient initialThemePreference={initialThemePreference}>

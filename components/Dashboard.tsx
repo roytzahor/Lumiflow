@@ -139,7 +139,10 @@ function DashboardAccountBalanceCard({
                             <div className="w-7 h-7 rounded-full bg-ios-blue/15 text-ios-blue flex items-center justify-center mx-auto mb-2">
                                 <Lock className="w-3.5 h-3.5" />
                             </div>
-                            <p className="text-xs text-ios-text dark:text-ios-dark-text leading-relaxed">
+                            <p 
+                                data-testid="account-locked-message"
+                                className="text-xs text-ios-text dark:text-ios-dark-text leading-relaxed"
+                            >
                                 הוסיפו לחשבון &quot;{getAccountLabel(account)}&quot; הכנסות או הוצאות כדי לפתוח את המאזן
                             </p>
                         </div>
@@ -262,6 +265,11 @@ export default function Dashboard({
         },
         [router, searchParams]
     );
+
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     const stableNow = useMemo(() => new Date(nowIso), [nowIso]);
     const selectedMonth = useMemo(() => selectedMonthIso ? new Date(selectedMonthIso) : stableNow, [selectedMonthIso, stableNow]);
@@ -526,7 +534,7 @@ export default function Dashboard({
                 {/* Header */}
                 <header className="mb-3">
                     <p className="text-base text-ios-subtle dark:text-ios-dark-subtle mb-1">
-                        {viewerName?.trim() ? `${getGreeting(stableNow)}, ${viewerName.trim()}` : getGreeting(stableNow)}
+                        {mounted && (viewerName?.trim() ? `${getGreeting(stableNow)}, ${viewerName.trim()}` : getGreeting(stableNow))}
                     </p>
                     <h1 className="text-3xl font-bold text-ios-text dark:text-ios-dark-text tracking-tight">
                         {monthName}
