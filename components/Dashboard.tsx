@@ -550,12 +550,12 @@ export default function Dashboard({
                     transition={sectionDelay(0.1)}
                     className={`bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 sm:p-6 shadow-card mb-4 ${hasIncomeConfigured ? "" : "opacity-80"}`}
                 >
-                    <div className="mb-5 flex min-w-0 flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
-                        <h2 className="min-w-0 shrink text-lg font-bold tracking-tight text-ios-text dark:text-ios-dark-text truncate">
+                    <div className="mb-5 flex min-w-0 flex-row items-center justify-between gap-3">
+                        <h2 className="min-w-0 flex-1 truncate text-lg font-bold tracking-tight text-ios-text dark:text-ios-dark-text">
                             {heroTitle}
                         </h2>
                         {scopeSelectorVisible ? (
-                            <div className="relative w-full shrink-0 sm:w-auto sm:min-w-[11rem]">
+                            <div className="relative w-full min-w-0 max-w-[11rem] shrink-0">
                                 <label htmlFor="dashboard-scope-account" className="sr-only">
                                     חשבון לתצוגה בסקירה
                                 </label>
@@ -567,7 +567,7 @@ export default function Dashboard({
                                         setScopeAccount(v === "all" ? "all" : v);
                                     }}
                                     aria-label="חשבון לתצוגה בסקירה"
-                                    className="w-full appearance-none rounded-xl border border-gray-200/50 dark:border-white/10 bg-ios-card/95 dark:bg-ios-dark-fill/90 py-2.5 ps-3 pe-9 text-sm font-semibold text-ios-text shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ios-blue/40 dark:text-ios-dark-text"
+                                    className="w-full min-w-0 appearance-none rounded-xl border border-gray-200/50 dark:border-white/10 bg-ios-gray-6 py-2 ps-3 pe-8 text-sm font-semibold text-ios-text shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ios-blue/40 dark:bg-ios-dark-fill dark:text-ios-dark-text"
                                 >
                                     <option value="all">כל החשבונות</option>
                                     {myContributionRatios.length > 0 && (

@@ -40,43 +40,43 @@ export default function SavingsAllocationCard({
       transition={sectionDelay(0)}
       className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 shadow-card mb-4 mt-3"
     >
-      <div className="flex items-center gap-2 mb-1">
+      <div className="mb-1 flex min-w-0 items-center gap-2">
         <button
           type="button"
           onClick={onToggleSection}
           aria-expanded={sectionExpanded}
-          className="min-w-0 flex-1 flex items-center justify-between gap-2 text-start rounded-xl -mx-1 px-1 py-0.5 active:bg-black/[0.03] dark:active:bg-white/[0.04] transition-colors"
+          className="-mx-1 flex min-w-0 flex-1 items-center gap-2 rounded-xl px-1 py-0.5 text-start transition-colors active:bg-black/[0.03] dark:active:bg-white/[0.04]"
         >
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
             <motion.span
               animate={{ rotate: sectionExpanded ? 180 : 0 }}
               transition={
                 reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 400, damping: 30 }
               }
-              className="flex-shrink-0 text-ios-subtle dark:text-ios-dark-subtle inline-flex"
+              className="inline-flex shrink-0 text-ios-subtle dark:text-ios-dark-subtle"
               aria-hidden
             >
-              <ChevronDown className="w-5 h-5" />
+              <ChevronDown className="h-5 w-5" />
             </motion.span>
-            <div className="w-8 h-8 rounded-lg bg-ios-green/12 flex items-center justify-center text-ios-green shrink-0">
-              <PiggyBank className="w-4 h-4" strokeWidth={2} />
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-ios-green/12 text-ios-green">
+              <PiggyBank className="h-4 w-4" strokeWidth={2} />
             </div>
-            <h2 className="text-lg font-bold text-ios-text dark:text-ios-dark-text truncate">
+            <h2 className="min-w-0 flex-1 truncate text-lg font-bold text-ios-text dark:text-ios-dark-text">
               הפרשות חיסכון החודש
             </h2>
           </div>
-          <span className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle flex-shrink-0">
-            {allocations.length} סה״כ
-          </span>
         </button>
         <button
           type="button"
           onClick={onAdd}
-          className="shrink-0 flex items-center gap-1 rounded-xl bg-ios-green/15 text-ios-green px-3 py-2 text-xs font-bold active:bg-ios-green/25 transition-colors"
+          className="flex shrink-0 items-center gap-1 rounded-xl bg-ios-green/15 px-3 py-2 text-xs font-bold text-ios-green transition-colors active:bg-ios-green/25"
         >
-          <Plus className="w-4 h-4" strokeWidth={2.5} />
+          <Plus className="h-4 w-4" strokeWidth={2.5} />
           הוספה
         </button>
+        <span className="shrink-0 text-xs font-semibold tabular-nums text-ios-subtle dark:text-ios-dark-subtle">
+          {allocations.length} סה״כ
+        </span>
       </div>
 
       {!sectionExpanded && allocations.length > 0 && (

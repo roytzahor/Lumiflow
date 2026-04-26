@@ -84,6 +84,7 @@ export default function InfoHint({ children, ariaLabel = 'הסבר', className }
       <div
         ref={panelRef}
         id={panelId}
+        data-lumiflow-overlay="true"
         role="region"
         aria-label={ariaLabel}
         style={{

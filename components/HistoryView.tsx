@@ -57,18 +57,19 @@ export default function HistoryView({
     /** "my-money" is dashboard-only; treat as all accounts for the history list. */
     const effectiveHistoryAccountId = selectedAccountId === "my-money" ? "all" : selectedAccountId;
 
-    const categoryParam = searchParams.get("category");
-
     const activeCategoryNames = useMemo(() => {
         const uniqueNames = new Set(transactions.map((t) => t.category));
         return Array.from(uniqueNames).sort((a, b) => a.localeCompare(b, "he"));
     }, [transactions]);
 
-    const selectedCategory = useMemo(() => {
-        if (!categoryParam) return null;
-        if (activeCategoryNames.includes(categoryParam)) return categoryParam;
-        return null;
-    }, [categoryParam, activeCategoryNames]);
+    /** Category filters from URL (`category` may repeat); only names present in this month. */
+    const selectedCategories = useMemo(() => {
+        const raw = searchParams.getAll("category").filter(Boolean);
+        const legacy = searchParams.get("category");
+        const merged = raw.length > 0 ? raw : legacy ? [legacy] : [];
+        const valid = Array.from(new Set(merged)).filter((c) => activeCategoryNames.includes(c));
+        return valid.sort((a, b) => a.localeCompare(b, "he"));
+    }, [searchParams, activeCategoryNames]);
 
     const setHistoryAccountFilter = useCallback(
         (next: "all" | string) => {
@@ -84,28 +85,54 @@ export default function HistoryView({
         [router, searchParams]
     );
 
-    const setCategoryFilter = useCallback(
-        (next: string | null) => {
+    const replaceCategoryParams = useCallback(
+        (names: string[]) => {
             const params = new URLSearchParams(searchParams.toString());
-            if (next) {
-                params.set("category", next);
-            } else {
-                params.delete("category");
+            params.delete("category");
+            const valid = Array.from(new Set(names)).filter((c) => activeCategoryNames.includes(c));
+            const sorted = valid.sort((a, b) => a.localeCompare(b, "he"));
+            for (const c of sorted) {
+                params.append("category", c);
             }
             const q = params.toString();
             router.replace(q ? `/history?${q}` : "/history");
         },
-        [router, searchParams]
+        [router, searchParams, activeCategoryNames]
     );
 
+    const toggleCategoryFilter = useCallback(
+        (name: string) => {
+            if (!activeCategoryNames.includes(name)) return;
+            const next = new Set(selectedCategories);
+            if (next.has(name)) next.delete(name);
+            else next.add(name);
+            replaceCategoryParams(Array.from(next));
+        },
+        [selectedCategories, replaceCategoryParams, activeCategoryNames]
+    );
+
+    const clearCategoryFilters = useCallback(() => {
+        replaceCategoryParams([]);
+    }, [replaceCategoryParams]);
+
     useEffect(() => {
-        if (categoryParam && !activeCategoryNames.includes(categoryParam)) {
+        const raw = searchParams.getAll("category").filter(Boolean);
+        const legacy = searchParams.get("category");
+        const merged = raw.length > 0 ? raw : legacy ? [legacy] : [];
+        const valid = Array.from(new Set(merged)).filter((c) => activeCategoryNames.includes(c));
+        const sorted = [...valid].sort((a, b) => a.localeCompare(b, "he"));
+        const hasInvalid = merged.some((c) => !activeCategoryNames.includes(c));
+        const hasDupes = new Set(merged).size !== merged.length;
+        if (hasInvalid || hasDupes) {
             const params = new URLSearchParams(searchParams.toString());
             params.delete("category");
+            for (const c of sorted) {
+                params.append("category", c);
+            }
             const q = params.toString();
             router.replace(q ? `/history?${q}` : "/history", { scroll: false });
         }
-    }, [categoryParam, activeCategoryNames, searchParams, router]);
+    }, [activeCategoryNames, searchParams, router]);
 
     useEffect(() => {
         if (accountParam === "my-money") {
@@ -157,16 +184,17 @@ export default function HistoryView({
 
     const visibleTransactions = useMemo(() => {
         let result = showRecurring ? transactionsForView : transactionsForView.filter((t) => !t.isRecurring);
-        if (selectedCategory) {
-            result = result.filter((t) => t.category === selectedCategory);
+        if (selectedCategories.length > 0) {
+            const set = new Set(selectedCategories);
+            result = result.filter((t) => set.has(t.category));
         }
         return result;
-    }, [transactionsForView, showRecurring, selectedCategory]);
+    }, [transactionsForView, showRecurring, selectedCategories]);
 
     const visibleSavings = useMemo(() => {
-        if (selectedCategory) return [];
+        if (selectedCategories.length > 0) return [];
         return savingsForView;
-    }, [savingsForView, selectedCategory]);
+    }, [savingsForView, selectedCategories]);
 
     const displayTotal = useMemo(
         () => visibleTransactions.reduce((sum, t) => sum + t.amount, 0),
@@ -230,7 +258,7 @@ export default function HistoryView({
                     accounts={accounts}
                     categories={categories}
                     activeCategoryNames={activeCategoryNames}
-                    selectedCategory={selectedCategory}
+                    selectedCategories={selectedCategories}
                     effectiveAccountId={effectiveHistoryAccountId}
                     filteredAccount={filteredAccount}
                     showRecurring={showRecurring}
@@ -239,10 +267,11 @@ export default function HistoryView({
                     displayTotal={displayTotal}
                     visibleSavingsTotal={visibleSavingsTotal}
                     showSavingsSummaryRow={
-                        !selectedCategory && showSavingsInFeed && visibleSavingsTotal > 0
+                        selectedCategories.length === 0 && showSavingsInFeed && visibleSavingsTotal > 0
                     }
                     onAccountChange={setHistoryAccountFilter}
-                    onCategoryFilter={setCategoryFilter}
+                    onToggleCategory={toggleCategoryFilter}
+                    onClearCategories={clearCategoryFilters}
                     onToggleRecurring={toggleShowRecurring}
                     onToggleSavingsInFeed={() => setShowSavingsInFeed((v) => !v)}
                 />
@@ -256,7 +285,7 @@ export default function HistoryView({
                     onTransactionClick={handleTransactionClick}
                     savingsAllocations={visibleSavings}
                     savingsLabels={savingsLabels}
-                    showSavingsInFeed={showSavingsInFeed && !selectedCategory}
+                    showSavingsInFeed={showSavingsInFeed && selectedCategories.length === 0}
                     onSavingsClick={handleSavingsClick}
                 />
             </div>
