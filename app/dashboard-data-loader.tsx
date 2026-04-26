@@ -1,17 +1,6 @@
 import Dashboard from "@/components/Dashboard";
 import DashboardLoadError from "@/components/DashboardLoadError";
-import {
-    getTransactions,
-    getCategories,
-    getAccounts,
-    getRecurringTransactions,
-    getAccountContributionTotals,
-    getCurrentUserProfile,
-    getMonthlyIncomeEntries,
-    getMyContributionRatios,
-    getSavingsAllocations,
-    getSavingsLabels,
-} from "@/app/actions";
+import { loadDashboardPageData } from "@/lib/server/load-dashboard-data";
 
 function firstQueryValue(value: string | string[] | undefined): string | undefined {
     if (value === undefined) return undefined;
@@ -38,7 +27,7 @@ export default async function DashboardDataLoader({
             Number.isFinite(parsedMonth) && parsedMonth >= 0 && parsedMonth <= 11 ? parsedMonth : now.getMonth();
         const selectedMonthIso = new Date(Date.UTC(year, month, 1)).toISOString();
 
-        const [
+        const {
             transactions,
             categories,
             accounts,
@@ -49,18 +38,7 @@ export default async function DashboardDataLoader({
             myContributionRatios,
             savingsAllocations,
             savingsLabels,
-        ] = await Promise.all([
-            getTransactions("All", year, month),
-            getCategories(),
-            getAccounts(),
-            getRecurringTransactions(),
-            getAccountContributionTotals(),
-            getCurrentUserProfile(),
-            getMonthlyIncomeEntries(year, month),
-            getMyContributionRatios(),
-            getSavingsAllocations(year, month),
-            getSavingsLabels(),
-        ]);
+        } = await loadDashboardPageData(year, month);
 
         return (
             <Dashboard

@@ -13,9 +13,9 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, ChevronLeft, Lock } from "lucide-react";
 import InfoHint from "@/components/InfoHint";
-import WelcomeTour from "@/components/WelcomeTour";
 
 const QuickAddSheet = dynamic(() => import("./QuickAddSheet"), { ssr: false });
+const WelcomeTour = dynamic(() => import("./WelcomeTour"), { ssr: false });
 const RecurringEditSheet = dynamic(() => import("./RecurringEditSheet"), { ssr: false });
 const SavingsAllocationSheet = dynamic(() => import("./SavingsAllocationSheet"), { ssr: false });
 const SavingsAllocationCard = dynamic(() => import("./SavingsAllocationCard"), { ssr: false });
@@ -268,11 +268,6 @@ export default function Dashboard({
         },
         [router, searchParams]
     );
-
-    const [mounted, setMounted] = useState(false);
-    useEffect(() => {
-        setMounted(true);
-    }, []);
 
     const stableNow = useMemo(() => new Date(nowIso), [nowIso]);
     const selectedMonth = useMemo(() => selectedMonthIso ? new Date(selectedMonthIso) : stableNow, [selectedMonthIso, stableNow]);
@@ -537,7 +532,7 @@ export default function Dashboard({
                 {/* Header */}
                 <header className="mb-3">
                     <p className="text-base text-ios-subtle dark:text-ios-dark-subtle mb-1">
-                        {mounted && (viewerName?.trim() ? `${getGreeting(stableNow)}, ${viewerName.trim()}` : getGreeting(stableNow))}
+                        {viewerName?.trim() ? `${getGreeting(stableNow)}, ${viewerName.trim()}` : getGreeting(stableNow)}
                     </p>
                     <h1 className="text-3xl font-bold text-ios-text dark:text-ios-dark-text tracking-tight">
                         {monthName}
@@ -1026,7 +1021,9 @@ export default function Dashboard({
                 accounts={accounts}
                 savingsLabels={savingsLabels}
             />
-            <WelcomeTour welcomeTourCompletedAt={welcomeTourCompletedAt} />
+            {welcomeTourCompletedAt == null ? (
+                <WelcomeTour welcomeTourCompletedAt={welcomeTourCompletedAt} />
+            ) : null}
         </div>
     );
 }

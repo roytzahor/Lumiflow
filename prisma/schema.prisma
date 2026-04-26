@@ -97,6 +97,7 @@ model AccountMember {
   account   Account           @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
   @@unique([userId, accountId])
+  @@index([userId])
 }
 
 model Transaction {
@@ -244,4 +245,5 @@ model SavingsAllocation {
 
   @@index([accountId, date])
   @@index([userId])
+  @@index([userId, accountId, date])
 }

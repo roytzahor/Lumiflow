@@ -1,8 +1,7 @@
 import { ensureDefaultWorkspace } from '@/app/actions';
-import { authOptions } from '@/auth';
+import { getCachedServerSession } from '@/lib/get-cached-server-session';
 import { prisma } from '@/lib/prisma';
 import { resolveOrRestoreSessionUserId } from '@/lib/session-user';
-import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 
 export async function isUserOnboarded(userId: string) {
@@ -18,7 +17,7 @@ export async function isUserOnboarded(userId: string) {
 }
 
 export async function redirectToOnboardingIfNeeded() {
-  const session = await getServerSession(authOptions);
+  const session = await getCachedServerSession();
   if (!session?.user) return;
 
   let userId: string;
@@ -41,7 +40,7 @@ export async function redirectToOnboardingIfNeeded() {
 }
 
 export async function redirectToHomeIfAlreadyOnboarded() {
-  const session = await getServerSession(authOptions);
+  const session = await getCachedServerSession();
   if (!session?.user) return;
 
   let userId: string;

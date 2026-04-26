@@ -1,16 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import { authOptions } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { getCachedServerSession } from "@/lib/get-cached-server-session";
 import { Assistant } from "next/font/google";
 import ProvidersClient from "@/components/ProvidersClient";
 import Script from "next/script";
-import { getServerSession } from "next-auth";
 import "./globals.css";
 
 const assistant = Assistant({
     subsets: ["hebrew", "latin"],
     variable: "--font-assistant",
-    weight: ["400", "500", "600", "700"],
     display: "swap",
 });
 
@@ -40,12 +38,12 @@ export default async function RootLayout({
 }: Readonly<{
     children: React.ReactNode;
 }>) {
-    const session = await getServerSession(authOptions);
-    const email = session?.user?.email?.trim().toLowerCase();
+    const session = await getCachedServerSession();
+    const userId = session?.user?.id;
     let initialThemePreference: "LIGHT" | "DARK" | "SYSTEM" = "SYSTEM";
-    if (email) {
+    if (userId) {
         const user = await prisma.user.findUnique({
-            where: { email },
+            where: { id: userId },
             select: { themePreference: true },
         });
         initialThemePreference = user?.themePreference ?? "SYSTEM";

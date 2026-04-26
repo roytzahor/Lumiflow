@@ -1,11 +1,10 @@
 import WelcomeClient from '@/app/welcome/WelcomeClient';
 import { ensureDefaultWorkspace, getCurrentUserProfile } from '@/app/actions';
-import { authOptions } from '@/auth';
-import { getServerSession } from 'next-auth';
+import { getCachedServerSession } from '@/lib/get-cached-server-session';
 import { redirect } from 'next/navigation';
 
 export default async function WelcomePage() {
-  const session = await getServerSession(authOptions);
+  const session = await getCachedServerSession();
   if (!session?.user?.email) {
     redirect('/auth/signin?callbackUrl=%2Fwelcome');
   }
