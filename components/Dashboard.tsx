@@ -926,7 +926,7 @@ export default function Dashboard({
                                     {recurringForScope.length === 0 ? (
                                         <p className="text-sm text-ios-subtle dark:text-ios-dark-subtle py-2">אין הוצאות חוזרות כרגע</p>
                                     ) : (
-                                        <div className="bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card border border-gray-200/50 dark:border-white/10 overflow-hidden divide-y divide-black/5 dark:divide-white/10">
+                                        <div className="bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl overflow-hidden divide-y divide-gray-200/50 dark:divide-white/10">
                                             {recurringForScope.map((item) => {
                                                 const icon = getCategoryIcon(categories, item.category);
                                                 const isShared = item.account.type === "SHARED";
@@ -938,10 +938,10 @@ export default function Dashboard({
                                                         key={item.id}
                                                         type="button"
                                                         onClick={() => handleRecurringClick(item)}
-                                                        className="w-full flex items-center justify-between p-4 cursor-pointer active:bg-ios-gray-6/90 dark:active:bg-ios-dark-fill transition-colors"
+                                                        className="w-full flex items-center justify-between min-h-[44px] px-4 py-3 cursor-pointer active:bg-ios-gray-5/70 dark:active:bg-ios-dark-card/50 transition-colors text-start"
                                                     >
                                                         <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                            <div className="w-10 h-10 rounded-xl bg-ios-gray-6 dark:bg-ios-dark-fill flex items-center justify-center text-lg flex-shrink-0">
+                                                            <div className="w-10 h-10 rounded-lg bg-ios-card dark:bg-ios-dark-card flex items-center justify-center text-lg flex-shrink-0 shadow-sm">
                                                                 {icon}
                                                             </div>
                                                             <div className="min-w-0">

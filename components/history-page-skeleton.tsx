@@ -25,23 +25,23 @@ export default function HistoryPageSkeleton() {
                 </div>
 
                 <div className="px-5 mb-4">
-                    <div className="h-12 rounded-2xl bg-ios-card dark:bg-ios-dark-card shadow-card border border-gray-200/50 dark:border-white/10" />
+                    <div className="h-12 rounded-2xl bg-ios-card dark:bg-ios-dark-card shadow-card" />
                 </div>
 
                 <div className="px-5 flex gap-3">
-                    <div className="flex-1 bg-ios-card dark:bg-ios-dark-card rounded-2xl h-20 shadow-card border border-gray-200/50 dark:border-white/10" />
+                    <div className="flex-1 bg-ios-card dark:bg-ios-dark-card rounded-2xl h-20 shadow-card" />
                     <div className="flex-1 flex flex-col gap-2">
-                        <div className="bg-ios-card dark:bg-ios-dark-card rounded-xl h-9 shadow-card border border-gray-200/50 dark:border-white/10" />
-                        <div className="bg-ios-card dark:bg-ios-dark-card rounded-xl h-9 shadow-card border border-gray-200/50 dark:border-white/10" />
+                        <div className="bg-ios-card dark:bg-ios-dark-card rounded-xl h-9 shadow-card" />
+                        <div className="bg-ios-card dark:bg-ios-dark-card rounded-xl h-9 shadow-card" />
                     </div>
                 </div>
 
                 <div className="px-5 mt-6 space-y-3">
                     <div className="h-5 w-24 bg-ios-gray-5 dark:bg-ios-dark-fill rounded-lg mb-2" />
                     <div className="bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl h-10 mb-4" />
-                    <div className="bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card overflow-hidden border border-gray-200/50 dark:border-white/10">
+                    <div className="bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl overflow-hidden divide-y divide-gray-200/50 dark:divide-white/10">
                         {[1, 2, 3, 4, 5].map((i) => (
-                            <div key={i} className="flex items-center justify-between p-4 border-b border-black/5 dark:border-white/10 last:border-0">
+                            <div key={i} className="flex items-center justify-between px-4 py-3">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-xl bg-ios-gray-6 dark:bg-ios-dark-fill" />
                                     <div className="space-y-1.5">

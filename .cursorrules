@@ -42,7 +42,16 @@ This is the shared vocabulary for how LumiFlow should **look and feel** in the p
 - **Semantic CSS variables** (see `app/globals.css`): `--background`, `--foreground`, `--card`, `--subtle`, `--surface`, `--surface-muted`. Light and **`.dark`** blocks must stay in sync when introducing new tokens.
 - **Tailwind iOS palette** (`tailwind.config.ts`): `ios-bg`, `ios-card`, `ios-gray-*` / fills, **`ios-blue`** (#007AFF) for **primary** actions and focus, **`ios-red`** for **destructive** or critical warnings, **`ios-indigo`** and other accents sparingly for secondary emphasis.
 - **Dark mode**: `class` strategy on `html`/root; use **`dark:`** variants paired with light styles (`bg-ios-card dark:bg-ios-dark-card`, `text-ios-text dark:text-ios-dark-text`, `text-ios-subtle dark:text-ios-dark-subtle`). Avoid hard‑coding only light grays on surfaces that appear in both themes.
-- **Borders**: prefer low‑contrast hairlines—`border-gray-200/50`, `dark:border-white/10`, or `rgba(0,0,0,0.06)` / `rgba(255,255,255,0.08)` in plain CSS when not using Tailwind.
+- **Borders**: prefer low‑contrast hairlines—`border-gray-200/50`, `dark:border-white/10`, or `rgba(0,0,0,0.06)` / `rgba(255,255,255,0.08)` in plain CSS when not using Tailwind. Use them on **controls** (inputs, selects, chips) and **dashed example** callouts—not as a second outline around every list that already sits on `ios-bg`.
+
+### Grouped lists (Settings-style inset rows)
+
+Use the same vocabulary as **קטגוריות** / **יעדי חיסכון** in Settings:
+
+- **Section shell** (one block on the page): `rounded-3xl shadow-card bg-ios-card dark:bg-ios-dark-card` (and optional `p-5`). Do **not** add an extra full hairline border around the shell unless it matches an intentional pattern elsewhere; elevation + radius is enough.
+- **Inset list inside a shell** (transactions by day, recurring expenses, savings rows, settings category rows): wrapper `bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl overflow-hidden divide-y divide-gray-200/50 dark:divide-white/10` — **no** `shadow-card` and **no** outer `border` on this wrapper; separators come only from `divide-y`.
+- **Rows**: `min-h-[44px]` where tappable, horizontal padding `px-4 py-3`, `text-start` on buttons; optional leading icon in `w-10 h-10 rounded-lg bg-ios-card dark:bg-ios-dark-card … shadow-sm` so the glyph reads clearly on the gray list track.
+- **History & Insights** lists on `ios-bg`: prefer this inset list pattern (or a single card shell **without** stacking a border on both shell and list). Avoid “double frame” (card + bordered inner card).
 
 ### Shape, spacing, and elevation
 

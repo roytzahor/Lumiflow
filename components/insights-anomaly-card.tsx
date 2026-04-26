@@ -16,7 +16,7 @@ export default function InsightsAnomalyCard({ anomaly: a, icon, variant = "defau
             className={`bg-ios-card dark:bg-ios-dark-card rounded-3xl p-4 shadow-card ${
                 isExample
                     ? "pointer-events-none border border-dashed border-ios-subtle/35 dark:border-ios-dark-subtle/40 opacity-[0.88]"
-                    : "border border-gray-200/50 dark:border-white/10"
+                    : ""
             }`}
         >
             <div className="flex items-center gap-3">

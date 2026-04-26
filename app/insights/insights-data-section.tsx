@@ -62,7 +62,7 @@ export default async function InsightsDataSection() {
 
             {!hasEnoughHistory ? (
                 <div className="space-y-5">
-                    <div className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-6 shadow-card border border-gray-200/50 dark:border-white/10 text-center">
+                    <div className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-6 shadow-card text-center">
                         <div className="w-12 h-12 rounded-full bg-ios-indigo/10 flex items-center justify-center mx-auto mb-3">
                             <span className="text-2xl">📊</span>
                         </div>
@@ -91,7 +91,7 @@ export default async function InsightsDataSection() {
                     </div>
                 </div>
             ) : anomalies.length === 0 ? (
-                <div className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-6 shadow-card border border-gray-200/50 dark:border-white/10 text-center">
+                <div className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-6 shadow-card text-center">
                     <div className="w-12 h-12 rounded-full bg-ios-green/10 flex items-center justify-center mx-auto mb-3">
                         <span className="text-2xl">✅</span>
                     </div>
@@ -132,7 +132,7 @@ export default async function InsightsDataSection() {
                             )}
                         </InfoHint>
                     </div>
-                    <div className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 shadow-card border border-gray-200/50 dark:border-white/10 space-y-4">
+                    <div className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 shadow-card space-y-4">
                         <div className="flex items-center justify-between gap-3">
                             <span className="text-sm text-ios-subtle dark:text-ios-dark-subtle">החודש</span>
                             <span className="text-lg font-bold text-ios-green tabular-nums">

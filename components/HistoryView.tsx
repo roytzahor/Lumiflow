@@ -316,7 +316,7 @@ export default function HistoryView({
             </div>
 
             <div className="px-5 mt-3 w-full min-w-0 max-w-full space-y-2.5">
-                <div className="flex w-full min-w-0 max-w-full items-center justify-between gap-2 rounded-2xl bg-ios-card/90 dark:bg-ios-dark-card/80 py-3 px-3.5 shadow-card border border-gray-200/50 dark:border-white/10">
+                <div className="flex w-full min-w-0 max-w-full items-center justify-between gap-2 rounded-2xl bg-ios-card/90 dark:bg-ios-dark-card/80 py-3 px-3.5 shadow-card">
                     <div className="flex min-w-0 flex-1 items-center gap-1.5">
                         <span className="text-sm font-semibold text-ios-text dark:text-ios-dark-text truncate">
                             הצג הוצאות קבועות
@@ -330,7 +330,7 @@ export default function HistoryView({
                     </div>
                 </div>
                 {savingsForView.length > 0 ? (
-                    <div className="flex w-full min-w-0 max-w-full items-center justify-between gap-2 rounded-2xl bg-ios-card/90 dark:bg-ios-dark-card/80 py-3 px-3.5 shadow-card border border-gray-200/50 dark:border-white/10">
+                    <div className="flex w-full min-w-0 max-w-full items-center justify-between gap-2 rounded-2xl bg-ios-card/90 dark:bg-ios-dark-card/80 py-3 px-3.5 shadow-card">
                         <div className="flex min-w-0 flex-1 items-center gap-1.5">
                             <span className="text-sm font-semibold text-ios-text dark:text-ios-dark-text truncate">
                                 הצג הפרשות חיסכון
@@ -353,7 +353,7 @@ export default function HistoryView({
 
             {/* Summary card */}
             <div className="px-5 mt-4 min-w-0">
-                <div className="min-h-[152px] w-full min-w-0 bg-ios-card dark:bg-ios-dark-card rounded-2xl p-4 shadow-card border border-gray-200/50 dark:border-white/10 flex flex-col justify-center gap-3">
+                <div className="min-h-[152px] w-full min-w-0 bg-ios-card dark:bg-ios-dark-card rounded-2xl p-4 shadow-card flex flex-col justify-center gap-3">
                         <div className="flex items-center justify-between gap-4 w-full min-w-0">
                         <div className="min-w-0 flex-1 space-y-1">
                             <p className="text-[11px] font-medium text-ios-subtle dark:text-ios-dark-subtle">

@@ -112,7 +112,7 @@ export default function DashboardPageSkeleton() {
                     </div>
                 </div>
 
-                <div className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 shadow-card border border-gray-200/50 dark:border-white/10 mt-3">
+                <div className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 shadow-card mt-3">
                     <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0 flex-1">
                             <div className="w-5 h-5 rounded bg-ios-gray-5 dark:bg-ios-dark-fill shrink-0" />
@@ -120,9 +120,9 @@ export default function DashboardPageSkeleton() {
                         </div>
                         <div className="h-4 w-14 bg-ios-gray-6 dark:bg-ios-dark-fill rounded shrink-0" />
                     </div>
-                    <div className="mt-4 rounded-2xl bg-ios-card dark:bg-ios-dark-card shadow-card overflow-hidden border border-gray-200/50 dark:border-white/10 divide-y divide-black/5 dark:divide-white/10">
+                    <div className="mt-4 rounded-xl bg-ios-gray-6 dark:bg-ios-dark-fill overflow-hidden divide-y divide-gray-200/50 dark:divide-white/10">
                         {[1, 2, 3].map((row) => (
-                            <div key={row} className="flex items-center justify-between p-4">
+                            <div key={row} className="flex items-center justify-between px-4 py-3">
                                 <div className="flex items-center gap-3 min-w-0 flex-1">
                                     <div className="w-10 h-10 rounded-xl bg-ios-gray-6 dark:bg-ios-dark-fill shrink-0" />
                                     <div className="space-y-2 min-w-0 flex-1">

@@ -130,7 +130,7 @@ export default function TransactionFeed({
                                     {formatUtcDateLabel(dateKey)}
                                 </p>
 
-                                <div className="bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card border border-gray-200/50 dark:border-white/10 overflow-hidden divide-y divide-black/5 dark:divide-white/10">
+                                <div className="bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl overflow-hidden divide-y divide-gray-200/50 dark:divide-white/10">
                                     {groupedByDate[dateKey].map((row) => {
                                         if (row.kind === 'savings') {
                                             const s = row.savings;
@@ -145,10 +145,10 @@ export default function TransactionFeed({
                                                     animate={{ opacity: 1 }}
                                                     exit={{ opacity: 0, scale: 0.98 }}
                                                     whileTap={{ scale: 0.98 }}
-                                                    className="w-full flex items-center justify-between min-h-[44px] py-3 px-4 transition-colors cursor-pointer active:bg-ios-green/5 dark:active:bg-ios-green/10 border-s-4 border-ios-green"
+                                                    className="w-full flex items-center justify-between min-h-[44px] px-4 py-3 transition-colors cursor-pointer active:bg-ios-green/5 dark:active:bg-ios-green/10 border-s-4 border-ios-green"
                                                 >
                                                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                        <div className="w-10 h-10 rounded-xl bg-ios-green/12 flex items-center justify-center flex-shrink-0 text-ios-green">
+                                                        <div className="w-10 h-10 rounded-lg bg-ios-card dark:bg-ios-dark-card flex items-center justify-center flex-shrink-0 text-ios-green shadow-sm">
                                                             <PiggyBank className="w-5 h-5" strokeWidth={2} />
                                                         </div>
                                                         <div className="flex-1 min-w-0 text-start">
@@ -197,12 +197,12 @@ export default function TransactionFeed({
                                                 animate={{ opacity: 1 }}
                                                 exit={{ opacity: 0, scale: 0.98 }}
                                                 whileTap={(t.isRecurring || !t.isProjected) ? { scale: 0.98 } : undefined}
-                                                className={`flex items-center justify-between min-h-[44px] py-3 px-4 transition-colors ${
-                                                    (t.isRecurring || !t.isProjected) ? 'cursor-pointer active:bg-ios-gray-6/90 dark:active:bg-ios-dark-fill' : 'cursor-default'
+                                                className={`flex items-center justify-between min-h-[44px] px-4 py-3 transition-colors ${
+                                                    (t.isRecurring || !t.isProjected) ? 'cursor-pointer active:bg-ios-gray-5/70 dark:active:bg-ios-dark-card/50' : 'cursor-default'
                                                 }`}
                                             >
                                                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                    <div className="w-10 h-10 rounded-xl bg-ios-gray-6 dark:bg-ios-dark-fill flex items-center justify-center text-lg flex-shrink-0">
+                                                    <div className="w-10 h-10 rounded-lg bg-ios-card dark:bg-ios-dark-card flex items-center justify-center text-lg flex-shrink-0 shadow-sm">
                                                         {getIcon(t.category)}
                                                     </div>
                                                     <div className="flex-1 min-w-0">
