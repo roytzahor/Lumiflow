@@ -119,7 +119,7 @@ export default function ProfileEditSheet({
 
               {mode === "details" ? (
                 <div className="space-y-3">
-                  <div className="rounded-2xl bg-white p-4 shadow-card dark:bg-ios-dark-card">
+                  <div className="rounded-2xl bg-ios-card p-4 shadow-card border border-gray-200/50 dark:border-white/10 dark:bg-ios-dark-card">
                     <label className="mb-1.5 block text-xs font-medium text-ios-subtle dark:text-ios-dark-subtle">שם</label>
                     <div className="mb-3 flex items-center gap-2 rounded-xl bg-ios-gray-6 px-3 py-2.5 dark:bg-ios-dark-fill">
                       <User className="h-4 w-4 text-ios-subtle dark:text-ios-dark-subtle" />
@@ -156,7 +156,7 @@ export default function ProfileEditSheet({
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <div className="rounded-2xl bg-white p-4 shadow-card dark:bg-ios-dark-card">
+                  <div className="rounded-2xl bg-ios-card p-4 shadow-card border border-gray-200/50 dark:border-white/10 dark:bg-ios-dark-card">
                     <label className="mb-1.5 block text-xs font-medium text-ios-subtle dark:text-ios-dark-subtle">סיסמה נוכחית</label>
                     <div className="mb-3 flex items-center gap-2 rounded-xl bg-ios-gray-6 px-3 py-2.5 dark:bg-ios-dark-fill">
                       <LockKeyhole className="h-4 w-4 text-ios-subtle dark:text-ios-dark-subtle" />

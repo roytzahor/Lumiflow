@@ -353,7 +353,7 @@ export default function HistoryView({
 
             {/* Summary card */}
             <div className="px-5 mt-4 min-w-0">
-                <div className="min-h-[152px] w-full min-w-0 bg-white dark:bg-ios-dark-card rounded-2xl p-4 shadow-card flex flex-col justify-center gap-3">
+                <div className="min-h-[152px] w-full min-w-0 bg-ios-card dark:bg-ios-dark-card rounded-2xl p-4 shadow-card border border-gray-200/50 dark:border-white/10 flex flex-col justify-center gap-3">
                         <div className="flex items-center justify-between gap-4 w-full min-w-0">
                         <div className="min-w-0 flex-1 space-y-1">
                             <p className="text-[11px] font-medium text-ios-subtle dark:text-ios-dark-subtle">

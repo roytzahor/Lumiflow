@@ -114,7 +114,7 @@ export default function SavingsAllocationCard({
                 </p>
               ) : (
                 <>
-                  <div className="bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card overflow-hidden divide-y divide-black/5 dark:divide-white/10 mb-3">
+                  <div className="bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card border border-gray-200/50 dark:border-white/10 overflow-hidden divide-y divide-black/5 dark:divide-white/10 mb-3">
                     {allocations.map((row) => (
                       <button
                         key={row.id}

@@ -35,7 +35,7 @@ export default function LiquidToggle({ isOn, onToggle, testId }: LiquidTogglePro
                     stiffness: 500,
                     damping: 35
                 }}
-                className="flex-shrink-0 w-[27px] h-[27px] bg-white rounded-full shadow-sm"
+                className="flex-shrink-0 w-[27px] h-[27px] rounded-full bg-white shadow-sm ring-1 ring-black/[0.06] dark:bg-zinc-100 dark:ring-white/20"
                 animate={{
                     x: isOn ? (isRtl ? -20 : 20) : 0
                 }}

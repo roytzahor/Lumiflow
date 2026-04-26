@@ -112,7 +112,7 @@ export default function DashboardPageSkeleton() {
                     </div>
                 </div>
 
-                <div className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 shadow-card mt-3">
+                <div className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 shadow-card border border-gray-200/50 dark:border-white/10 mt-3">
                     <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0 flex-1">
                             <div className="w-5 h-5 rounded bg-ios-gray-5 dark:bg-ios-dark-fill shrink-0" />

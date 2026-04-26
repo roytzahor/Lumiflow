@@ -326,7 +326,7 @@ export default function SavingsAllocationSheet({
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         rows={3}
-                        className="w-full resize-none bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl py-3 px-3.5 text-[15px] text-ios-text dark:text-ios-dark-text placeholder-gray-400 dark:placeholder-ios-dark-subtle focus:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue/30 border border-transparent focus-visible:border-gray-200/80 dark:focus-visible:border-white/10 leading-normal"
+                        className="w-full resize-none bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl py-3 px-3.5 text-[15px] text-ios-text dark:text-ios-dark-text placeholder:text-ios-subtle dark:placeholder:text-ios-dark-subtle focus:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue/30 border border-transparent focus-visible:border-gray-200/80 dark:focus-visible:border-white/10 leading-normal"
                         placeholder="למשל: העברה חודשית"
                       />
                     </div>

@@ -52,7 +52,7 @@ export default function WelcomeClient({ initialName, initialTheme }: WelcomeClie
 
   return (
     <main className="min-h-screen bg-ios-bg dark:bg-ios-dark-bg flex items-center justify-center px-5 py-8 transition-colors">
-      <section className="w-full max-w-md bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card p-6 space-y-5">
+      <section className="w-full max-w-md bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card border border-gray-200/50 dark:border-white/10 p-6 space-y-5">
         <header className="space-y-2">
           <h1 className="text-2xl font-bold text-ios-text dark:text-ios-dark-text">ברוכים הבאים ל-LumiFlow</h1>
           <p className="text-sm text-ios-subtle dark:text-ios-dark-subtle">
@@ -69,7 +69,7 @@ export default function WelcomeClient({ initialName, initialTheme }: WelcomeClie
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="איך לפנות אליך באפליקציה"
-              className="w-full bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-3 py-2.5 text-sm text-ios-text dark:text-ios-dark-text"
+              className="w-full bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-3 py-2.5 text-sm text-ios-text dark:text-ios-dark-text placeholder:text-ios-subtle dark:placeholder:text-ios-dark-subtle focus:outline-none focus:ring-2 focus:ring-ios-blue/30"
             />
           </label>
 

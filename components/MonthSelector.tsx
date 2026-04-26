@@ -89,7 +89,9 @@ export default function MonthSelector({ basePath = '/history' }: MonthSelectorPr
                                 type="button"
                                 onClick={() => handleSelect(date)}
                                 className={`relative shrink-0 flex flex-col items-center justify-center min-w-[3.5rem] py-2.5 rounded-xl transition-colors ${
-                                    isSelected ? 'bg-ios-blue' : ''
+                                    isSelected
+                                        ? 'bg-ios-blue'
+                                        : 'hover:bg-ios-gray-6/80 dark:hover:bg-ios-dark-fill/70 active:bg-ios-gray-6 dark:active:bg-ios-dark-fill'
                                 }`}
                                 aria-pressed={isSelected}
                                 aria-label={format(date, 'MMMM yyyy', { locale: he })}

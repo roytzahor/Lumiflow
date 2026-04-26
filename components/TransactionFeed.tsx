@@ -118,7 +118,7 @@ export default function TransactionFeed({
                         <div className="w-14 h-14 bg-ios-gray-6 dark:bg-ios-dark-fill rounded-full flex items-center justify-center mb-3">
                             <span className="text-2xl opacity-60">💸</span>
                         </div>
-                        <p className="text-sm font-medium text-center px-2">
+                        <p className="text-sm font-medium text-center px-2 text-ios-subtle dark:text-ios-dark-subtle">
                             לא נוספו עדיין הוצאות
                         </p>
                     </motion.div>
@@ -130,7 +130,7 @@ export default function TransactionFeed({
                                     {formatUtcDateLabel(dateKey)}
                                 </p>
 
-                                <div className="bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card overflow-hidden divide-y divide-black/5 dark:divide-white/10">
+                                <div className="bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card border border-gray-200/50 dark:border-white/10 overflow-hidden divide-y divide-black/5 dark:divide-white/10">
                                     {groupedByDate[dateKey].map((row) => {
                                         if (row.kind === 'savings') {
                                             const s = row.savings;

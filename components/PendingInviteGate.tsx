@@ -37,7 +37,7 @@ export default function PendingInviteGate() {
 
   return (
     <div className="fixed inset-0 z-[99] bg-black/35 backdrop-blur-sm flex items-center justify-center px-5">
-      <div className="w-full max-w-sm bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card p-5 space-y-4">
+      <div className="w-full max-w-sm bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card border border-gray-200/50 dark:border-white/10 p-5 space-y-4">
         <h3 className="text-lg font-bold text-ios-text dark:text-ios-dark-text">הזמנה להצטרפות לחשבון</h3>
         <p className="text-sm text-ios-subtle dark:text-ios-dark-subtle leading-relaxed">
           <span className="font-semibold">{invite.invitedByName}</span> הזמין אותך להצטרף לחשבון{" "}

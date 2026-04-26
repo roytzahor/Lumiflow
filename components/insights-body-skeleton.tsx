@@ -7,7 +7,7 @@ export default function InsightsBodySkeleton() {
                 {[1, 2, 3].map((i) => (
                     <div
                         key={i}
-                        className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-4 shadow-card"
+                        className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-4 shadow-card border border-gray-200/50 dark:border-white/10"
                     >
                         <div className="flex items-center gap-3">
                             <div className="w-11 h-11 rounded-xl bg-ios-gray-6 dark:bg-ios-dark-fill shrink-0" />

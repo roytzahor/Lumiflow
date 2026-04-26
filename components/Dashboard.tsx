@@ -926,7 +926,7 @@ export default function Dashboard({
                                     {recurringForScope.length === 0 ? (
                                         <p className="text-sm text-ios-subtle dark:text-ios-dark-subtle py-2">אין הוצאות חוזרות כרגע</p>
                                     ) : (
-                                        <div className="bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card overflow-hidden divide-y divide-black/5 dark:divide-white/10">
+                                        <div className="bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card border border-gray-200/50 dark:border-white/10 overflow-hidden divide-y divide-black/5 dark:divide-white/10">
                                             {recurringForScope.map((item) => {
                                                 const icon = getCategoryIcon(categories, item.category);
                                                 const isShared = item.account.type === "SHARED";
