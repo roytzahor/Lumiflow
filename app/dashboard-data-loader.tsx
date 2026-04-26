@@ -79,6 +79,7 @@ export default async function DashboardDataLoader({
                 initialRecurringSectionExpanded={currentUser?.dashboardRecurringSectionExpanded ?? false}
                 initialSavingsSectionExpanded={currentUser?.dashboardSavingsSectionExpanded ?? false}
                 initialSpendingSectionExpanded={currentUser?.dashboardSpendingSectionExpanded ?? true}
+                welcomeTourCompletedAt={currentUser?.welcomeTourCompletedAt ?? null}
             />
         );
     } catch (error) {

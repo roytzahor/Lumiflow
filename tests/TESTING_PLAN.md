@@ -2,7 +2,7 @@
 
 ## Goals
 - Prevent regressions in critical user journeys.
-- Verify auth + onboarding + invite flows.
+- Verify auth + welcome/first-run + invite flows.
 - Validate recurring month policy behavior.
 - Keep CI fast enough for every PR.
 
@@ -17,9 +17,8 @@
 
 ### 2) E2E tests (Cypress)
 - `auth-onboarding.cy.ts`
-  - sign up
-  - onboarding template selection
-  - landing on dashboard
+  - sign up → `/welcome` → dashboard
+  - monthly contribution via Settings (replaces old onboarding income step)
 - `invite-popup.cy.ts`
   - owner creates invite link
   - invited user signs up via callback URL

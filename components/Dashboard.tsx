@@ -13,6 +13,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, ChevronLeft, Lock } from "lucide-react";
 import InfoHint from "@/components/InfoHint";
+import WelcomeTour from "@/components/WelcomeTour";
 
 const QuickAddSheet = dynamic(() => import("./QuickAddSheet"), { ssr: false });
 const RecurringEditSheet = dynamic(() => import("./RecurringEditSheet"), { ssr: false });
@@ -59,6 +60,7 @@ interface DashboardProps {
     initialRecurringSectionExpanded?: boolean;
     initialSavingsSectionExpanded?: boolean;
     initialSpendingSectionExpanded?: boolean;
+    welcomeTourCompletedAt?: Date | string | null;
 }
 
 function getGreeting(now: Date): string {
@@ -200,6 +202,7 @@ export default function Dashboard({
     initialRecurringSectionExpanded = false,
     initialSavingsSectionExpanded = false,
     initialSpendingSectionExpanded = true,
+    welcomeTourCompletedAt = null,
 }: DashboardProps) {
     const [isSheetOpen, setIsSheetOpen] = useState(false);
     const [savingsSheetOpen, setSavingsSheetOpen] = useState(false);
@@ -541,7 +544,7 @@ export default function Dashboard({
                     </h1>
                 </header>
 
-                <div className="mb-8 min-w-0">
+                <div className="mb-8 min-w-0" data-testid="dashboard-month-selector">
                     <MonthSelector basePath="/" />
                 </div>
 
@@ -1023,6 +1026,7 @@ export default function Dashboard({
                 accounts={accounts}
                 savingsLabels={savingsLabels}
             />
+            <WelcomeTour welcomeTourCompletedAt={welcomeTourCompletedAt} />
         </div>
     );
 }

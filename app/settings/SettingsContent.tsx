@@ -809,6 +809,7 @@ export default function SettingsContent({
         <div className="space-y-3">
           <button
             type="button"
+            data-testid="settings-add-account"
             onClick={openCreateAccountPopup}
             className="w-full px-3 py-2.5 rounded-xl bg-ios-blue text-white text-sm font-semibold flex items-center justify-center gap-1.5"
           >

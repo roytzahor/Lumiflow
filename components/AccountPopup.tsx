@@ -8,6 +8,13 @@ import type { AccountSummary, AccountType } from '@/lib/types';
 type AccountFormValues = {
   name: string;
   type: AccountType;
+  /** Digits only (string) to avoid React/Cypress quirks with `type="number"`. */
+  monthlyContributionDraft: string;
+};
+
+export type AccountSubmitPayload = {
+  name: string;
+  type: AccountType;
   monthlyContribution: number;
 };
 
@@ -19,14 +26,14 @@ interface AccountPopupProps {
   isSaving?: boolean;
   isDeleting?: boolean;
   onClose: () => void;
-  onSubmit: (values: AccountFormValues) => Promise<void> | void;
+  onSubmit: (values: AccountSubmitPayload) => Promise<void> | void;
   onDelete?: () => Promise<void> | void;
 }
 
 const INITIAL_VALUES: AccountFormValues = {
   name: '',
   type: 'PRIVATE',
-  monthlyContribution: 0,
+  monthlyContributionDraft: '',
 };
 
 export default function AccountPopup({
@@ -46,11 +53,18 @@ export default function AccountPopup({
 
   useEffect(() => {
     if (!isOpen) return;
-    setValues(account ? {
-      name: account.name,
-      type: account.type,
-      monthlyContribution: Number.isFinite(initialMonthlyContribution) ? initialMonthlyContribution : 0,
-    } : INITIAL_VALUES);
+    setValues(
+      account
+        ? {
+            name: account.name,
+            type: account.type,
+            monthlyContributionDraft:
+              Number.isFinite(initialMonthlyContribution) && initialMonthlyContribution > 0
+                ? String(Math.round(initialMonthlyContribution))
+                : '',
+          }
+        : INITIAL_VALUES,
+    );
     setShowDeleteConfirm(false);
     setError(null);
   }, [isOpen, account, initialMonthlyContribution]);
@@ -69,7 +83,9 @@ export default function AccountPopup({
 
   const handleSubmit = async () => {
     const normalizedName = values.name.trim();
-    const normalizedContribution = Number(values.monthlyContribution);
+    const rawContribution = values.monthlyContributionDraft.trim();
+    const normalizedContribution =
+      rawContribution === '' ? 0 : Number(rawContribution.replace(/[\s,]/g, ''));
     if (!normalizedName) {
       setError('יש להזין שם חשבון');
       return;
@@ -154,11 +170,15 @@ export default function AccountPopup({
                 <label className="block space-y-1">
                   <span className="text-xs text-ios-subtle dark:text-ios-dark-subtle">תרומה חודשית לחשבון (₪)</span>
                   <input
-                    type="number"
-                    min={0}
-                    inputMode="decimal"
-                    value={values.monthlyContribution}
-                    onChange={(e) => setValues((prev) => ({ ...prev, monthlyContribution: Number(e.target.value) }))}
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    data-testid="account-popup-monthly-contribution"
+                    value={values.monthlyContributionDraft}
+                    onChange={(e) => {
+                      const digits = e.target.value.replace(/\D/g, '');
+                      setValues((prev) => ({ ...prev, monthlyContributionDraft: digits }));
+                    }}
                     className="w-full bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-3 py-2.5 text-sm text-ios-text dark:text-ios-dark-text"
                     dir="ltr"
                   />

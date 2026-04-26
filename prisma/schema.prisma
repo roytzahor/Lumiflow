@@ -35,6 +35,8 @@ model User {
   email           String          @unique
   passwordHash    String
   onboardingCompletedAt DateTime?
+  /// Set when the user finishes or dismisses the post-sign-in dashboard spotlight tour.
+  welcomeTourCompletedAt DateTime?
   themePreference ThemePreference @default(SYSTEM)
   /// Collapsed/expanded state for "ריכוז הוצאות קבועות" on dashboard (persisted per user).
   dashboardRecurringSectionExpanded Boolean @default(false)

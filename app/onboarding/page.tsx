@@ -1,7 +1,6 @@
-import OnboardingClient from '@/app/onboarding/OnboardingClient';
-import { redirectToHomeIfAlreadyOnboarded } from '@/lib/onboarding';
+import { redirect } from 'next/navigation';
 
-export default async function OnboardingPage() {
-  await redirectToHomeIfAlreadyOnboarded();
-  return <OnboardingClient />;
+/** Legacy URL: onboarding is now automatic; advanced setup lives in Settings. */
+export default function OnboardingPage() {
+  redirect('/');
 }

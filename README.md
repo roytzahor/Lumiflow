@@ -11,6 +11,7 @@ Flexible budgeting for individuals and groups. A mobile-first app for tracking p
 - **Multi-Account** — Any number of private or shared accounts
 - **Recurring Transactions** — Monthly automation with short-month policy (`roll to last day` or `skip month`)
 - **Auth** — Email/password sign-in with protected app routes
+- **First run** — After sign-up, optional **`/welcome`** step (display name + theme); a **default private account** is created automatically; first visit to the dashboard can show a short **spotlight tour** (dismissible) for month selection, quick add, and Settings. Shared accounts, income split, and invites are configured later in **Settings** (the legacy multi-step `/onboarding` wizard was removed; `/onboarding` redirects home).
 - **RTL / Hebrew** — Fully right-to-left interface with Hebrew locale
 
 ## Tech Stack
@@ -230,10 +231,13 @@ app/
   api/auth/           # Auth endpoints
   page.tsx            # Dashboard page
   actions.ts          # Auth-scoped server actions
+  welcome/            # Optional post-sign-up welcome (name + theme)
+  onboarding/         # Legacy route → redirects to /
   history/            # History page
   settings/           # Settings page
 components/
   Dashboard.tsx       # Main dashboard with savings ring & charts
+  WelcomeTour.tsx     # Post-sign-in spotlight tour (driver.js)
   QuickAddSheet.tsx   # Bottom-sheet for adding/editing transactions
   TransactionFeed.tsx # Grouped transaction list
   HistoryView.tsx     # Monthly history view

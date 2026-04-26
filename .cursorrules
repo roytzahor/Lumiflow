@@ -1,0 +1,79 @@
+# LumiFlow — Cursor agent rules
+
+## Product and goals
+
+- **LumiFlow** is a mobile-first personal and **household** finance app: flexible budgeting, spending visibility, and automation for **private** and **shared** accounts.
+- **Primary audience**: Hebrew-speaking users; the UI is **RTL** and shipped copy is largely **Hebrew**. Preserve RTL layout, logical reading order, and existing tone when editing Hebrew strings. **Agents may suggest English** when helpful (e.g. alternative labels, commit/PR wording, comments, future i18n notes)—but do not land **mixed Hebrew+English inside the same shipped UI control** unless the user explicitly wants that.
+- **Core user journeys**: sign up → optional **`/welcome`** (name + theme) → **dashboard** (auto-created private account; optional dismissible spotlight tour) → **quick add** → **history** → **settings** (shared accounts, monthly contributions / split, invites, recurring, categories). Legacy **`/onboarding`** URL redirects home; advanced setup is in Settings, not a blocking wizard.
+
+## Technical stack
+
+- **Framework**: Next.js 15 **App Router** (`app/`), React 19, TypeScript.
+- **Auth**: NextAuth.js (credentials); protected routes and session-aware server code.
+- **Data**: PostgreSQL via **Prisma** (`prisma/schema.prisma`, migrations under `prisma/migrations/`).
+- **UI**: Tailwind CSS, custom iOS-style patterns in components, **lucide-react** for icons, **Sonner** for toasts, **Framer Motion** where motion already exists—do not introduce a second animation stack without a strong reason.
+- **Tests**: **Vitest** for unit tests; **Cypress** for e2e (`cypress/e2e/`, shared setup in `cypress/support/e2e.ts`).
+- **Deploy**: Vercel uses `vercel.json` → **`yarn vercel-build`** (runs migrations, then generate, then `next build`). Local `yarn build` also runs `prisma generate` first.
+
+## Repository layout (where code belongs)
+
+- **`app/`**: routes, layouts, loading/error boundaries, API route handlers (`app/api/`), and **auth-scoped server actions** in `app/actions.ts`. Prefer colocating route-specific small components next to their page when they are not reused broadly.
+- **`components/`**: reusable UI and larger feature surfaces (e.g. dashboard, sheets, feeds). Keep components presentational when possible; push domain rules to `lib/` or server actions.
+- **`lib/`**: shared **domain logic**, formatting, date-only helpers, recurring/installment math, invite helpers, Prisma singleton (`lib/prisma.ts`), session helpers, shared types (`lib/types.ts`). This is the default home for non-trivial business rules.
+- **`prisma/`**: schema and migrations—treat data model changes as migrations + types, not ad-hoc SQL in app code.
+
+## Engineering conventions
+
+- **TypeScript**: strict, intentional types—**avoid `any`**. Prefer narrowing, discriminated unions, and Prisma-generated types where appropriate.
+- **React**: functional components and hooks only; no class components.
+- **Server vs client**: use `'use client'` only when needed (browser APIs, local state, event handlers). Prefer server components and server actions for data mutations that must be trusted.
+- **Mutations and reads that touch the DB**: implement through existing patterns—typically **`app/actions.ts`** (server actions) with session checks, not arbitrary new API routes unless there is a clear reason (webhooks, cron, NextAuth).
+- **Styling**: follow existing Tailwind tokens and **iOS-style** utility patterns already in the codebase; keep spacing, radii, and dark mode consistent with neighbors in the same view.
+- **Accessibility**: preserve `aria-*` labels and test ids used by Cypress; prefer stable **`data-testid`** for elements that tests depend on.
+- **Icons**: use **`lucide-react`** unless the file already uses a deliberate exception.
+
+## Domain concepts (mental model)
+
+- **Accounts**: `PRIVATE` vs `SHARED` (`AccountType` in Prisma). Users join accounts via **`AccountMember`** with roles (`OWNER` / `MEMBER`).
+- **Money movement**: transactions, savings allocations, budget settings, categories, recurring transactions with **`RecurringMonthPolicy`** (`ROLL_TO_LAST_DAY` / `SKIP_MONTH`) for short months.
+- **Collaboration**: **account invites** and share links; respect `NEXT_PUBLIC_APP_URL` / auth URL assumptions documented in README when touching invite or callback URLs.
+
+## Internationalization and locale
+
+- **Shipped UI** defaults to **Hebrew** user-facing strings. **English suggestions are allowed** (proposals, side-by-side options, developer-facing text, PR descriptions)—use them to clarify intent or prepare for future localization without replacing Hebrew in the product unless asked.
+- Avoid confusing **mixed-language UX in a single control** in production (e.g. Hebrew title + English primary button in the same card) unless the user directs otherwise.
+- Dates and numbers: follow existing helpers (`lib/formatters.ts`, `lib/date-only.ts`, etc.) and `he-IL` usage where already established.
+
+## Database and migrations
+
+- **Local development**: `yarn prisma:migrate:dev` when changing `schema.prisma`; commit generated SQL under `prisma/migrations/`.
+- **CI / Vercel / shared DBs**: migrations apply via **`prisma migrate deploy`** (wired in CI and `yarn vercel-build`). Never assume `db push` in production.
+- **`DATABASE_URL` and `DIRECT_URL`**: required; Neon-style pooled + direct URLs are supported—keep both correct for migrations vs runtime as documented in README.
+- After schema changes: run **`yarn prisma generate`** and ensure TypeScript still passes.
+
+## Testing expectations
+
+- **Before merging meaningful changes**, run at least:
+  - `yarn lint`
+  - `yarn typecheck`
+  - `yarn test:unit`
+  - `yarn build` (and **`yarn vercel-build`** when Prisma or deploy scripts change)
+  - For UI/auth/onboarding/settings flows: **`yarn test:e2e:local`** when Docker is available (starts Postgres + dev server + full Cypress), or match CI’s `start-server-and-test` + `yarn test:e2e`.
+- Cypress clears cookies/localStorage in `cypress/support/e2e.ts`—do not “fix” tests by fighting that unless you understand cross-spec isolation.
+- Prefer **deterministic selectors** (`data-testid`) over brittle text-only selectors except for stable Hebrew button labels already used in specs.
+
+## Security and privacy
+
+- Never commit secrets. `.env.example` should stay the **non-secret** contract for required vars; real values live in `.env` / Vercel / CI secrets.
+- Protect cron or sensitive routes with existing secrets (e.g. `CRON_SECRET`) as already implemented—do not weaken checks.
+- Validate and authorize on the server for any action that reads or mutates user data (session user id, account membership checks).
+
+## Git and change discipline
+
+- Keep diffs **focused** on the task: avoid drive-by refactors, unrelated formatting sweeps, or new docs unless requested.
+- If you touch Prisma schema, migrations, auth, or money calculations, **explain briefly in the PR/commit** what behavior changed and what you verified (tests run).
+
+## When unsure
+
+- Prefer matching **existing patterns** in the nearest similar file over inventing a new architecture.
+- If product behavior is ambiguous (e.g. copy, permissions, edge cases for shared accounts), **ask the user** rather than guessing—especially for **financial correctness** and **Hebrew UX** in the live UI. It is fine to offer **English phrasing ideas** alongside questions when that speeds up alignment.

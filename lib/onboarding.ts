@@ -1,3 +1,4 @@
+import { ensureDefaultWorkspace } from '@/app/actions';
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { resolveOrRestoreSessionUserId } from '@/lib/session-user';
@@ -33,8 +34,10 @@ export async function redirectToOnboardingIfNeeded() {
     return;
   }
 
+  await ensureDefaultWorkspace();
+
   const onboarded = await isUserOnboarded(userId);
-  if (!onboarded) redirect('/onboarding');
+  if (!onboarded) redirect('/welcome');
 }
 
 export async function redirectToHomeIfAlreadyOnboarded() {

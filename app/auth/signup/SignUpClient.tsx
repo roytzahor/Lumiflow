@@ -16,7 +16,7 @@ export default function SignUpClient({ googleAuthEnabled }: SignUpClientProps) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const callbackUrl = '/onboarding';
+  const callbackUrl = '/welcome';
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -118,7 +118,7 @@ export default function SignUpClient({ googleAuthEnabled }: SignUpClientProps) {
         <p className="text-sm text-ios-subtle dark:text-ios-dark-subtle">
           כבר יש לך חשבון?{' '}
           <Link
-            href={`/auth/signin?callbackUrl=${encodeURIComponent('/onboarding')}`}
+            href={`/auth/signin?callbackUrl=${encodeURIComponent('/welcome')}`}
             className="text-ios-blue font-medium"
           >
             התחבר

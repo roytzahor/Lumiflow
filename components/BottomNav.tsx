@@ -173,6 +173,7 @@ export default function BottomNav() {
                                     key={item.basePath}
                                     href={item.path}
                                     onClick={() => trigger(10)}
+                                    data-testid={item.basePath === "/settings" ? "bottom-nav-settings" : undefined}
                                     className={`relative flex flex-col items-center justify-center py-2 gap-0.5 ${item.col}`}
                                 >
                                     <div className="relative">

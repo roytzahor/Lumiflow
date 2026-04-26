@@ -118,6 +118,74 @@ async function ensureUserBootstrap(userId: string) {
   }
 }
 
+/** Creates a default private account + membership when missing; heals missing onboardingCompletedAt. Idempotent. */
+export async function ensureDefaultWorkspace() {
+  try {
+    const userId = await requireUserId();
+    await ensureUserBootstrap(userId);
+
+    const memberCount = await prisma.accountMember.count({ where: { userId } });
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { onboardingCompletedAt: true },
+    });
+
+    if (memberCount > 0) {
+      if (!user?.onboardingCompletedAt) {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { onboardingCompletedAt: new Date() },
+        });
+      }
+      refreshAllViews(userId);
+      return { ok: true as const, createdAccount: false };
+    }
+
+    let newAccountId = '';
+    await prisma.$transaction(async (tx) => {
+      const personal = await tx.account.create({
+        data: {
+          name: 'החשבון האישי שלי',
+          type: 'PRIVATE',
+          income: 0,
+        },
+      });
+      newAccountId = personal.id;
+      await tx.accountMember.create({
+        data: {
+          userId,
+          accountId: personal.id,
+          role: 'OWNER',
+        },
+      });
+      await tx.user.update({
+        where: { id: userId },
+        data: { onboardingCompletedAt: new Date() },
+      });
+    });
+
+    await recalculateAccountIncome(newAccountId);
+    refreshAllViews(userId);
+    return { ok: true as const, createdAccount: true };
+  } catch {
+    return { ok: false as const, createdAccount: false };
+  }
+}
+
+export async function markWelcomeTourCompleted() {
+  try {
+    const userId = await requireUserId();
+    await prisma.user.update({
+      where: { id: userId },
+      data: { welcomeTourCompletedAt: new Date() },
+    });
+    refreshAllViews(userId);
+    return { success: true as const };
+  } catch {
+    return { success: false as const, error: 'Failed to save tour state' };
+  }
+}
+
 async function getUserAccountIds(userId: string) {
   const memberships = await prisma.accountMember.findMany({
     where: { userId, account: { isArchived: false } },
@@ -456,6 +524,7 @@ export async function getCurrentUserProfile() {
         settingsAccountsSectionExpanded: true,
         settingsCategoriesSectionExpanded: true,
         isPremiumMock: true,
+        welcomeTourCompletedAt: true,
       },
     });
     return user;
@@ -486,6 +555,7 @@ export async function updateCurrentUserProfile(input: { name?: string; email?: s
     });
 
     revalidatePath('/settings');
+    revalidatePath('/welcome');
     return { success: true };
   } catch {
     return { success: false, error: 'עדכון הפרופיל נכשל' };
@@ -527,6 +597,8 @@ export async function updateThemePreference(themePreference: 'LIGHT' | 'DARK' | 
       data: { themePreference },
     });
     revalidatePath('/settings');
+    revalidatePath('/welcome');
+    revalidatePath('/');
     return { success: true };
   } catch {
     return { success: false, error: 'עדכון תצוגה נכשל' };
@@ -908,10 +980,7 @@ export async function upsertContributionPlan(input: { accountId: string; monthly
     });
     await recalculateAccountIncome(input.accountId);
 
-    revalidatePath('/');
-    revalidatePath('/settings');
-    revalidatePath('/insights');
-    revalidateTag(`lumiflow-accounts-${userId}`);
+    refreshAllViews(userId);
     return { success: true };
   } catch {
     return { success: false, error: 'שמירת התרומה החודשית נכשלה' };

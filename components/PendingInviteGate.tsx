@@ -20,7 +20,7 @@ export default function PendingInviteGate() {
   const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
-    if (pathname?.startsWith('/auth') || pathname === '/onboarding') return;
+    if (pathname?.startsWith('/auth') || pathname === '/onboarding' || pathname === '/welcome') return;
     if (hidden) return;
 
     getPendingAccountInvites()
