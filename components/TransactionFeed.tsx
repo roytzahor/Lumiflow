@@ -115,7 +115,7 @@ export default function TransactionFeed({
                         exit={{ opacity: 0, scale: 0.95 }}
                         className="flex flex-col items-center justify-center py-16 text-ios-subtle dark:text-ios-dark-subtle"
                     >
-                        <div className="w-14 h-14 bg-gray-100 dark:bg-ios-dark-fill rounded-full flex items-center justify-center mb-3">
+                        <div className="w-14 h-14 bg-ios-gray-6 dark:bg-ios-dark-fill rounded-full flex items-center justify-center mb-3">
                             <span className="text-2xl opacity-60">💸</span>
                         </div>
                         <p className="text-sm font-medium text-center px-2">
@@ -130,7 +130,7 @@ export default function TransactionFeed({
                                     {formatUtcDateLabel(dateKey)}
                                 </p>
 
-                                <div className="bg-white dark:bg-ios-dark-card rounded-2xl shadow-card overflow-hidden divide-y divide-gray-100 dark:divide-white/10">
+                                <div className="bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card overflow-hidden divide-y divide-black/5 dark:divide-white/10">
                                     {groupedByDate[dateKey].map((row) => {
                                         if (row.kind === 'savings') {
                                             const s = row.savings;
@@ -174,7 +174,7 @@ export default function TransactionFeed({
                                                         <span className="text-[15px] font-bold text-ios-green tabular-nums">
                                                             ₪{formatIlsAmount(s.amount)}
                                                         </span>
-                                                        <ChevronLeft className="w-4 h-4 text-gray-300 dark:text-ios-dark-subtle/60" />
+                                                        <ChevronLeft className="w-4 h-4 text-ios-gray-4 dark:text-ios-dark-subtle/60" />
                                                     </div>
                                                 </motion.button>
                                             );
@@ -198,11 +198,11 @@ export default function TransactionFeed({
                                                 exit={{ opacity: 0, scale: 0.98 }}
                                                 whileTap={(t.isRecurring || !t.isProjected) ? { scale: 0.98 } : undefined}
                                                 className={`flex items-center justify-between min-h-[44px] py-3 px-4 transition-colors ${
-                                                    (t.isRecurring || !t.isProjected) ? 'cursor-pointer active:bg-gray-50 dark:active:bg-ios-dark-fill' : 'cursor-default'
+                                                    (t.isRecurring || !t.isProjected) ? 'cursor-pointer active:bg-ios-gray-6/90 dark:active:bg-ios-dark-fill' : 'cursor-default'
                                                 }`}
                                             >
                                                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                    <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-ios-dark-fill flex items-center justify-center text-lg flex-shrink-0">
+                                                    <div className="w-10 h-10 rounded-xl bg-ios-gray-6 dark:bg-ios-dark-fill flex items-center justify-center text-lg flex-shrink-0">
                                                         {getIcon(t.category)}
                                                     </div>
                                                     <div className="flex-1 min-w-0">
@@ -244,7 +244,7 @@ export default function TransactionFeed({
                                                     <span className="text-[15px] font-bold text-ios-text dark:text-ios-dark-text tabular-nums">
                                                         ₪{formatIlsAmount(t.amount)}
                                                     </span>
-                                                    {(t.isRecurring || !t.isProjected) && <ChevronLeft className="w-4 h-4 text-gray-300 dark:text-ios-dark-subtle/60" />}
+                                                    {(t.isRecurring || !t.isProjected) && <ChevronLeft className="w-4 h-4 text-ios-gray-4 dark:text-ios-dark-subtle/60" />}
                                                 </div>
                                             </motion.div>
                                         );

@@ -93,7 +93,7 @@ export default function InfoHint({ children, ariaLabel = 'הסבר', className }
           width: PANEL_WIDTH,
           zIndex: 200,
         }}
-        className="rounded-2xl border border-gray-200/90 bg-white p-3 text-start shadow-lg dark:border-white/10 dark:bg-ios-dark-card"
+        className="rounded-2xl border border-gray-200/50 bg-ios-card p-3 text-start shadow-lg dark:border-white/10 dark:bg-ios-dark-card"
       >
         <div className="text-xs leading-relaxed text-ios-text dark:text-ios-dark-text">{children}</div>
       </div>

@@ -114,16 +114,16 @@ export default function SavingsAllocationCard({
                 </p>
               ) : (
                 <>
-                  <div className="bg-white dark:bg-ios-dark-card rounded-2xl shadow-card overflow-hidden divide-y divide-gray-100 dark:divide-white/10 mb-3">
+                  <div className="bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card overflow-hidden divide-y divide-black/5 dark:divide-white/10 mb-3">
                     {allocations.map((row) => (
                       <button
                         key={row.id}
                         type="button"
                         onClick={() => onEdit(row)}
-                        className="w-full flex items-center justify-between p-4 cursor-pointer active:bg-gray-50 dark:active:bg-ios-dark-fill transition-colors"
+                        className="w-full flex items-center justify-between p-4 cursor-pointer active:bg-ios-gray-6/90 dark:active:bg-ios-dark-fill transition-colors"
                       >
                         <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-ios-dark-fill flex items-center justify-center text-lg flex-shrink-0">
+                          <div className="w-10 h-10 rounded-xl bg-ios-gray-6 dark:bg-ios-dark-fill flex items-center justify-center text-lg flex-shrink-0">
                             {iconForLabel(savingsLabels, row.label)}
                           </div>
                           <div className="min-w-0 text-start">
@@ -149,7 +149,7 @@ export default function SavingsAllocationCard({
                           <span className="text-[15px] font-bold text-ios-green tabular-nums">
                             ₪{formatIlsAmount(row.amount)}
                           </span>
-                          <ChevronLeft className="w-4 h-4 text-gray-300 dark:text-ios-dark-subtle/60" />
+                          <ChevronLeft className="w-4 h-4 text-ios-gray-4 dark:text-ios-dark-subtle/60" />
                         </div>
                       </button>
                     ))}

@@ -168,3 +168,12 @@ input[type="date"] {
     @apply text-gray-500 dark:text-ios-dark-subtle;
   }
 }
+
+/*
+ * driver.js applies `overflow: hidden !important` to any non-body ancestor that directly
+ * contains `.driver-active-element`. The FAB sits in a row with `-top-5` and would be
+ * clipped; allow that slot to stay visible while the tour is active.
+ */
+html body.driver-active div.lumiflow-fab-slot.max-w-md {
+  overflow: visible !important;
+}

@@ -1,0 +1,215 @@
+/* LumiFlow-themed driver.js spotlight tour — load after driver.css */
+
+@keyframes lumiflow-tour-popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.driver-popover.lumiflow-welcome-tour-popover {
+  direction: rtl;
+  font-family: inherit !important;
+  color: var(--foreground) !important;
+  background-color: var(--card) !important;
+  border-radius: 1rem !important;
+  padding: 1.25rem 1.25rem 1rem !important;
+  min-width: min(17.5rem, calc(100vw - 2rem)) !important;
+  max-width: min(20rem, calc(100vw - 2rem)) !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  box-shadow:
+    0 8px 30px rgba(0, 0, 0, 0.1),
+    0 1px 3px rgba(0, 0, 0, 0.06) !important;
+}
+
+.dark .driver-popover.lumiflow-welcome-tour-popover {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.45),
+    0 1px 0 rgba(255, 255, 255, 0.04) inset !important;
+}
+
+.driver-popover.lumiflow-welcome-tour-popover * {
+  font-family: inherit !important;
+}
+
+.driver-fade .driver-popover.lumiflow-welcome-tour-popover {
+  animation: lumiflow-tour-popover-in 0.38s cubic-bezier(0.32, 0.72, 0, 1) both !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .driver-fade .driver-popover.lumiflow-welcome-tour-popover {
+    animation: none !important;
+  }
+}
+
+.driver-popover.lumiflow-welcome-tour-popover .driver-popover-title {
+  font-size: 1.125rem !important;
+  font-weight: 700 !important;
+  line-height: 1.35 !important;
+  color: var(--foreground) !important;
+  letter-spacing: -0.01em;
+}
+
+.driver-popover.lumiflow-welcome-tour-popover .driver-popover-description {
+  font-size: 0.875rem !important;
+  line-height: 1.55 !important;
+  font-weight: 400 !important;
+  color: var(--subtle) !important;
+  margin-top: 0.5rem !important;
+}
+
+.driver-popover.lumiflow-welcome-tour-popover .driver-popover-close-btn {
+  inset-inline-end: 0.5rem !important;
+  top: 0.5rem !important;
+  width: 2.25rem !important;
+  height: 2.25rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 9999px !important;
+  color: var(--subtle) !important;
+  font-size: 1.25rem !important;
+  transition: background-color 0.15s ease, color 0.15s ease !important;
+}
+
+.driver-popover.lumiflow-welcome-tour-popover .driver-popover-close-btn:hover,
+.driver-popover.lumiflow-welcome-tour-popover .driver-popover-close-btn:focus {
+  color: var(--foreground) !important;
+  background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+.dark .driver-popover.lumiflow-welcome-tour-popover .driver-popover-close-btn:hover,
+.dark .driver-popover.lumiflow-welcome-tour-popover .driver-popover-close-btn:focus {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+.driver-popover.lumiflow-welcome-tour-popover .driver-popover-footer {
+  margin-top: 1.125rem !important;
+  padding-top: 0.75rem !important;
+  border-top: 1px solid rgba(0, 0, 0, 0.06) !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+}
+
+.dark .driver-popover.lumiflow-welcome-tour-popover .driver-popover-footer {
+  border-top-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.driver-popover.lumiflow-welcome-tour-popover .driver-popover-progress-text {
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  color: var(--subtle) !important;
+}
+
+.driver-popover.lumiflow-welcome-tour-popover .driver-popover-navigation-btns {
+  flex-grow: 1 !important;
+  justify-content: flex-start !important;
+  gap: 0.5rem !important;
+}
+
+.driver-popover.lumiflow-welcome-tour-popover .driver-popover-navigation-btns button + button {
+  margin-left: 0 !important;
+  margin-inline-start: 0 !important;
+}
+
+.driver-popover.lumiflow-welcome-tour-popover .driver-popover-footer button {
+  all: unset !important;
+  box-sizing: border-box !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+  line-height: 1.25 !important;
+  padding: 0.625rem 1rem !important;
+  border-radius: 0.75rem !important;
+  min-height: 2.75rem !important;
+  text-shadow: none !important;
+  transition: transform 0.12s ease, opacity 0.12s ease, background-color 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+.driver-popover.lumiflow-welcome-tour-popover .driver-popover-footer button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .driver-popover.lumiflow-welcome-tour-popover .driver-popover-footer button:active:not(:disabled) {
+    transform: none;
+  }
+}
+
+.driver-popover.lumiflow-welcome-tour-popover .driver-popover-prev-btn {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+  color: var(--foreground) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+.dark .driver-popover.lumiflow-welcome-tour-popover .driver-popover-prev-btn {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.driver-popover.lumiflow-welcome-tour-popover .driver-popover-prev-btn:hover,
+.driver-popover.lumiflow-welcome-tour-popover .driver-popover-prev-btn:focus {
+  background-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+.dark .driver-popover.lumiflow-welcome-tour-popover .driver-popover-prev-btn:hover,
+.dark .driver-popover.lumiflow-welcome-tour-popover .driver-popover-prev-btn:focus {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.driver-popover.lumiflow-welcome-tour-popover .driver-popover-next-btn {
+  background-color: #007aff !important;
+  color: #ffffff !important;
+  border: none !important;
+  box-shadow: 0 1px 2px rgba(0, 122, 255, 0.35) !important;
+}
+
+.driver-popover.lumiflow-welcome-tour-popover .driver-popover-next-btn:hover,
+.driver-popover.lumiflow-welcome-tour-popover .driver-popover-next-btn:focus {
+  background-color: #0066d6 !important;
+}
+
+.driver-popover.lumiflow-welcome-tour-popover .driver-popover-footer .driver-popover-btn-disabled {
+  opacity: 0.45 !important;
+}
+
+/* Popover arrow matches card surface */
+.driver-popover.lumiflow-welcome-tour-popover .driver-popover-arrow {
+  border-width: 6px !important;
+}
+
+.driver-popover.lumiflow-welcome-tour-popover .driver-popover-arrow-side-left {
+  border-right-color: transparent !important;
+  border-bottom-color: transparent !important;
+  border-top-color: transparent !important;
+  border-left-color: var(--card) !important;
+}
+
+.driver-popover.lumiflow-welcome-tour-popover .driver-popover-arrow-side-right {
+  border-left-color: transparent !important;
+  border-bottom-color: transparent !important;
+  border-top-color: transparent !important;
+  border-right-color: var(--card) !important;
+}
+
+.driver-popover.lumiflow-welcome-tour-popover .driver-popover-arrow-side-top {
+  border-right-color: transparent !important;
+  border-bottom-color: transparent !important;
+  border-left-color: transparent !important;
+  border-top-color: var(--card) !important;
+}
+
+.driver-popover.lumiflow-welcome-tour-popover .driver-popover-arrow-side-bottom {
+  border-left-color: transparent !important;
+  border-top-color: transparent !important;
+  border-right-color: transparent !important;
+  border-bottom-color: var(--card) !important;
+}

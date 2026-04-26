@@ -19,7 +19,7 @@ export default function GoogleSignInButton({ callbackUrl, disabled }: GoogleSign
         setLoading(true);
         void signIn('google', { callbackUrl });
       }}
-      className="w-full flex items-center justify-center gap-3 py-3 rounded-xl border border-gray-200 dark:border-white/20 bg-white dark:bg-[#111a2e] text-ios-text dark:text-ios-dark-text font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] hover:bg-gray-50 dark:hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition"
+      className="w-full flex items-center justify-center gap-3 py-3 rounded-xl border border-gray-200/50 dark:border-white/10 bg-ios-card dark:bg-ios-dark-card text-ios-text dark:text-ios-dark-text font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] hover:bg-ios-gray-6/90 dark:hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition"
     >
       <GoogleGlyph className="shrink-0" />
       {loading ? 'מפנה לגוגל...' : 'המשך עם Google'}

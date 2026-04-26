@@ -46,8 +46,8 @@ export default function PieChart({ data, onSliceClick }: PieChartProps) {
 
     if (total === 0) {
         return (
-            <div className="flex flex-col items-center justify-center py-8 text-gray-400">
-                <div className="w-32 h-32 rounded-full border-4 border-gray-100 dark:border-ios-dark-fill flex items-center justify-center mb-3">
+            <div className="flex flex-col items-center justify-center py-8 text-ios-subtle">
+                <div className="w-32 h-32 rounded-full border-4 border-ios-gray-6 dark:border-ios-dark-fill flex items-center justify-center mb-3">
                     <span className="text-3xl opacity-30">📊</span>
                 </div>
                 <p className="text-sm font-medium text-ios-subtle dark:text-ios-dark-subtle">אין נתונים להצגה</p>
@@ -96,7 +96,7 @@ export default function PieChart({ data, onSliceClick }: PieChartProps) {
                         initial={{ opacity: 0, x: 10 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.3 + index * 0.04 }}
-                        className={`flex items-center justify-between py-1.5${onSliceClick ? ' cursor-pointer active:bg-gray-50 dark:active:bg-ios-dark-fill/60 rounded-lg -mx-1.5 px-1.5 transition-colors' : ''}`}
+                        className={`flex items-center justify-between py-1.5${onSliceClick ? ' cursor-pointer active:bg-ios-gray-6/90 dark:active:bg-ios-dark-fill/60 rounded-lg -mx-1.5 px-1.5 transition-colors' : ''}`}
                         onClick={() => onSliceClick?.(item.name)}
                     >
                         <div className="flex items-center gap-2.5">
@@ -104,7 +104,7 @@ export default function PieChart({ data, onSliceClick }: PieChartProps) {
                                 className="w-3 h-3 rounded-full flex-shrink-0"
                                 style={{ backgroundColor: item.color }}
                             />
-                            <span className="text-sm text-gray-600 dark:text-ios-dark-text/90">{item.icon} {item.name}</span>
+                            <span className="text-sm text-ios-subtle dark:text-ios-dark-text/90">{item.icon} {item.name}</span>
                         </div>
                         <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
                             {item.attributionTag ? (

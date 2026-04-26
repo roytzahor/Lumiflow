@@ -3,6 +3,7 @@
 import { markWelcomeTourCompleted } from '@/app/actions';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
+import '@/components/welcome-tour.css';
 import { useEffect, useRef } from 'react';
 
 type WelcomeTourProps = {
@@ -27,6 +28,12 @@ export default function WelcomeTour({ welcomeTourCompletedAt }: WelcomeTourProps
 
       const driverObj = driver({
         showProgress: true,
+        animate: true,
+        popoverClass: 'lumiflow-welcome-tour-popover',
+        overlayColor: '#0C121B',
+        overlayOpacity: 0.42,
+        stagePadding: 10,
+        stageRadius: 16,
         nextBtnText: 'הבא',
         prevBtnText: 'חזרה',
         doneBtnText: 'סיום',

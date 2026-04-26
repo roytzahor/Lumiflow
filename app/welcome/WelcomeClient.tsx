@@ -85,7 +85,7 @@ export default function WelcomeClient({ initialName, initialTheme }: WelcomeClie
                   className={`flex-1 py-2 rounded-xl text-xs font-semibold border transition ${
                     themePreference === t
                       ? 'border-ios-blue bg-ios-blue/10 text-ios-blue'
-                      : 'border-gray-200 dark:border-white/10 text-ios-text dark:text-ios-dark-text'
+                      : 'border-gray-200/50 dark:border-white/10 text-ios-text dark:text-ios-dark-text'
                   }`}
                 >
                   {t === 'LIGHT' ? 'בהיר' : t === 'DARK' ? 'כהה' : 'מערכת'}

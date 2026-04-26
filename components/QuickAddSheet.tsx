@@ -363,7 +363,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                     >
                         {/* Drag Handle */}
                         <div className="w-full flex justify-center pt-3 pb-2" onPointerDown={(e) => dragControls.start(e)}>
-                            <div className="w-9 h-[5px] bg-gray-300 dark:bg-ios-dark-subtle/60 rounded-full" />
+                            <div className="w-9 h-[5px] bg-ios-gray-4 dark:bg-ios-dark-subtle/60 rounded-full" />
                         </div>
 
                         <div className="flex-1 overflow-y-auto px-5 pb-8">
@@ -376,18 +376,18 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                     data-testid="quickadd-open-close"
                                     type="button"
                                     onClick={onClose}
-                                    className="w-8 h-8 bg-gray-200 dark:bg-ios-dark-fill rounded-full flex items-center justify-center"
+                                    className="w-8 h-8 bg-ios-gray-5 dark:bg-ios-dark-fill rounded-full flex items-center justify-center"
                                     aria-label="סגור"
                                 >
-                                    <X className="w-4 h-4 text-gray-500 dark:text-ios-dark-subtle" />
+                                    <X className="w-4 h-4 text-ios-subtle dark:text-ios-dark-subtle" />
                                 </button>
                             </div>
 
                             {/* Amount Input */}
-                            <div className="bg-white dark:bg-ios-dark-card rounded-2xl p-5 sm:p-6 shadow-card mb-4 text-center">
+                            <div className="bg-ios-card dark:bg-ios-dark-card rounded-2xl p-5 sm:p-6 shadow-card mb-4 text-center">
                                 <p className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle uppercase tracking-wider mb-3">סכום</p>
                                 <div className="flex items-center justify-center gap-1">
-                                    <span className="text-3xl sm:text-4xl text-gray-300 dark:text-ios-dark-subtle/60 font-light">₪</span>
+                                    <span className="text-3xl sm:text-4xl text-ios-gray-4 dark:text-ios-dark-subtle/60 font-light">₪</span>
                                     <input
                                         ref={amountInputRef}
                                         data-testid="quickadd-amount"
@@ -400,7 +400,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                             trigger(5);
                                         }}
                                         placeholder="0"
-                                        className="bg-transparent text-center text-4xl sm:text-5xl font-bold text-ios-text dark:text-ios-dark-text placeholder-gray-200 dark:placeholder-ios-dark-subtle/50 focus:outline-none w-40 sm:w-48"
+                                        className="bg-transparent text-center text-4xl sm:text-5xl font-bold text-ios-text dark:text-ios-dark-text placeholder:text-ios-gray-4/70 dark:placeholder:text-ios-dark-subtle/50 focus:outline-none w-40 sm:w-48"
                                         autoFocus={!initialData}
                                         aria-invalid={!!amountError}
                                         aria-describedby={amountError ? 'amount-error' : undefined}
@@ -414,7 +414,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                             </div>
 
                             {/* Account Selector */}
-                            <div className="bg-white dark:bg-ios-dark-card rounded-2xl shadow-card mb-4 overflow-hidden">
+                            <div className="bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card mb-4 overflow-hidden">
                                 <p className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle uppercase tracking-wider px-4 pt-4 pb-2">חשבון</p>
                                 <div className="px-3 pb-3">
                                     <button
@@ -462,7 +462,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                                     className={`w-full flex items-center gap-2.5 py-3 px-3.5 text-sm font-semibold text-right transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue/30 ${
                                                         accountId === acc.id
                                                             ? 'bg-ios-blue/12 dark:bg-ios-blue/25 text-ios-blue dark:text-white'
-                                                            : 'text-gray-600 dark:text-ios-dark-subtle'
+                                                            : 'text-ios-subtle dark:text-ios-dark-subtle'
                                                     }`}
                                                     aria-pressed={accountId === acc.id}
                                                 >
@@ -481,7 +481,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                             </div>
 
                             {/* Date */}
-                            <div className="bg-white dark:bg-ios-dark-card rounded-2xl shadow-card mb-4 overflow-hidden">
+                            <div className="bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card mb-4 overflow-hidden">
                                 <div className="flex items-center justify-between p-4">
                                     <div className="flex items-center gap-3">
                                         <div className="w-8 h-8 bg-ios-red/10 rounded-lg flex items-center justify-center">
@@ -497,7 +497,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                             setDate(e.target.value);
                                             if (dateError) setDateError('');
                                         }}
-                                        className="bg-ios-gray-6 dark:bg-ios-dark-fill border border-gray-200 dark:border-white/10 rounded-xl px-3 py-2 text-[15px] text-gray-700 dark:text-ios-dark-text focus:outline-none focus:ring-2 focus:ring-ios-blue/30 text-left"
+                                        className="bg-ios-gray-6 dark:bg-ios-dark-fill border border-gray-200/50 dark:border-white/10 rounded-xl px-3 py-2 text-[15px] text-ios-text dark:text-ios-dark-text focus:outline-none focus:ring-2 focus:ring-ios-blue/30 text-left"
                                     />
                                 </div>
                                 <div className="px-4 pb-4 -mt-2">
@@ -509,7 +509,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                             </div>
 
                             {/* Description */}
-                            <div className="bg-white dark:bg-ios-dark-card rounded-2xl shadow-card mb-4 overflow-hidden">
+                            <div className="bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card mb-4 overflow-hidden">
                                 <div className="p-4">
                                     <div className="flex items-center gap-3 mb-2">
                                         <div className="w-8 h-8 bg-ios-blue/10 rounded-lg flex items-center justify-center">
@@ -522,12 +522,12 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                         type="text"
                                         value={description}
                                         onChange={(e) => setDescription(e.target.value)}
-                                        className="w-full bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl py-3 px-4 text-[15px] text-ios-text dark:text-ios-dark-text placeholder-gray-400 dark:placeholder-ios-dark-subtle focus:outline-none focus:ring-2 focus:ring-ios-blue/30 transition"
+                                        className="w-full bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl py-3 px-4 text-[15px] text-ios-text dark:text-ios-dark-text placeholder:text-ios-subtle dark:placeholder:text-ios-dark-subtle focus:outline-none focus:ring-2 focus:ring-ios-blue/30 transition"
                                         placeholder="על מה יצא הכסף?"
                                     />
                                 </div>
                                 {ambiguousCategoryMatches.length > 0 && (
-                                    <div className="px-4 pb-4 pt-1 border-t border-gray-100 dark:border-white/10">
+                                    <div className="px-4 pb-4 pt-1 border-t border-black/5 dark:border-white/10">
                                         <p className="text-xs font-medium text-ios-subtle dark:text-ios-dark-subtle mb-2">
                                             זוהו כמה התאמות לתיאור — בחרו קטגוריה:
                                         </p>
@@ -553,7 +553,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                             </div>
 
                             {/* Category */}
-                            <div className="bg-white dark:bg-ios-dark-card rounded-2xl shadow-card mb-4 p-4">
+                            <div className="bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card mb-4 p-4">
                                 <p className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle uppercase tracking-wider mb-3">קטגוריה</p>
                                 <div className="flex gap-2 mb-3">
                                     <input
@@ -561,7 +561,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                         placeholder="שם קטגוריה חדשה"
                                         value={newCategoryName}
                                         onChange={(e) => setNewCategoryName(e.target.value)}
-                                        className="flex-1 bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-3.5 py-2.5 text-sm text-ios-text dark:text-ios-dark-text placeholder-gray-400 dark:placeholder-ios-dark-subtle focus:outline-none focus:ring-2 focus:ring-ios-blue/30"
+                                        className="flex-1 bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-3.5 py-2.5 text-sm text-ios-text dark:text-ios-dark-text placeholder:text-ios-subtle dark:placeholder:text-ios-dark-subtle focus:outline-none focus:ring-2 focus:ring-ios-blue/30"
                                     />
                                     <input
                                         type="text"
@@ -597,7 +597,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                             value={categorySearch}
                                             onChange={(e) => setCategorySearch(e.target.value)}
                                             placeholder="חיפוש קטגוריה קיימת"
-                                            className="w-full bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl py-2.5 pr-9 pl-3 text-sm text-ios-text dark:text-ios-dark-text placeholder-gray-400 dark:placeholder-ios-dark-subtle focus:outline-none focus:ring-2 focus:ring-ios-blue/30"
+                                            className="w-full bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl py-2.5 pr-9 pl-3 text-sm text-ios-text dark:text-ios-dark-text placeholder:text-ios-subtle dark:placeholder:text-ios-dark-subtle focus:outline-none focus:ring-2 focus:ring-ios-blue/30"
                                         />
                                     </div>
                                 </div>
@@ -615,7 +615,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                             className={`flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                                                 category === cat.name
                                                     ? 'bg-ios-blue text-white shadow-sm'
-                                                    : 'bg-ios-gray-6 dark:bg-ios-dark-fill text-gray-600 dark:text-ios-dark-subtle'
+                                                    : 'bg-ios-gray-6 dark:bg-ios-dark-fill text-ios-subtle dark:text-ios-dark-subtle'
                                             }`}
                                         >
                                             <span>{cat.icon}</span>
@@ -632,7 +632,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                             className={`flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                                                 category === 'כללי'
                                                     ? 'bg-ios-blue text-white shadow-sm'
-                                                    : 'bg-ios-gray-6 dark:bg-ios-dark-fill text-gray-600 dark:text-ios-dark-subtle'
+                                                    : 'bg-ios-gray-6 dark:bg-ios-dark-fill text-ios-subtle dark:text-ios-dark-subtle'
                                             }`}
                                         >
                                             <span>✨</span>
@@ -659,7 +659,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                             )}
 
                             {!initialData && (
-                                <div className="bg-white dark:bg-ios-dark-card rounded-2xl shadow-card mb-4 p-4">
+                                <div className="bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card mb-4 p-4">
                                     <div className="flex items-center gap-3 mb-2">
                                         <div className="w-8 h-8 bg-ios-teal/10 rounded-lg flex items-center justify-center">
                                             <span className="text-sm">📅</span>
@@ -711,7 +711,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                             )}
 
                             {/* Recurring Toggle */}
-                            <div className="bg-white dark:bg-ios-dark-card rounded-2xl shadow-card mb-6 p-4 flex items-center justify-between">
+                            <div className="bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card mb-6 p-4 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 bg-ios-orange/10 rounded-lg flex items-center justify-center">
                                         <span className="text-sm">🔄</span>
@@ -733,13 +733,13 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                             </div>
 
                             {shouldShowShortMonthPolicy && (
-                                <div className="bg-white dark:bg-ios-dark-card rounded-2xl shadow-card mb-6 p-4">
+                                <div className="bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card mb-6 p-4">
                                     <p className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle uppercase tracking-wider mb-2">חודש קצר</p>
                                     <select
                                         data-testid="quickadd-short-month-policy"
                                         value={monthPolicy}
                                         onChange={(e) => setMonthPolicy(e.target.value as RecurringMonthPolicy)}
-                                        className="w-full bg-ios-gray-6 dark:bg-ios-dark-fill border border-gray-200 dark:border-white/10 rounded-xl px-3 py-2.5 text-sm text-gray-700 dark:text-ios-dark-text focus:outline-none focus:ring-2 focus:ring-ios-blue/30"
+                                        className="w-full bg-ios-gray-6 dark:bg-ios-dark-fill border border-gray-200/50 dark:border-white/10 rounded-xl px-3 py-2.5 text-sm text-ios-text dark:text-ios-dark-text focus:outline-none focus:ring-2 focus:ring-ios-blue/30"
                                     >
                                         <option value="ROLL_TO_LAST_DAY">גלישה ליום האחרון בחודש</option>
                                         <option value="SKIP_MONTH">דילוג על חודש חסר</option>
@@ -768,7 +768,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                                 <button
                                                     type="button"
                                                     onClick={() => setShowDeleteConfirm(false)}
-                                                    className="flex-1 bg-gray-100 dark:bg-ios-dark-fill text-gray-700 dark:text-ios-dark-text font-bold py-3.5 rounded-2xl"
+                                                    className="flex-1 bg-ios-gray-6 dark:bg-ios-dark-fill text-ios-text dark:text-ios-dark-text font-bold py-3.5 rounded-2xl"
                                                 >
                                                     ביטול
                                                 </button>

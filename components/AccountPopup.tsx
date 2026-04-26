@@ -127,7 +127,7 @@ export default function AccountPopup({
             className="fixed bottom-0 left-0 right-0 z-[97] mx-auto w-full max-w-md rounded-t-[20px] bg-ios-bg dark:bg-ios-dark-bg shadow-sheet pb-safe"
           >
             <div className="flex w-full justify-center pt-3 pb-2">
-              <div className="h-[5px] w-9 rounded-full bg-gray-300 dark:bg-ios-dark-subtle/60" />
+              <div className="h-[5px] w-9 rounded-full bg-ios-gray-4 dark:bg-ios-dark-subtle/60" />
             </div>
             <div className="space-y-4 px-5 pb-8">
               <div className="flex items-center justify-between gap-2">

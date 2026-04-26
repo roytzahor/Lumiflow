@@ -24,7 +24,7 @@ export default function AuthThemeToggle({ className = '' }: AuthThemeToggleProps
       type="button"
       suppressHydrationWarning
       onClick={() => setTheme(isDark ? 'light' : 'dark')}
-      className={`inline-flex items-center gap-2 rounded-xl border border-gray-200/80 dark:border-white/15 bg-white/90 dark:bg-ios-dark-fill/80 px-3 py-2 text-xs font-semibold text-ios-text dark:text-ios-dark-text hover:bg-white dark:hover:bg-ios-dark-fill transition shadow-sm ${className}`}
+      className={`inline-flex items-center gap-2 rounded-xl border border-gray-200/50 dark:border-white/15 bg-ios-card/95 dark:bg-ios-dark-fill/80 px-3 py-2 text-xs font-semibold text-ios-text dark:text-ios-dark-text hover:bg-ios-gray-6 dark:hover:bg-ios-dark-fill transition shadow-sm ${className}`}
       aria-label={label}
       title={label}
     >

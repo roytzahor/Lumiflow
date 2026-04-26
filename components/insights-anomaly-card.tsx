@@ -20,7 +20,7 @@ export default function InsightsAnomalyCard({ anomaly: a, icon, variant = "defau
             }`}
         >
             <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-xl bg-gray-50 dark:bg-ios-dark-fill flex items-center justify-center text-xl flex-shrink-0">
+                <div className="w-11 h-11 rounded-xl bg-ios-gray-6 dark:bg-ios-dark-fill flex items-center justify-center text-xl flex-shrink-0">
                     {icon}
                 </div>
                 <div className="flex-1 min-w-0">

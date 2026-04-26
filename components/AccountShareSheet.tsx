@@ -53,7 +53,7 @@ export default function AccountShareSheet({
             className="fixed bottom-0 left-0 right-0 z-[110] mx-auto w-full max-w-md rounded-t-[20px] bg-ios-bg dark:bg-ios-dark-bg shadow-sheet pb-safe"
           >
             <div className="flex w-full justify-center pt-3 pb-2">
-              <div className="h-[5px] w-9 rounded-full bg-gray-300 dark:bg-ios-dark-subtle/60" />
+              <div className="h-[5px] w-9 rounded-full bg-ios-gray-4 dark:bg-ios-dark-subtle/60" />
             </div>
 
             <div className="space-y-4 px-5 pb-8">
@@ -65,7 +65,7 @@ export default function AccountShareSheet({
                   type="button"
                   onClick={onClose}
                   disabled={isLoading}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200 text-gray-600 disabled:opacity-50 dark:bg-ios-dark-fill dark:text-ios-dark-subtle"
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-ios-gray-5 text-ios-subtle disabled:opacity-50 dark:bg-ios-dark-fill dark:text-ios-dark-subtle"
                   aria-label="סגור"
                 >
                   <X className="h-4 w-4" />

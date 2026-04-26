@@ -180,7 +180,7 @@ export default function SavingsAllocationSheet({
             className="fixed bottom-0 left-0 right-0 z-[80] max-h-[92vh] bg-ios-bg dark:bg-ios-dark-bg shadow-sheet flex flex-col pb-safe rounded-t-[20px] max-w-md mx-auto"
           >
             <div className="w-full flex justify-center pt-3 pb-2" onPointerDown={(e) => dragControls.start(e)}>
-              <div className="w-9 h-[5px] bg-gray-300 dark:bg-ios-dark-subtle/60 rounded-full" />
+              <div className="w-9 h-[5px] bg-ios-gray-4 dark:bg-ios-dark-subtle/60 rounded-full" />
             </div>
 
             <div className="flex-1 overflow-y-auto px-5 pb-8">
@@ -196,30 +196,30 @@ export default function SavingsAllocationSheet({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="w-8 h-8 bg-gray-200 dark:bg-ios-dark-fill rounded-full flex items-center justify-center shrink-0"
+                  className="w-8 h-8 bg-ios-gray-5 dark:bg-ios-dark-fill rounded-full flex items-center justify-center shrink-0"
                   aria-label="סגור"
                 >
-                  <X className="w-4 h-4 text-gray-500 dark:text-ios-dark-subtle" />
+                  <X className="w-4 h-4 text-ios-subtle dark:text-ios-dark-subtle" />
                 </button>
               </div>
 
-              <div className="bg-white dark:bg-ios-dark-card rounded-2xl p-5 sm:p-6 shadow-card border border-gray-100/80 dark:border-white/10 mb-4 text-center">
+              <div className="bg-ios-card dark:bg-ios-dark-card rounded-2xl p-5 sm:p-6 shadow-card border border-gray-200/50 dark:border-white/10 mb-4 text-center">
                 <p className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle uppercase tracking-wider mb-3">
                   סכום
                 </p>
                 <div className="flex items-center justify-center gap-1">
-                  <span className="text-3xl sm:text-4xl text-gray-300 dark:text-ios-dark-subtle/60 font-light">₪</span>
+                  <span className="text-3xl sm:text-4xl text-ios-gray-4 dark:text-ios-dark-subtle/60 font-light">₪</span>
                   <input
                     type="number"
                     inputMode="decimal"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    className="bg-transparent text-center text-4xl sm:text-5xl font-bold text-ios-text dark:text-ios-dark-text placeholder-gray-200 dark:placeholder-ios-dark-subtle/50 focus:outline-none w-40 sm:w-48"
+                    className="bg-transparent text-center text-4xl sm:text-5xl font-bold text-ios-text dark:text-ios-dark-text placeholder:text-ios-gray-4/70 dark:placeholder:text-ios-dark-subtle/50 focus:outline-none w-40 sm:w-48"
                   />
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-ios-dark-card rounded-2xl shadow-card border border-gray-100/80 dark:border-white/10 mb-4 overflow-hidden p-4">
+              <div className="bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card border border-gray-200/50 dark:border-white/10 mb-4 overflow-hidden p-4">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-9 h-9 rounded-xl bg-ios-blue/12 flex items-center justify-center shrink-0">
                     <Landmark className="w-5 h-5 text-ios-blue" strokeWidth={2} />
@@ -262,7 +262,7 @@ export default function SavingsAllocationSheet({
                 )}
               </div>
 
-              <div className="bg-white dark:bg-ios-dark-card rounded-2xl shadow-card border border-gray-100/80 dark:border-white/10 mb-4 overflow-hidden">
+              <div className="bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card border border-gray-200/50 dark:border-white/10 mb-4 overflow-hidden">
                 <div className="p-4 space-y-3">
                   <div className="flex items-start gap-3">
                     <div className="w-9 h-9 bg-ios-green/10 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
@@ -285,7 +285,7 @@ export default function SavingsAllocationSheet({
                   </div>
                 </div>
 
-                <div className="h-px bg-gray-100 dark:bg-white/10 mx-4" />
+                <div className="h-px bg-black/5 dark:bg-white/10 mx-4" />
 
                 <div className="p-4 flex items-center justify-between gap-4">
                   <div className="flex items-start gap-3 min-w-0">
@@ -309,7 +309,7 @@ export default function SavingsAllocationSheet({
                   />
                 </div>
 
-                <div className="h-px bg-gray-100 dark:bg-white/10 mx-4" />
+                <div className="h-px bg-black/5 dark:bg-white/10 mx-4" />
 
                 <div className="p-4 space-y-2">
                   <div className="flex items-start gap-3">
@@ -334,7 +334,7 @@ export default function SavingsAllocationSheet({
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-ios-dark-card rounded-2xl shadow-card border border-gray-100/80 dark:border-white/10 mb-4 p-4">
+              <div className="bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card border border-gray-200/50 dark:border-white/10 mb-4 p-4">
                 <p className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle uppercase tracking-wider mb-3">
                   יעד חיסכון
                 </p>
@@ -350,7 +350,7 @@ export default function SavingsAllocationSheet({
                       className={`flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                         label === l.name
                           ? 'bg-ios-green text-white shadow-sm'
-                          : 'bg-ios-gray-6 dark:bg-ios-dark-fill text-gray-600 dark:text-ios-dark-subtle'
+                          : 'bg-ios-gray-6 dark:bg-ios-dark-fill text-ios-subtle dark:text-ios-dark-subtle'
                       }`}
                     >
                       <span>{l.icon}</span>
@@ -392,7 +392,7 @@ export default function SavingsAllocationSheet({
                       <button
                         type="button"
                         onClick={() => setShowDeleteConfirm(false)}
-                        className="flex-1 bg-gray-100 dark:bg-ios-dark-fill text-gray-700 dark:text-ios-dark-text font-bold py-3.5 rounded-2xl"
+                        className="flex-1 bg-ios-gray-6 dark:bg-ios-dark-fill text-ios-text dark:text-ios-dark-text font-bold py-3.5 rounded-2xl"
                       >
                         ביטול
                       </button>

@@ -26,7 +26,7 @@ export default function LiquidToggle({ isOn, onToggle, testId }: LiquidTogglePro
             aria-checked={isOn}
             onClick={onToggle}
             className={`flex-shrink-0 w-[51px] h-[31px] rounded-full flex items-center p-[2px] cursor-pointer transition-colors duration-300 ${
-                isOn ? 'bg-ios-green' : 'bg-gray-200'
+                isOn ? 'bg-ios-green' : 'bg-ios-gray-5'
             }`}
         >
             <motion.div

@@ -28,9 +28,50 @@
 - **React**: functional components and hooks only; no class components.
 - **Server vs client**: use `'use client'` only when needed (browser APIs, local state, event handlers). Prefer server components and server actions for data mutations that must be trusted.
 - **Mutations and reads that touch the DB**: implement through existing patterns—typically **`app/actions.ts`** (server actions) with session checks, not arbitrary new API routes unless there is a clear reason (webhooks, cron, NextAuth).
-- **Styling**: follow existing Tailwind tokens and **iOS-style** utility patterns already in the codebase; keep spacing, radii, and dark mode consistent with neighbors in the same view.
+- **Styling**: follow the **Visual design system (UI language)** section and existing Tailwind / iOS utility patterns; keep spacing, radii, and dark mode consistent with neighbors in the same view.
 - **Accessibility**: preserve `aria-*` labels and test ids used by Cypress; prefer stable **`data-testid`** for elements that tests depend on.
 - **Icons**: use **`lucide-react`** unless the file already uses a deliberate exception.
+- **Visual system**: follow the **Visual design system (UI language)** section below for surfaces, motion, RTL overlays, and third‑party widgets (e.g. spotlight tours).
+
+## Visual design system (UI language)
+
+This is the shared vocabulary for how LumiFlow should **look and feel** in the product UI (not marketing site).
+
+### Surfaces and color
+
+- **Semantic CSS variables** (see `app/globals.css`): `--background`, `--foreground`, `--card`, `--subtle`, `--surface`, `--surface-muted`. Light and **`.dark`** blocks must stay in sync when introducing new tokens.
+- **Tailwind iOS palette** (`tailwind.config.ts`): `ios-bg`, `ios-card`, `ios-gray-*` / fills, **`ios-blue`** (#007AFF) for **primary** actions and focus, **`ios-red`** for **destructive** or critical warnings, **`ios-indigo`** and other accents sparingly for secondary emphasis.
+- **Dark mode**: `class` strategy on `html`/root; use **`dark:`** variants paired with light styles (`bg-ios-card dark:bg-ios-dark-card`, `text-ios-text dark:text-ios-dark-text`, `text-ios-subtle dark:text-ios-dark-subtle`). Avoid hard‑coding only light grays on surfaces that appear in both themes.
+- **Borders**: prefer low‑contrast hairlines—`border-gray-200/50`, `dark:border-white/10`, or `rgba(0,0,0,0.06)` / `rgba(255,255,255,0.08)` in plain CSS when not using Tailwind.
+
+### Shape, spacing, and elevation
+
+- **Corners**: **`rounded-xl`** (12px) for controls and rows; **`rounded-2xl`** (1rem) for cards, sheets, and modals; **`rounded-3xl`** for large section shells where the codebase already does. FABs and icon-only controls often use **`rounded-full`**.
+- **Spacing**: mobile‑first, comfortable tap targets (**min ~44px** height on primary rows), consistent **`px-5`** section gutters on phone layouts.
+- **Elevation**: **`shadow-card`** for resting cards; slightly stronger shadows on dark cards when stacking (see dashboard/settings). Avoid arbitrary heavy drop shadows unless matching neighbors.
+
+### Typography
+
+- **Font**: **Assistant** (`--font-assistant`) with system UI fallbacks—already on `body`.
+- **Hebrew UI**: titles **bold** and slightly tight tracking where used elsewhere; body **`text-sm`** / **`text-xs`** with **`text-ios-subtle`** / **`dark:text-ios-dark-subtle`** for secondary lines. Keep hierarchy consistent within a screen.
+
+### Motion
+
+- Prefer **short CSS transitions** (`0.15s`–`0.2s` ease) on color/opacity/shadow; subtle **scale on press** (`~0.97`) for primary buttons where the app already does.
+- **Respect `prefers-reduced-motion: reduce`**: disable non‑essential animations (see `app/globals.css` patterns). Do not add long bouncy motion for core flows.
+- **Framer Motion**: use only where the surrounding feature already uses it (e.g. collapsible sections); do not add a second animation stack for small widgets if CSS is enough.
+
+### RTL and language
+
+- App routes use **`dir="rtl"`** where established; keep **logical CSS** (`margin-inline`, `padding-inline`, `inset-inline-*`) for new layout so mirrors work.
+- **Shipped strings** remain **Hebrew** for user‑visible copy; do not mix English into the same control as Hebrew unless the user explicitly requests it.
+- **Third‑party overlays** (e.g. **driver.js** spotlight): apply **`direction: rtl`**, LumiFlow colors, and iOS‑like buttons via a **dedicated stylesheet** (e.g. `components/welcome-tour.css`) plus **`popoverClass`**—do not leave library default gray/chrome that clashes with the app.
+
+### Spotlight / driver.js (product tour)
+
+- **Config** lives in `components/WelcomeTour.tsx`: set **`popoverClass`**, **`overlayColor` / `overlayOpacity`**, **`stageRadius` / `stagePadding`** to match card radii and scrim tone.
+- **Theming** is done in **`components/welcome-tour.css`** loaded **after** `driver.js/dist/driver.css`. Reuse **`var(--card)`**, **`var(--foreground)`**, **`var(--subtle)`**, and **`#007AFF`** for primary actions so tours track light/dark with the rest of the app.
+- **FAB clipping**: the bottom nav FAB parent uses **`lumiflow-fab-slot`**; **`globals.css`** forces **`overflow: visible`** while `body.driver-active` so driver’s `overflow: hidden` rule does not clip negative‑offset FABs.
 
 ## Domain concepts (mental model)
 

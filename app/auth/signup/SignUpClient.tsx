@@ -53,11 +53,11 @@ export default function SignUpClient({ googleAuthEnabled }: SignUpClientProps) {
   };
 
   const inputClassName =
-    'w-full rounded-xl px-4 py-3 text-ios-text dark:text-ios-dark-text bg-white dark:bg-[#111a2e] border border-gray-200 dark:border-white/20 placeholder:text-gray-400 dark:placeholder:text-ios-dark-subtle/90 focus:outline-none focus:ring-2 focus:ring-ios-blue/45 focus:border-ios-blue/35 transition-shadow shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]';
+    'w-full rounded-xl px-4 py-3 text-ios-text dark:text-ios-dark-text bg-ios-card dark:bg-ios-dark-card border border-gray-200/50 dark:border-white/10 placeholder:text-ios-subtle dark:placeholder:text-ios-dark-subtle/90 focus:outline-none focus:ring-2 focus:ring-ios-blue/45 focus:border-ios-blue/35 transition-shadow shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]';
 
   return (
     <main className="min-h-screen bg-ios-bg dark:bg-ios-dark-bg dark:bg-[radial-gradient(120%_85%_at_50%_0%,rgba(42,102,237,0.22),rgba(6,13,28,1))] flex items-center justify-center px-5 py-8 transition-colors">
-      <div className="w-full max-w-sm bg-ios-card/95 dark:bg-ios-dark-card/95 rounded-3xl shadow-card p-6 space-y-4 border border-gray-100 dark:border-white/10 backdrop-blur-sm">
+      <div className="w-full max-w-sm bg-ios-card/95 dark:bg-ios-dark-card/95 rounded-3xl shadow-card p-6 space-y-4 border border-gray-200/50 dark:border-white/10 backdrop-blur-sm">
         <div className="flex items-center justify-between">
           <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle">יצירת משתמש חדש</p>
           <AuthThemeToggle />
@@ -68,9 +68,9 @@ export default function SignUpClient({ googleAuthEnabled }: SignUpClientProps) {
           <>
             <GoogleSignInButton callbackUrl={callbackUrl} disabled={loading} />
             <div className="relative flex items-center gap-3 py-1">
-              <span className="h-px flex-1 bg-gray-200 dark:bg-white/15" />
+              <span className="h-px flex-1 bg-ios-gray-5 dark:bg-white/15" />
               <span className="text-xs text-ios-subtle dark:text-ios-dark-subtle shrink-0">או עם אימייל</span>
-              <span className="h-px flex-1 bg-gray-200 dark:bg-white/15" />
+              <span className="h-px flex-1 bg-ios-gray-5 dark:bg-white/15" />
             </div>
           </>
         )}

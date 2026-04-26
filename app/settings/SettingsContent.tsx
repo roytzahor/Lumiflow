@@ -918,13 +918,13 @@ export default function SettingsContent({
                       onChange={(e) => setEditingCategoryEmojiInput(e.target.value)}
                       placeholder="אימוג׳י"
                       list="settings-category-emoji-list"
-                      className="w-20 text-center bg-white dark:bg-ios-dark-card rounded-lg px-1 py-2 text-sm text-ios-text dark:text-ios-dark-text"
+                      className="w-20 text-center bg-ios-card dark:bg-ios-dark-card rounded-lg px-1 py-2 text-sm text-ios-text dark:text-ios-dark-text"
                       aria-label="בחירת אימוג׳י לעריכת קטגוריה"
                     />
                     <input
                       value={editingCategoryName}
                       onChange={(e) => setEditingCategoryName(e.target.value)}
-                      className="flex-1 bg-white dark:bg-ios-dark-card rounded-lg px-3 py-2 text-sm text-ios-text dark:text-ios-dark-text"
+                      className="flex-1 bg-ios-card dark:bg-ios-dark-card rounded-lg px-3 py-2 text-sm text-ios-text dark:text-ios-dark-text"
                     />
                     <button onClick={handleSaveCategory} className="text-ios-green p-1">
                       <Check className="w-4 h-4" />
@@ -1095,7 +1095,7 @@ export default function SettingsContent({
                     placeholder="0"
                     value={incomeFormAmount}
                     onChange={(e) => setIncomeFormAmount(e.target.value)}
-                    className="w-full bg-white dark:bg-ios-dark-card rounded-xl px-3 py-2.5 text-sm text-ios-text dark:text-ios-dark-text outline-none"
+                    className="w-full bg-ios-card dark:bg-ios-dark-card rounded-xl px-3 py-2.5 text-sm text-ios-text dark:text-ios-dark-text outline-none"
                   />
                 </div>
                 <div className="flex-1">
@@ -1104,7 +1104,7 @@ export default function SettingsContent({
                     type="date"
                     value={incomeFormDate}
                     onChange={(e) => setIncomeFormDate(e.target.value)}
-                    className="w-full bg-white dark:bg-ios-dark-card rounded-xl px-3 py-2.5 text-sm text-ios-text dark:text-ios-dark-text outline-none"
+                    className="w-full bg-ios-card dark:bg-ios-dark-card rounded-xl px-3 py-2.5 text-sm text-ios-text dark:text-ios-dark-text outline-none"
                   />
                 </div>
               </div>
@@ -1115,7 +1115,7 @@ export default function SettingsContent({
                   placeholder="בונוס שנתי, פרויקט..."
                   value={incomeFormDescription}
                   onChange={(e) => setIncomeFormDescription(e.target.value)}
-                  className="w-full bg-white dark:bg-ios-dark-card rounded-xl px-3 py-2.5 text-sm text-ios-text dark:text-ios-dark-text outline-none"
+                  className="w-full bg-ios-card dark:bg-ios-dark-card rounded-xl px-3 py-2.5 text-sm text-ios-text dark:text-ios-dark-text outline-none"
                 />
               </div>
               <div>
@@ -1123,7 +1123,7 @@ export default function SettingsContent({
                 <select
                   value={incomeFormAccountId}
                   onChange={(e) => setIncomeFormAccountId(e.target.value)}
-                  className="w-full bg-white dark:bg-ios-dark-card rounded-xl px-3 py-2.5 text-sm text-ios-text dark:text-ios-dark-text outline-none"
+                  className="w-full bg-ios-card dark:bg-ios-dark-card rounded-xl px-3 py-2.5 text-sm text-ios-text dark:text-ios-dark-text outline-none"
                 >
                   <option value="">בחר חשבון...</option>
                   {accounts.map((acc) => (
