@@ -24,19 +24,26 @@ export default function HistoryPageSkeleton() {
                     </div>
                 </div>
 
-                <div className="px-5 mb-4">
-                    <div className="h-12 rounded-2xl bg-ios-card dark:bg-ios-dark-card shadow-card" />
-                </div>
-
-                <div className="px-5 flex gap-3">
-                    <div className="flex-1 bg-ios-card dark:bg-ios-dark-card rounded-2xl h-20 shadow-card" />
-                    <div className="flex-1 flex flex-col gap-2">
-                        <div className="bg-ios-card dark:bg-ios-dark-card rounded-xl h-9 shadow-card" />
-                        <div className="bg-ios-card dark:bg-ios-dark-card rounded-xl h-9 shadow-card" />
+                <div className="px-5 mt-3 mb-4">
+                    <div className="rounded-3xl bg-ios-card dark:bg-ios-dark-card p-4 shadow-card space-y-3">
+                        <div className="h-5 w-36 bg-ios-gray-5 dark:bg-ios-dark-fill rounded-lg" />
+                        <div className="h-9 w-full bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl" />
+                        <div className="h-9 w-full bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl" />
+                        <div className="flex justify-between gap-3 border-t border-black/5 dark:border-white/10 pt-3">
+                            <div className="space-y-1.5 flex-1 min-w-0">
+                                <div className="h-3 w-28 bg-ios-gray-6 dark:bg-ios-dark-fill rounded" />
+                                <div className="h-3 w-20 bg-ios-gray-6 dark:bg-ios-dark-fill rounded" />
+                            </div>
+                            <div className="h-7 w-24 bg-ios-gray-5 dark:bg-ios-dark-fill rounded-lg shrink-0" />
+                        </div>
+                        <div className="flex flex-wrap gap-3 border-t border-black/5 dark:border-white/10 pt-3">
+                            <div className="h-9 flex-1 min-w-[9rem] bg-ios-gray-6 dark:bg-ios-dark-fill rounded-lg" />
+                            <div className="h-9 flex-1 min-w-[9rem] bg-ios-gray-6 dark:bg-ios-dark-fill rounded-lg" />
+                        </div>
                     </div>
                 </div>
 
-                <div className="px-5 mt-6 space-y-3">
+                <div className="px-5 mt-3 space-y-3">
                     <div className="h-5 w-24 bg-ios-gray-5 dark:bg-ios-dark-fill rounded-lg mb-2" />
                     <div className="bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl h-10 mb-4" />
                     <div className="bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl overflow-hidden divide-y divide-gray-200/50 dark:divide-white/10">
