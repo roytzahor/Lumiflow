@@ -346,6 +346,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
 
                     <motion.div
                         ref={sheetRef}
+                        data-testid="quickadd-sheet-dialog"
                         role="dialog"
                         aria-modal="true"
                         aria-labelledby="sheet-title"

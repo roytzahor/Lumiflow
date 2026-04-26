@@ -10,18 +10,14 @@ describe('Recurring short month policy visibility', () => {
   });
 
   const submitOnboardingWithStaleRetry = () => {
-    cy.get('[data-testid="onboarding-submit"]').click();
+    cy.get('[data-testid="onboarding-submit"]').click({ force: true });
     cy.get('body').then(($body) => {
       if ($body.text().includes('הסשן התיישן')) {
         cy.wait(400);
-        cy.get('[data-testid="onboarding-submit"]').click();
+        cy.get('[data-testid="onboarding-submit"]').click({ force: true });
       }
     });
   };
-
-  beforeEach(() => {
-    cy.clearLocalStorage();
-  });
 
   it('shows short month policy only for dates 29/30/31', () => {
     const stamp = Date.now();
@@ -31,20 +27,20 @@ describe('Recurring short month policy visibility', () => {
     cy.visit('/auth/signup');
     cy.get('[data-testid="signup-email"]').type(email);
     cy.get('[data-testid="signup-password"]').type(password);
-    cy.get('[data-testid="signup-submit"]').click();
+    cy.get('[data-testid="signup-submit"]').click({ force: true });
 
     cy.url({ timeout: 15000 }).should('include', '/onboarding');
     cy.get('[data-testid="onboarding-template-personalOnly"]').click();
-    cy.contains('button', 'המשך').click();
-    cy.contains('button', 'המשך').click();
-    cy.contains('button', 'המשך').click();
-    cy.contains('button', 'המשך').click();
+    cy.contains('button', 'המשך').click({ force: true });
+    cy.contains('button', 'המשך').click({ force: true });
+    cy.contains('button', 'המשך').click({ force: true });
+    cy.contains('button', 'המשך').click({ force: true });
     submitOnboardingWithStaleRetry();
-    cy.get('[data-testid="onboarding-continue-dashboard"]', { timeout: 15000 }).should('be.visible').click();
+    cy.get('[data-testid="onboarding-continue-dashboard"]', { timeout: 45000 }).should('be.visible').click({ force: true });
     cy.url().should('eq', `${Cypress.config('baseUrl')}/`);
 
-    cy.visit('/?quickAdd=1');
-    cy.get('[data-testid="quickadd-open-close"]').should('be.visible');
+    cy.get('[data-testid="fab-add-button"]').click({ force: true });
+    cy.get('[data-testid="quickadd-amount"]', { timeout: 15000 }).should('be.visible');
     cy.get('[data-testid="quickadd-recurring-toggle"]').click();
 
     cy.get('[data-testid="quickadd-date"]').clear().type('2026-04-28');

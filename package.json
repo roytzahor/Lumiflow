@@ -21,7 +21,10 @@
     "test:unit": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "cypress run",
-    "test:e2e:open": "cypress open"
+    "test:e2e:open": "cypress open",
+    "test:e2e:local": "bash scripts/cypress-e2e-local.sh",
+    "test:e2e:spec:local": "bash scripts/cypress-e2e-spec-local.sh",
+    "test:e2e:onboarding-resilience:local": "bash scripts/cypress-e2e-spec-local.sh cypress/e2e/onboarding-resilience.cy.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",

@@ -489,7 +489,7 @@ export default function Dashboard({
     };
 
     const scopeSelectorVisible = accounts.length > 1 || myContributionRatios.length > 0;
-    const perAccountBreakdownVisible = scopeAccountId === "all" && accountBalancesAll.length > 1;
+    const perAccountBreakdownVisible = scopeAccountId === "all" && accountBalancesAll.length >= 1;
 
     const heroTitle =
         scopeAccountId === "all"
@@ -751,6 +751,7 @@ export default function Dashboard({
 
                 {perAccountBreakdownVisible ? (
                     <motion.div
+                        data-testid="dashboard-per-account-section"
                         initial={sectionEnter}
                         animate={{ opacity: 1, y: 0 }}
                         transition={sectionDelay(0.2)}

@@ -125,6 +125,7 @@ export default function ProfileEditSheet({
                       <User className="h-4 w-4 text-ios-subtle dark:text-ios-dark-subtle" />
                       <input
                         type="text"
+                        data-testid="settings-profile-name-input"
                         value={name}
                         onChange={(event) => setName(event.target.value)}
                         placeholder="שם תצוגה"
@@ -145,6 +146,7 @@ export default function ProfileEditSheet({
 
                   <button
                     type="button"
+                    data-testid="settings-profile-save"
                     onClick={handleDetailsSubmit}
                     disabled={isSaving}
                     className="w-full rounded-2xl bg-ios-blue py-3.5 text-sm font-bold text-white disabled:opacity-50"

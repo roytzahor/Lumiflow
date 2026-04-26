@@ -13,13 +13,19 @@ import {
     getSavingsLabels,
 } from "@/app/actions";
 
+function firstQueryValue(value: string | string[] | undefined): string | undefined {
+    if (value === undefined) return undefined;
+    return Array.isArray(value) ? value[0] : value;
+}
+
 export default async function DashboardDataLoader({
     searchParams,
 }: {
     searchParams: Record<string, string | string[] | undefined>;
 }) {
     try {
-        if (process.env.NODE_ENV !== "production" && searchParams.dashboardFail === "1") {
+        const dashboardFailFlag = firstQueryValue(searchParams.dashboardFail);
+        if (process.env.NODE_ENV !== "production" && dashboardFailFlag === "1") {
             throw new Error("Simulated dashboard load failure");
         }
 

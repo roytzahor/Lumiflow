@@ -245,7 +245,9 @@ export default function SettingsContent({
     }
 
     setPendingInviteToken(token);
-    getInvitePreview(token).then((res) => {
+    let cancelled = false;
+    void getInvitePreview(token).then((res) => {
+      if (cancelled) return;
       if (res.success && res.invite) {
         setInvitePreview(res.invite);
         setShowInvitePopup(true);
@@ -254,18 +256,31 @@ export default function SettingsContent({
         router.replace('/settings');
       }
     });
+    return () => {
+      cancelled = true;
+    };
   }, [searchParams, router]);
 
   const handleAcceptInvite = async () => {
-    if (!pendingInviteToken) return;
+    const tokenFromUrl =
+      typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('invite') : null;
+    const token = tokenFromUrl ?? pendingInviteToken;
+    if (!token) return;
     setAcceptingInvite(true);
-    const res = await acceptAccountInvite(pendingInviteToken);
+    const res = await acceptAccountInvite(token);
     setAcceptingInvite(false);
     if (res.success) {
       toast.success('ההזמנה אושרה בהצלחה');
       setShowInvitePopup(false);
-      router.replace('/settings');
-      router.refresh();
+      setInvitePreview(null);
+      setPendingInviteToken(null);
+      // Full navigation drops ?invite= reliably; client replace+refresh could leave the overlay
+      // mounted while searchParams briefly still expose the token (flaky Cypress + invite UX).
+      if (typeof window !== 'undefined') {
+        window.location.assign(`${window.location.origin}/settings`);
+      } else {
+        router.replace('/settings');
+      }
     } else {
       toast.error(res.error ?? 'אישור ההזמנה נכשל');
     }

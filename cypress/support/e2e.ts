@@ -1,3 +1,8 @@
+beforeEach(() => {
+  cy.clearCookies();
+  cy.clearLocalStorage();
+});
+
 Cypress.on('uncaught:exception', (err) => {
   // Ignore Next.js internal redirect errors
   if (err.message.includes('NEXT_REDIRECT')) {

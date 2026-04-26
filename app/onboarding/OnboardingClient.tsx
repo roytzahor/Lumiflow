@@ -32,11 +32,15 @@ type OnboardingSuccess = {
 
 const DRAFT_STORAGE_KEY = 'lumiflow:onboarding-draft:v1';
 
+function defaultNameForAccountType(type: AccountType): string {
+  return type === 'PRIVATE' ? 'החשבון האישי שלי' : 'חשבון משותף';
+}
+
 function createDraftAccount(type: AccountType = 'PRIVATE', partial?: Partial<OnboardingAccountDraft>): OnboardingAccountDraft {
   return {
     id: partial?.id ?? `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     type,
-    name: partial?.name ?? (type === 'PRIVATE' ? 'החשבון האישי שלי' : 'חשבון משותף'),
+    name: partial?.name ?? defaultNameForAccountType(type),
   };
 }
 
@@ -379,17 +383,33 @@ export default function OnboardingClient() {
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle">סוג חשבון</label>
                     <select
-                      data-testid="onboarding-account-type"
+                      data-testid={`onboarding-account-type-${index}`}
                       value={account.type}
-                      onChange={(e) => setDraft((prev) => ({
-                        ...prev,
-                        template: 'custom',
-                        accounts: prev.accounts.map((entry) => (
-                          entry.id === account.id
-                            ? { ...entry, type: e.target.value as AccountType }
-                            : entry
-                        )),
-                      }))}
+                      onChange={(e) => {
+                        const nextType = e.target.value as AccountType;
+                        const rowIndex = index;
+                        setDraft((prev) => ({
+                          ...prev,
+                          template: 'custom',
+                          accounts: prev.accounts.map((entry, idx) => {
+                            if (idx !== rowIndex) return entry;
+                            let nextName = entry.name;
+                            // Always apply the default shared label when leaving PRIVATE during onboarding.
+                            // Match by row index (not entry.id) so updates never no-op due to stale render closures.
+                            if (nextType === 'SHARED' && entry.type === 'PRIVATE') {
+                              nextName = defaultNameForAccountType('SHARED');
+                            }
+                            if (
+                              nextType === 'PRIVATE'
+                              && entry.type === 'SHARED'
+                              && entry.name.trim() === defaultNameForAccountType('SHARED')
+                            ) {
+                              nextName = defaultNameForAccountType('PRIVATE');
+                            }
+                            return { ...entry, type: nextType, name: nextName };
+                          }),
+                        }));
+                      }}
                       className="w-full bg-white dark:bg-ios-dark-card rounded-xl px-3 py-2.5 text-sm text-ios-text dark:text-ios-dark-text"
                     >
                       <option value="PRIVATE">פרטי</option>
@@ -401,15 +421,16 @@ export default function OnboardingClient() {
                     <input
                       data-testid="onboarding-account-name"
                       value={account.name}
-                      onChange={(e) => setDraft((prev) => ({
-                        ...prev,
-                        template: 'custom',
-                        accounts: prev.accounts.map((entry) => (
-                          entry.id === account.id
-                            ? { ...entry, name: e.target.value }
-                            : entry
-                        )),
-                      }))}
+                      onChange={(e) => {
+                        const rowIndex = index;
+                        setDraft((prev) => ({
+                          ...prev,
+                          template: 'custom',
+                          accounts: prev.accounts.map((entry, idx) => (
+                            idx === rowIndex ? { ...entry, name: e.target.value } : entry
+                          )),
+                        }));
+                      }}
                       className="w-full bg-white dark:bg-ios-dark-card rounded-xl px-3 py-2.5 text-sm text-ios-text dark:text-ios-dark-text"
                       placeholder={account.type === 'PRIVATE' ? 'למשל: חשבון אישי' : 'למשל: חשבון בית'}
                     />
