@@ -8,7 +8,7 @@ describe('Auth and welcome flow', () => {
     return true;
   });
 
-  it('signs up, skips welcome, then sets monthly contribution in settings', () => {
+  it('signs up, completes welcome, then sets monthly contribution in settings', () => {
     const stamp = Date.now();
     const email = `user+${stamp}@lumiflow.local`;
     const password = 'Password123!';

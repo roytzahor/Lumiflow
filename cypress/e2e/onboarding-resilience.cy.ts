@@ -20,7 +20,7 @@ describe('Welcome and dashboard resilience', () => {
     cy.url({ timeout: 30000 }).should('include', '/welcome');
     cy.reload();
     cy.url().should('include', '/welcome');
-    cy.get('[data-testid="welcome-skip"]', { timeout: 20000 }).should('be.visible');
+    cy.get('[data-testid="welcome-continue"]', { timeout: 20000 }).should('be.visible');
   });
 
   it('shows income split UI in settings when a shared account exists', () => {

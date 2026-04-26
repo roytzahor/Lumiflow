@@ -14,6 +14,7 @@ import type { AccountMemberRole, AccountType, RecurringMonthPolicy, Transaction 
 import bcrypt from 'bcryptjs';
 import { randomBytes, randomUUID } from 'crypto';
 import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache';
+import { after } from 'next/server';
 import type { AccountSummary } from '@/lib/types';
 import {
   getCategoryAnomalies as getCategoryAnomaliesImpl,
@@ -69,7 +70,7 @@ export async function ensureDefaultWorkspace() {
           data: { onboardingCompletedAt: new Date() },
         });
       }
-      refreshAllViews(userId);
+      deferRefreshAllViews(userId);
       return { ok: true as const, createdAccount: false };
     }
 
@@ -97,7 +98,7 @@ export async function ensureDefaultWorkspace() {
     });
 
     await recalculateAccountIncome(newAccountId);
-    refreshAllViews(userId);
+    deferRefreshAllViews(userId);
     return { ok: true as const, createdAccount: true };
   } catch (error) {
     logServerDev('ensure_default_workspace_failed', error);
@@ -116,6 +117,60 @@ export async function markWelcomeTourCompleted() {
     return { success: true as const };
   } catch {
     return { success: false as const, error: 'Failed to save tour state' };
+  }
+}
+
+/**
+ * Permanently deletes the signed-in user and all personal data.
+ * Blocks when the user owns a shared account that still has other members (they must leave or remove co-members first).
+ */
+export async function deleteCurrentUserAccount() {
+  try {
+    const userId = await requireUserId();
+
+    const ownsSharedWithOthers = await prisma.accountMember.findFirst({
+      where: {
+        userId,
+        role: 'OWNER',
+        account: {
+          type: 'SHARED',
+          members: { some: { userId: { not: userId } } },
+        },
+      },
+      select: { accountId: true },
+    });
+
+    if (ownsSharedWithOthers) {
+      return {
+        success: false as const,
+        error:
+          'לא ניתן למחוק את החשבון כל עוד אתם בעלי חשבון משותף עם משתמשים אחרים. הסירו משתתפים או מחקו את החשבון המשותף תחילה.',
+      };
+    }
+
+    const soleMemberAccounts = await prisma.account.findMany({
+      where: {
+        members: {
+          every: {
+            userId,
+          },
+        },
+      },
+      select: { id: true },
+    });
+
+    await prisma.$transaction(async (tx) => {
+      if (soleMemberAccounts.length > 0) {
+        await tx.account.deleteMany({
+          where: { id: { in: soleMemberAccounts.map((a) => a.id) } },
+        });
+      }
+      await tx.user.delete({ where: { id: userId } });
+    });
+
+    return { success: true as const };
+  } catch {
+    return { success: false as const, error: 'מחיקת החשבון נכשלה. נסו שוב או פנו לתמיכה.' };
   }
 }
 
@@ -147,6 +202,13 @@ function refreshAllViews(userId: string) {
   for (const tag of userDataCacheTags(userId)) {
     revalidateTag(tag);
   }
+}
+
+/** Revalidation must not run during RSC render (e.g. `/welcome` calling `ensureDefaultWorkspace`). */
+function deferRefreshAllViews(userId: string) {
+  after(() => {
+    refreshAllViews(userId);
+  });
 }
 
 async function logActionMetric(eventName: string, userId: string, payload: Record<string, unknown> = {}) {

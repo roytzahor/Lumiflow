@@ -1,11 +1,11 @@
-/** Sign up and pass the optional welcome screen to reach the dashboard root. */
+/** Sign up and complete the welcome screen (save profile + theme) to reach the dashboard root. */
 export function signUpThroughWelcome(email: string, password: string) {
   cy.visit('/auth/signup');
   cy.get('[data-testid="signup-email"]').type(email);
   cy.get('[data-testid="signup-password"]').type(password);
   cy.get('[data-testid="signup-submit"]').click({ force: true });
   cy.url({ timeout: 30000 }).should('include', '/welcome');
-  cy.get('[data-testid="welcome-skip"]', { timeout: 20000 }).should('be.visible').click({ force: true });
+  cy.get('[data-testid="welcome-continue"]', { timeout: 20000 }).should('be.visible').click({ force: true });
   cy.url({ timeout: 20000 }).should('eq', `${Cypress.config('baseUrl')}/`);
 }
 

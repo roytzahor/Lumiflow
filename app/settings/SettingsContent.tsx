@@ -28,10 +28,11 @@ import {
   addSavingsLabel,
   deleteSavingsLabel,
   setSavingsLabelHidden,
+  deleteCurrentUserAccount,
 } from '../actions';
 import type { SettingsSectionKey } from '../actions';
 import type { AccountMemberSummary } from '../actions';
-import { User, MoonStar, Pencil, Check, X, Trash2, Plus, Share2, LogOut, Copy, SendHorizontal, Info, ChevronDown, Landmark, Tag, TrendingUp, PiggyBank, Eye, EyeOff } from 'lucide-react';
+import { User, MoonStar, Pencil, Check, X, Trash2, Plus, Share2, LogOut, Copy, SendHorizontal, Info, ChevronDown, Landmark, Tag, TrendingUp, PiggyBank, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import type { AccountSummary, Category, IncomeEntryItem, SavingsLabel } from '@/lib/types';
 import AccountPopup from '@/components/AccountPopup';
 import ProfileEditSheet from '@/components/ProfileEditSheet';
@@ -193,6 +194,8 @@ export default function SettingsContent({
   const [incomeFormAccountId, setIncomeFormAccountId] = useState('');
   const [isAddingIncome, setIsAddingIncome] = useState(false);
   const [deletingIncomeId, setDeletingIncomeId] = useState<string | null>(null);
+  const [showDeleteAccountDialog, setShowDeleteAccountDialog] = useState(false);
+  const [deleteAccountWorking, setDeleteAccountWorking] = useState(false);
 
   const toggleSettingsSection = (key: SettingsSectionKey) => {
     const next = !settingsSectionOpenRef.current[key];
@@ -1176,14 +1179,90 @@ export default function SettingsContent({
         )}
       </section>
 
-      <button
-        data-testid="settings-signout"
-        onClick={() => signOut({ callbackUrl: '/auth/signin' })}
-        className="w-full py-3 bg-black dark:bg-white dark:text-black text-white rounded-xl font-medium flex items-center justify-center gap-2"
-      >
-        <LogOut className="w-4 h-4" />
-        התנתק
-      </button>
+      <div className="space-y-2">
+        <button
+          data-testid="settings-signout"
+          type="button"
+          onClick={() => signOut({ callbackUrl: '/auth/signin' })}
+          className="w-full py-3 bg-black dark:bg-white dark:text-black text-white rounded-xl font-medium flex items-center justify-center gap-2"
+        >
+          <LogOut className="w-4 h-4" />
+          התנתק
+        </button>
+        <button
+          type="button"
+          data-testid="settings-delete-account-open"
+          onClick={() => setShowDeleteAccountDialog(true)}
+          className="w-full py-3 rounded-xl font-medium flex items-center justify-center gap-2 bg-ios-red text-white hover:bg-ios-red/90 active:bg-ios-red/85 transition-colors shadow-sm"
+        >
+          <AlertTriangle className="w-4 h-4" aria-hidden />
+          מחיקת חשבון לצמיתות
+        </button>
+      </div>
+
+      {showDeleteAccountDialog ? (
+        <div
+          className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-center justify-center px-5"
+          role="presentation"
+          onClick={() => !deleteAccountWorking && setShowDeleteAccountDialog(false)}
+        >
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-account-dialog-title"
+            aria-describedby="delete-account-dialog-desc"
+            className="w-full max-w-sm bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card p-5 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ios-red/10 text-ios-red">
+                <AlertTriangle className="w-5 h-5" aria-hidden />
+              </div>
+              <div className="min-w-0 flex-1 space-y-1 text-right">
+                <h3 id="delete-account-dialog-title" className="text-lg font-bold text-ios-text dark:text-ios-dark-text">
+                  למחוק את החשבון?
+                </h3>
+                <p id="delete-account-dialog-desc" className="text-sm text-ios-subtle dark:text-ios-dark-subtle leading-relaxed">
+                  פעולה זו <span className="font-semibold text-ios-red">בלתי הפיכה</span>. כל הנתונים האישיים, החשבונות שבבעלותכם בלבד, והגדרות יימחקו לצמיתות. לא ניתן לשחזר.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col-reverse sm:flex-row gap-2 pt-1">
+              <button
+                type="button"
+                data-testid="settings-delete-account-cancel"
+                disabled={deleteAccountWorking}
+                onClick={() => setShowDeleteAccountDialog(false)}
+                className="flex-1 py-2.5 rounded-xl bg-ios-gray-6 dark:bg-ios-dark-fill text-ios-text dark:text-ios-dark-text text-sm font-medium disabled:opacity-50"
+              >
+                ביטול
+              </button>
+              <button
+                type="button"
+                data-testid="settings-delete-account-confirm"
+                disabled={deleteAccountWorking}
+                onClick={() => {
+                  void (async () => {
+                    setDeleteAccountWorking(true);
+                    const res = await deleteCurrentUserAccount();
+                    setDeleteAccountWorking(false);
+                    if (!res.success) {
+                      toast.error(res.error);
+                      return;
+                    }
+                    setShowDeleteAccountDialog(false);
+                    toast.success('החשבון נמחק');
+                    await signOut({ callbackUrl: '/auth/signin' });
+                  })();
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-ios-red text-white text-sm font-semibold disabled:opacity-50"
+              >
+                {deleteAccountWorking ? 'מוחק...' : 'כן, מחק לצמיתות'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {showInvitePopup && invitePreview && (
         <div data-testid="invite-popup" className="fixed inset-0 z-[90] bg-black/35 backdrop-blur-sm flex items-center justify-center px-5">

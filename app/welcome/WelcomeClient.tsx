@@ -1,7 +1,6 @@
 'use client';
 
 import { updateCurrentUserProfile, updateThemePreference } from '@/app/actions';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
@@ -57,7 +56,7 @@ export default function WelcomeClient({ initialName, initialTheme }: WelcomeClie
         <header className="space-y-2">
           <h1 className="text-2xl font-bold text-ios-text dark:text-ios-dark-text">ברוכים הבאים ל-LumiFlow</h1>
           <p className="text-sm text-ios-subtle dark:text-ios-dark-subtle">
-            החשבון האישי שלכם מוכן. אפשר לדלג ולהמשיך לדשבורד, או לעדכן כאן שם ותצוגה — הכל ניתן לשינוי בהגדרות בכל עת.
+            החשבון האישי שלכם מוכן. עדכנו כאן שם תצוגה ומצב תצוגה, ולחצו להמשך לדשבורד — הכל ניתן לשינוי בהגדרות בכל עת.
           </p>
         </header>
 
@@ -98,24 +97,15 @@ export default function WelcomeClient({ initialName, initialTheme }: WelcomeClie
 
         {error ? <p className="text-sm text-ios-red">{error}</p> : null}
 
-        <div className="flex flex-col gap-2">
-          <button
-            type="button"
-            data-testid="welcome-continue"
-            disabled={saving}
-            onClick={() => void onSaveAndContinue()}
-            className="w-full py-3 rounded-xl bg-ios-blue text-white font-semibold disabled:opacity-50"
-          >
-            {saving ? 'שומר...' : 'המשך לדשבורד'}
-          </button>
-          <Link
-            href="/"
-            data-testid="welcome-skip"
-            className="w-full py-3 rounded-xl bg-ios-gray-6 dark:bg-ios-dark-fill text-ios-text dark:text-ios-dark-text font-semibold text-center text-sm"
-          >
-            דילוג — לדשבורד
-          </Link>
-        </div>
+        <button
+          type="button"
+          data-testid="welcome-continue"
+          disabled={saving}
+          onClick={() => void onSaveAndContinue()}
+          className="w-full py-3 rounded-xl bg-ios-blue text-white font-semibold disabled:opacity-50"
+        >
+          {saving ? 'שומר...' : 'המשך לדשבורד'}
+        </button>
       </section>
     </main>
   );
