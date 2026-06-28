@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronDown, ChevronLeft, PiggyBank, Plus } from 'lucide-react';
-import { formatIlsAmount } from '@/lib/formatters';
+import Money from "@/components/ui/Money";
 import type { SavingsAllocationListItem, SavingsLabel } from '@/lib/types';
 
 interface SavingsAllocationCardProps {
@@ -83,7 +83,7 @@ export default function SavingsAllocationCard({
         <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle mt-2 pr-7">
           סה״כ הפרשות החודש:{' '}
           <span className="font-bold text-ios-text dark:text-ios-dark-text tabular-nums">
-            ₪{formatIlsAmount(totalAllocations)}
+            <Money amount={totalAllocations} signed={false} />
           </span>
         </p>
       )}
@@ -147,7 +147,7 @@ export default function SavingsAllocationCard({
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
                           <span className="text-[15px] font-bold text-ios-green tabular-nums">
-                            ₪{formatIlsAmount(row.amount)}
+                            <Money amount={row.amount} signed={false} />
                           </span>
                           <ChevronLeft className="w-4 h-4 text-ios-gray-4 dark:text-ios-dark-subtle/60" />
                         </div>
@@ -157,7 +157,7 @@ export default function SavingsAllocationCard({
                   <div className="flex items-center justify-between rounded-xl bg-ios-green/8 px-3 py-2.5">
                     <span className="text-sm font-semibold text-ios-text dark:text-ios-dark-text">סה״כ הפרשות</span>
                     <span className="text-sm font-bold text-ios-green tabular-nums">
-                      ₪{formatIlsAmount(totalAllocations)}
+                      <Money amount={totalAllocations} signed={false} />
                     </span>
                   </div>
                 </>

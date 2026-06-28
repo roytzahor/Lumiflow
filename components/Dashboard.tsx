@@ -3,7 +3,9 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { motion, AnimatePresence, useReducedMotion, useScroll, useMotionValueEvent } from "framer-motion";
 import dynamic from "next/dynamic";
-import { formatIlsAmount, formatUtcMonthYear, getHourInTimezone } from "@/lib/formatters";
+import { formatUtcMonthYear, getHourInTimezone } from "@/lib/formatters";
+import Money from "@/components/ui/Money";
+import LockedTeaser from "@/components/ui/LockedTeaser";
 import {
     updateDashboardRecurringSectionExpanded,
     updateDashboardSavingsSectionExpanded,
@@ -155,28 +157,26 @@ function DashboardAccountBalanceCard({
                     <div className="flex items-center justify-between mb-3">
                         <p className={`text-sm font-semibold ${colors.text}`}>{getAccountLabel(account)}</p>
                         <p className={`text-sm font-bold tabular-nums ${balance >= 0 ? "text-ios-green" : "text-ios-red"}`}>
-                            {balance >= 0 ? "₪" : "-₪"}
-                            {formatIlsAmount(Math.abs(balance))}
+                            <Money amount={balance} />
                         </p>
                     </div>
                     <div className="grid grid-cols-3 gap-2 text-center">
                         <div className="rounded-lg bg-white/70 dark:bg-ios-dark-card/70 px-2 py-2">
                             <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">הכנסות</p>
                             <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text tabular-nums">
-                                ₪{formatIlsAmount(Math.round(monthlyInflow))}
+                                <Money amount={Math.round(monthlyInflow)} signed={false} />
                             </p>
                         </div>
                         <div className="rounded-lg bg-white/70 dark:bg-ios-dark-card/70 px-2 py-2">
                             <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">הוצאות</p>
                             <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text tabular-nums">
-                                ₪{formatIlsAmount(Math.round(expenses))}
+                                <Money amount={Math.round(expenses)} signed={false} />
                             </p>
                         </div>
                         <div className="rounded-lg bg-white/70 dark:bg-ios-dark-card/70 px-2 py-2">
                             <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">מאזן</p>
                             <p className={`text-sm font-semibold tabular-nums ${balance >= 0 ? "text-ios-green" : "text-ios-red"}`}>
-                                {balance >= 0 ? "₪" : "-₪"}
-                                {formatIlsAmount(Math.abs(Math.round(balance)))}
+                                <Money amount={Math.round(balance)} />
                             </p>
                         </div>
                     </div>
@@ -522,7 +522,7 @@ export default function Dashboard({
                                 : "חריגה"} החודש
                         </span>
                         <span className={`font-bold tabular-nums ${savedSoFar >= 0 ? 'text-ios-green' : 'text-ios-red'}`}>
-                            {savedSoFar >= 0 ? '₪' : '-₪'}{formatIlsAmount(Math.abs(savedSoFar))}
+                            <Money amount={savedSoFar} />
                         </span>
                     </div>
                 </motion.div>
@@ -649,7 +649,7 @@ export default function Dashboard({
                                     <p
                                         className={`text-2xl font-bold tracking-tight ${savedSoFar >= 0 ? "text-ios-green" : "text-ios-red"}`}
                                     >
-                                        ₪{formatIlsAmount(savedSoFar)}
+                                        <Money amount={savedSoFar} signed={false} />
                                     </p>
                                 </div>
                             </div>
@@ -660,7 +660,7 @@ export default function Dashboard({
                                         {incomeTileLabel}
                                     </p>
                                     <p className="text-sm font-semibold tabular-nums text-ios-text dark:text-ios-dark-text">
-                                        ₪{formatIlsAmount(income)}
+                                        <Money amount={income} signed={false} />
                                     </p>
                                 </div>
                                 <div className="rounded-xl bg-white/70 px-2 py-2.5 text-center dark:bg-ios-dark-card/70">
@@ -668,7 +668,7 @@ export default function Dashboard({
                                         {expensesTileLabel}
                                     </p>
                                     <p className="text-sm font-semibold tabular-nums text-ios-text dark:text-ios-dark-text">
-                                        ₪{formatIlsAmount(totalSpent)}
+                                        <Money amount={totalSpent} signed={false} />
                                     </p>
                                 </div>
                                 <div className="rounded-xl bg-white/70 px-2 py-2.5 text-center dark:bg-ios-dark-card/70">
@@ -676,7 +676,7 @@ export default function Dashboard({
                                         {savingsTileLabel}
                                     </p>
                                     <p className="text-sm font-semibold tabular-nums text-ios-green">
-                                        ₪{formatIlsAmount(totalSavingsScope)}
+                                        <Money amount={totalSavingsScope} signed={false} />
                                     </p>
                                 </div>
                                 <div className="rounded-xl bg-white/70 px-2 py-2.5 text-center dark:bg-ios-dark-card/70">
@@ -688,62 +688,54 @@ export default function Dashboard({
                                             freeAfterSavings >= 0 ? "text-ios-text dark:text-ios-dark-text" : "text-ios-red"
                                         }`}
                                     >
-                                        {freeAfterSavings >= 0 ? "₪" : "-₪"}
-                                        {formatIlsAmount(Math.abs(freeAfterSavings))}
+                                        <Money amount={freeAfterSavings} />
                                     </p>
                                 </div>
                             </div>
                         </>
                     ) : (
-                        <div className="relative min-h-[152px] overflow-hidden rounded-2xl border border-white/10 bg-ios-gray-6/40 p-5 dark:bg-ios-dark-fill/30">
-                            <div className="pointer-events-none select-none blur-[2.5px] opacity-90">
-                                <div className="flex items-center gap-6">
-                                    <div className="relative h-24 w-24 flex-shrink-0 rounded-full bg-white/70 dark:bg-ios-dark-card/70" />
-                                    <div className="flex-1 space-y-3">
+                        <LockedTeaser
+                            className="min-h-[152px] rounded-2xl border border-white/10 bg-ios-gray-6/40 p-5 dark:bg-ios-dark-fill/30"
+                            title="הגדירו תרומה חודשית לכל חשבון בהגדרות כדי לראות כמה חסכתם החודש"
+                            cta={
+                                <Link
+                                    href="/settings"
+                                    className="inline-flex w-full items-center justify-center rounded-xl bg-ios-blue py-2.5 text-xs font-semibold text-white active:opacity-90"
+                                >
+                                    הגדרות חשבונות
+                                </Link>
+                            }
+                        >
+                            <div className="flex items-center gap-6">
+                                <div className="relative h-24 w-24 flex-shrink-0 rounded-full bg-white/70 dark:bg-ios-dark-card/70" />
+                                <div className="flex-1 space-y-3">
+                                    <div>
+                                        <p className="text-xs font-medium text-ios-subtle dark:text-ios-dark-subtle">
+                                            חסכנו החודש
+                                        </p>
+                                        <p className="text-2xl font-bold tracking-tight text-ios-subtle dark:text-ios-dark-subtle">
+                                            ₪0
+                                        </p>
+                                    </div>
+                                    <div className="flex gap-6">
                                         <div>
-                                            <p className="text-xs font-medium text-ios-subtle dark:text-ios-dark-subtle">
-                                                חסכנו החודש
+                                            <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">
+                                                הכנסות לחשבונות
                                             </p>
-                                            <p className="text-2xl font-bold tracking-tight text-ios-subtle dark:text-ios-dark-subtle">
+                                            <p className="text-sm font-semibold text-ios-subtle dark:text-ios-dark-subtle">
                                                 ₪0
                                             </p>
                                         </div>
-                                        <div className="flex gap-6">
-                                            <div>
-                                                <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">
-                                                    הכנסות לחשבונות
-                                                </p>
-                                                <p className="text-sm font-semibold text-ios-subtle dark:text-ios-dark-subtle">
-                                                    ₪0
-                                                </p>
-                                            </div>
-                                            <div>
-                                                <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">הוצאות</p>
-                                                <p className="text-sm font-semibold text-ios-subtle dark:text-ios-dark-subtle">
-                                                    ₪0
-                                                </p>
-                                            </div>
+                                        <div>
+                                            <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">הוצאות</p>
+                                            <p className="text-sm font-semibold text-ios-subtle dark:text-ios-dark-subtle">
+                                                ₪0
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-4">
-                                <div className="pointer-events-auto w-[235px] rounded-xl border border-white/20 bg-white/28 px-3 py-3 text-center shadow-card backdrop-blur-xl dark:border-white/10 dark:bg-ios-dark-card/42">
-                                    <div className="mx-auto mb-2 flex h-8 w-8 items-center justify-center rounded-full bg-ios-blue/15 text-ios-blue">
-                                        <Lock className="h-4 w-4" />
-                                    </div>
-                                    <p className="text-xs leading-relaxed text-pretty text-ios-text dark:text-ios-dark-text">
-                                        הגדירו תרומה חודשית לכל חשבון בהגדרות כדי לראות כמה חסכתם החודש
-                                    </p>
-                                    <Link
-                                        href="/settings"
-                                        className="mt-3 inline-flex w-full items-center justify-center rounded-xl bg-ios-blue py-2.5 text-xs font-semibold text-white active:opacity-90"
-                                    >
-                                        הגדרות חשבונות
-                                    </Link>
-                                </div>
-                            </div>
-                        </div>
+                        </LockedTeaser>
                     )}
                 </motion.div>
 
@@ -905,7 +897,7 @@ export default function Dashboard({
                         <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle mt-2 pr-7">
                             סה״כ קבועות חודשיות:{" "}
                             <span className="font-bold text-ios-text dark:text-ios-dark-text tabular-nums">
-                                ₪{formatIlsAmount(recurringTotalAmount)}
+                                <Money amount={recurringTotalAmount} signed={false} />
                             </span>
                         </p>
                     )}
@@ -957,7 +949,7 @@ export default function Dashboard({
                                                             </div>
                                                         </div>
                                                         <div className="flex items-center gap-2 flex-shrink-0">
-                                                            <span className="text-[15px] font-bold text-ios-text dark:text-ios-dark-text tabular-nums">₪{formatIlsAmount(item.amount)}</span>
+                                                            <span className="text-[15px] font-bold text-ios-text dark:text-ios-dark-text tabular-nums"><Money amount={item.amount} signed={false} /></span>
                                                             <ChevronLeft className="w-4 h-4 text-ios-gray-4 dark:text-ios-dark-subtle/60" />
                                                         </div>
                                                     </button>

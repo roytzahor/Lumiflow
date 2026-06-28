@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { formatIlsAmount } from '@/lib/formatters';
+import Money from "@/components/ui/Money";
 
 export type PieChartDatum = {
     name: string;
@@ -83,7 +83,7 @@ export default function PieChart({ data, onSliceClick }: PieChartProps) {
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                     <span className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle font-medium">סה״כ</span>
                     <span className="text-xl font-bold text-ios-text dark:text-ios-dark-text tracking-tight tabular-nums">
-                        ₪{formatIlsAmount(total)}
+                        <Money amount={total} signed={false} />
                     </span>
                 </div>
             </div>
@@ -116,7 +116,7 @@ export default function PieChart({ data, onSliceClick }: PieChartProps) {
                                 {Math.round((item.value / total) * 100)}%
                             </span>
                             <span className="text-sm font-semibold text-ios-text dark:text-ios-dark-text tabular-nums">
-                                ₪{formatIlsAmount(item.value)}
+                                <Money amount={item.value} signed={false} />
                             </span>
                         </div>
                     </motion.div>
