@@ -143,7 +143,7 @@ function DashboardAccountBalanceCard({
                             </div>
                             <p 
                                 data-testid="account-locked-message"
-                                className="text-xs text-ios-text dark:text-ios-dark-text leading-relaxed"
+                                className="text-xs text-ios-text dark:text-ios-dark-text leading-relaxed text-pretty"
                             >
                                 הוסיפו לחשבון &quot;{getAccountLabel(account)}&quot; הכנסות או הוצאות כדי לפתוח את המאזן
                             </p>
@@ -732,7 +732,7 @@ export default function Dashboard({
                                     <div className="mx-auto mb-2 flex h-8 w-8 items-center justify-center rounded-full bg-ios-blue/15 text-ios-blue">
                                         <Lock className="h-4 w-4" />
                                     </div>
-                                    <p className="text-xs leading-relaxed text-ios-text dark:text-ios-dark-text">
+                                    <p className="text-xs leading-relaxed text-pretty text-ios-text dark:text-ios-dark-text">
                                         הגדירו תרומה חודשית לכל חשבון בהגדרות כדי לראות כמה חסכתם החודש
                                     </p>
                                     <Link
@@ -856,10 +856,10 @@ export default function Dashboard({
                                         {shouldShowSpendingTeaser && (
                                             <div className="absolute inset-0 flex items-center justify-center px-4">
                                                 <div className="w-[270px] rounded-2xl border border-white/20 bg-white/28 px-4 py-3.5 text-center shadow-card backdrop-blur-xl dark:border-white/10 dark:bg-ios-dark-card/42">
-                                                    <p className="mb-1 text-sm font-semibold text-ios-text dark:text-ios-dark-text">
+                                                    <p className="mb-1 text-sm font-semibold text-balance text-ios-text dark:text-ios-dark-text">
                                                         ההתפלגות תיפתח כשתתווספנה קטגוריות נוספות
                                                     </p>
-                                                    <p className="text-xs leading-relaxed text-ios-subtle dark:text-ios-dark-subtle">
+                                                    <p className="text-xs leading-relaxed text-pretty text-ios-subtle dark:text-ios-dark-subtle">
                                                         יש להוסיף הוצאות מקטגוריות נוספות כדי לראות את התפלגות ההוצאות
                                                     </p>
                                                 </div>

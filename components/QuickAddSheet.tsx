@@ -612,7 +612,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                                 setIsCategoryTouched(true);
                                                 trigger(10);
                                             }}
-                                            className={`flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                                            className={`flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-[background-color,color,box-shadow] ${
                                                 category === cat.name
                                                     ? 'bg-ios-blue text-white shadow-sm'
                                                     : 'bg-ios-gray-6 dark:bg-ios-dark-fill text-ios-subtle dark:text-ios-dark-subtle'
@@ -629,7 +629,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                                 setCategory('כללי');
                                                 setIsCategoryTouched(true);
                                             }}
-                                            className={`flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                                            className={`flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-[background-color,color,box-shadow] ${
                                                 category === 'כללי'
                                                     ? 'bg-ios-blue text-white shadow-sm'
                                                     : 'bg-ios-gray-6 dark:bg-ios-dark-fill text-ios-subtle dark:text-ios-dark-subtle'
@@ -756,7 +756,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                         handleSubmit();
                                     }}
                                     disabled={isSubmitting || !amount || !accountId}
-                                    className="w-full bg-ios-blue text-white font-bold text-base py-4 rounded-2xl shadow-lg shadow-ios-blue/20 hover:bg-ios-blue/90 active:scale-[0.98] transition-all disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed"
+                                    className="w-full bg-ios-blue text-white font-bold text-base py-4 rounded-2xl shadow-lg shadow-ios-blue/20 hover:bg-ios-blue/90 active:scale-[0.96] transition-[background-color,transform,opacity,box-shadow] disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed"
                                 >
                                     {isSubmitting ? 'שומר...' : initialData ? 'עדכון' : 'הוסף הוצאה'}
                                 </button>
