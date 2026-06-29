@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, ChevronDown, ListFilter } from "lucide-react";
 import LiquidToggle from "./ui/LiquidToggle";
 import InfoHint from "./InfoHint";
-import { formatIlsAmount } from "@/lib/formatters";
+import Money from "@/components/ui/Money";
 import type { AccountSummary, Category } from "@/lib/types";
 
 const selectClass =
@@ -305,7 +305,7 @@ export default function HistoryControlsCard({
                         ) : null}
                     </div>
                     <p className="shrink-0 text-xl font-bold tabular-nums text-ios-text dark:text-ios-dark-text">
-                        ₪{formatIlsAmount(displayTotal)}
+                        <Money amount={displayTotal} signed={false} />
                     </p>
                 </div>
                 {showSavingsSummaryRow ? (
@@ -314,7 +314,7 @@ export default function HistoryControlsCard({
                             סה״כ הפרשות חיסכון
                         </p>
                         <p className="shrink-0 text-base font-bold tabular-nums text-ios-green">
-                            ₪{formatIlsAmount(visibleSavingsTotal)}
+                            <Money amount={visibleSavingsTotal} signed={false} />
                         </p>
                     </div>
                 ) : null}

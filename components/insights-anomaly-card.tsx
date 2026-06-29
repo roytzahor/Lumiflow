@@ -1,5 +1,6 @@
 import type { CategoryAnomaly } from "@/lib/types";
 import { formatIlsAmount } from "@/lib/formatters";
+import Money from "@/components/ui/Money";
 
 type InsightsAnomalyCardProps = {
     anomaly: CategoryAnomaly;
@@ -58,13 +59,13 @@ export default function InsightsAnomalyCard({ anomaly: a, icon, variant = "defau
             >
                 <span className="text-xs text-ios-subtle dark:text-ios-dark-subtle">החודש</span>
                 <span className="text-xs font-semibold tabular-nums text-ios-text dark:text-ios-dark-text">
-                    ₪{formatIlsAmount(Math.round(a.currentAmount))}
+                    <Money amount={Math.round(a.currentAmount)} signed={false} />
                 </span>
             </div>
             <div className="mt-1 rounded-xl px-3 py-2 flex items-center justify-between bg-ios-gray-6 dark:bg-ios-dark-fill">
                 <span className="text-xs text-ios-subtle dark:text-ios-dark-subtle">ממוצע חודשים קודמים</span>
                 <span className="text-xs font-semibold tabular-nums text-ios-text dark:text-ios-dark-text">
-                    ₪{formatIlsAmount(Math.round(a.monthlyAverage))}
+                    <Money amount={Math.round(a.monthlyAverage)} signed={false} />
                 </span>
             </div>
         </div>

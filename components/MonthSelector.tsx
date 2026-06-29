@@ -68,12 +68,12 @@ export default function MonthSelector({ basePath = '/history' }: MonthSelectorPr
         <div className="w-full max-w-full min-w-0 overflow-hidden">
             {/* Year selector */}
             <div className="flex justify-between items-center mb-3">
-                <button onClick={nextYear} className="w-8 h-8 rounded-full bg-ios-gray-6 dark:bg-ios-dark-fill flex items-center justify-center active:bg-ios-gray-5 dark:active:bg-ios-dark-card transition">
-                    <ChevronRight className="w-4 h-4 text-ios-subtle dark:text-ios-dark-subtle" />
+                <button onClick={nextYear} aria-label="שנה הבאה" className="w-8 h-8 rounded-full bg-ios-gray-6 dark:bg-ios-dark-fill flex items-center justify-center active:bg-ios-gray-5 dark:active:bg-ios-dark-card transition">
+                    <ChevronRight className="w-4 h-4 text-ios-subtle dark:text-ios-dark-subtle" aria-hidden />
                 </button>
                 <h2 className="text-base font-bold text-ios-text dark:text-ios-dark-text">{currentYear}</h2>
-                <button onClick={prevYear} className="w-8 h-8 rounded-full bg-ios-gray-6 dark:bg-ios-dark-fill flex items-center justify-center active:bg-ios-gray-5 dark:active:bg-ios-dark-card transition">
-                    <ChevronLeft className="w-4 h-4 text-ios-subtle dark:text-ios-dark-subtle" />
+                <button onClick={prevYear} aria-label="שנה קודמת" className="w-8 h-8 rounded-full bg-ios-gray-6 dark:bg-ios-dark-fill flex items-center justify-center active:bg-ios-gray-5 dark:active:bg-ios-dark-card transition">
+                    <ChevronLeft className="w-4 h-4 text-ios-subtle dark:text-ios-dark-subtle" aria-hidden />
                 </button>
             </div>
 

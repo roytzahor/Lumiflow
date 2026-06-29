@@ -3,7 +3,8 @@
 import { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, PiggyBank } from 'lucide-react';
-import { formatIlsAmount, formatUtcDateLabel, getCalendarDateKeyInTimeZone, getUtcDateKey } from '@/lib/formatters';
+import { formatUtcDateLabel, getCalendarDateKeyInTimeZone, getUtcDateKey } from '@/lib/formatters';
+import Money from "@/components/ui/Money";
 import type { TransactionListItem, Category, SavingsAllocationListItem, SavingsLabel } from '@/lib/types';
 
 function addedByDisplayName(user: { name: string | null; email: string }): string {
@@ -172,7 +173,7 @@ export default function TransactionFeed({
                                                     </div>
                                                     <div className="flex items-center gap-2 flex-shrink-0">
                                                         <span className="text-[15px] font-bold text-ios-green tabular-nums">
-                                                            ₪{formatIlsAmount(s.amount)}
+                                                            <Money amount={s.amount} signed={false} />
                                                         </span>
                                                         <ChevronLeft className="w-4 h-4 text-ios-gray-4 dark:text-ios-dark-subtle/60" />
                                                     </div>
@@ -242,7 +243,7 @@ export default function TransactionFeed({
 
                                                 <div className="flex items-center gap-2 flex-shrink-0">
                                                     <span className="text-[15px] font-bold text-ios-text dark:text-ios-dark-text tabular-nums">
-                                                        ₪{formatIlsAmount(t.amount)}
+                                                        <Money amount={t.amount} signed={false} />
                                                     </span>
                                                     {(t.isRecurring || !t.isProjected) && <ChevronLeft className="w-4 h-4 text-ios-gray-4 dark:text-ios-dark-subtle/60" />}
                                                 </div>

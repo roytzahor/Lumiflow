@@ -122,7 +122,7 @@ export default function BottomNav() {
                         data-testid="fab-quick-add"
                     >
                         <span className="w-9 h-9 rounded-full bg-ios-blue/15 text-ios-blue flex items-center justify-center shrink-0">
-                            <Plus className="w-4 h-4" strokeWidth={2.4} />
+                            <Plus className="w-4 h-4" strokeWidth={2.4} aria-hidden />
                         </span>
                         הוצאה מהירה
                     </button>
@@ -134,7 +134,7 @@ export default function BottomNav() {
                         data-testid="fab-recurring-add"
                     >
                         <span className="w-9 h-9 rounded-full bg-ios-indigo/15 text-ios-indigo flex items-center justify-center shrink-0">
-                            <Repeat className="w-4 h-4" strokeWidth={2.4} />
+                            <Repeat className="w-4 h-4" strokeWidth={2.4} aria-hidden />
                         </span>
                         הוצאה קבועה
                     </button>
@@ -160,7 +160,7 @@ export default function BottomNav() {
                         aria-expanded={fabMenuOpen}
                         data-testid="fab-add-button"
                     >
-                        <Plus className="w-6 h-6 text-white" strokeWidth={2.8} />
+                        <Plus className="w-6 h-6 text-white" strokeWidth={2.8} aria-hidden />
                     </button>
 
                     <div className="grid grid-cols-5 items-center pt-4 gap-0.5">
@@ -182,6 +182,7 @@ export default function BottomNav() {
                                                 isActive ? "text-ios-blue" : "text-ios-subtle dark:text-ios-dark-subtle"
                                             }`}
                                             strokeWidth={isActive ? 2.2 : 1.8}
+                                            aria-hidden
                                         />
                                     </div>
                                     <span

@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronDown, ChevronLeft, PiggyBank, Plus } from 'lucide-react';
-import { formatIlsAmount } from '@/lib/formatters';
+import Money from "@/components/ui/Money";
 import type { SavingsAllocationListItem, SavingsLabel } from '@/lib/types';
 
 interface SavingsAllocationCardProps {
@@ -58,7 +58,7 @@ export default function SavingsAllocationCard({
             >
               <ChevronDown className="h-5 w-5" />
             </motion.span>
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-ios-green/12 text-ios-green">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-ios-green/12 text-ios-green" aria-hidden="true">
               <PiggyBank className="h-4 w-4" strokeWidth={2} />
             </div>
             <h2 className="min-w-0 flex-1 truncate text-lg font-bold text-ios-text dark:text-ios-dark-text">
@@ -71,7 +71,7 @@ export default function SavingsAllocationCard({
           onClick={onAdd}
           className="flex shrink-0 items-center gap-1 rounded-xl bg-ios-green/15 px-3 py-2 text-xs font-bold text-ios-green transition-colors active:bg-ios-green/25"
         >
-          <Plus className="h-4 w-4" strokeWidth={2.5} />
+          <Plus className="h-4 w-4" strokeWidth={2.5} aria-hidden />
           הוספה
         </button>
         <span className="shrink-0 text-xs font-semibold tabular-nums text-ios-subtle dark:text-ios-dark-subtle">
@@ -80,16 +80,16 @@ export default function SavingsAllocationCard({
       </div>
 
       {!sectionExpanded && allocations.length > 0 && (
-        <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle mt-2 pr-7">
+        <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle mt-2 pe-7">
           סה״כ הפרשות החודש:{' '}
           <span className="font-bold text-ios-text dark:text-ios-dark-text tabular-nums">
-            ₪{formatIlsAmount(totalAllocations)}
+            <Money amount={totalAllocations} signed={false} />
           </span>
         </p>
       )}
 
       {!sectionExpanded && allocations.length === 0 && (
-        <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle mt-2 pr-7 leading-relaxed">
+        <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle mt-2 pe-7 leading-relaxed">
           עדיין אין הפרשות — לחצו על &quot;הוספה&quot; או הרחיבו לפרטים.
         </p>
       )}
@@ -147,9 +147,9 @@ export default function SavingsAllocationCard({
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
                           <span className="text-[15px] font-bold text-ios-green tabular-nums">
-                            ₪{formatIlsAmount(row.amount)}
+                            <Money amount={row.amount} signed={false} />
                           </span>
-                          <ChevronLeft className="w-4 h-4 text-ios-gray-4 dark:text-ios-dark-subtle/60" />
+                          <ChevronLeft className="w-4 h-4 text-ios-gray-4 dark:text-ios-dark-subtle/60" aria-hidden />
                         </div>
                       </button>
                     ))}
@@ -157,7 +157,7 @@ export default function SavingsAllocationCard({
                   <div className="flex items-center justify-between rounded-xl bg-ios-green/8 px-3 py-2.5">
                     <span className="text-sm font-semibold text-ios-text dark:text-ios-dark-text">סה״כ הפרשות</span>
                     <span className="text-sm font-bold text-ios-green tabular-nums">
-                      ₪{formatIlsAmount(totalAllocations)}
+                      <Money amount={totalAllocations} signed={false} />
                     </span>
                   </div>
                 </>

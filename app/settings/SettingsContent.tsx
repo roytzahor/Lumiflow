@@ -71,7 +71,7 @@ function SettingsCollapsibleSection({
         onClick={onToggle}
         aria-expanded={open}
         className={cn(
-          'sticky top-0 z-[2] flex w-full items-center gap-2.5 px-5 pt-5 pb-3 text-right',
+          'sticky top-0 z-[2] flex w-full items-center gap-2.5 px-5 pt-5 pb-3 text-end',
           'bg-ios-card/95 dark:bg-ios-dark-card/95 backdrop-blur-md',
           'transition-[border-radius] duration-300 ease-out',
           open ? 'rounded-t-3xl rounded-b-none' : 'rounded-3xl',
@@ -714,7 +714,7 @@ export default function SettingsContent({
         title="פרופיל משתמש"
         headerStart={
           <div className="w-8 h-8 bg-ios-blue/12 rounded-lg flex items-center justify-center shrink-0">
-            <User className="w-4 h-4 text-ios-blue" />
+            <User className="w-4 h-4 text-ios-blue" aria-hidden />
           </div>
         }
       >
@@ -753,7 +753,7 @@ export default function SettingsContent({
         title="תצוגה"
         headerStart={
           <div className="w-8 h-8 bg-ios-purple/15 rounded-lg flex items-center justify-center shrink-0">
-            <MoonStar className="w-4 h-4 text-ios-purple" />
+            <MoonStar className="w-4 h-4 text-ios-purple" aria-hidden />
           </div>
         }
       >
@@ -805,7 +805,7 @@ export default function SettingsContent({
         title="חשבונות"
         headerStart={
           <div className="w-8 h-8 bg-ios-teal/15 rounded-lg flex items-center justify-center shrink-0">
-            <Landmark className="w-4 h-4 text-ios-teal" />
+            <Landmark className="w-4 h-4 text-ios-teal" aria-hidden />
           </div>
         }
       >
@@ -816,7 +816,7 @@ export default function SettingsContent({
             onClick={openCreateAccountPopup}
             className="w-full px-3 py-2.5 rounded-xl bg-ios-blue text-white text-sm font-semibold flex items-center justify-center gap-1.5"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4" aria-hidden />
             הוספת חשבון
           </button>
           {accounts.map((account) => (
@@ -877,7 +877,7 @@ export default function SettingsContent({
         title="קטגוריות"
         headerStart={
           <div className="w-8 h-8 bg-ios-orange/15 rounded-lg flex items-center justify-center shrink-0">
-            <Tag className="w-4 h-4 text-ios-orange" />
+            <Tag className="w-4 h-4 text-ios-orange" aria-hidden />
           </div>
         }
       >
@@ -902,8 +902,8 @@ export default function SettingsContent({
             <datalist id="settings-category-emoji-list">
               {CATEGORY_EMOJIS.map((emoji) => <option key={emoji} value={emoji}>{emoji}</option>)}
             </datalist>
-            <button onClick={handleAddCategory} className="w-11 bg-ios-blue text-white rounded-xl flex items-center justify-center">
-              <Plus className="w-5 h-5" />
+            <button type="button" onClick={handleAddCategory} aria-label="הוספת קטגוריה" className="w-11 bg-ios-blue text-white rounded-xl flex items-center justify-center">
+              <Plus className="w-5 h-5" aria-hidden />
             </button>
           </div>
 
@@ -926,11 +926,11 @@ export default function SettingsContent({
                       onChange={(e) => setEditingCategoryName(e.target.value)}
                       className="flex-1 bg-ios-card dark:bg-ios-dark-card rounded-lg px-3 py-2 text-sm text-ios-text dark:text-ios-dark-text"
                     />
-                    <button onClick={handleSaveCategory} className="text-ios-green p-1">
-                      <Check className="w-4 h-4" />
+                    <button type="button" onClick={handleSaveCategory} aria-label="שמירת עריכת קטגוריה" className="text-ios-green p-1">
+                      <Check className="w-4 h-4" aria-hidden />
                     </button>
-                    <button onClick={cancelEditCategory} className="text-ios-subtle dark:text-ios-dark-subtle p-1">
-                      <X className="w-4 h-4" />
+                    <button type="button" onClick={cancelEditCategory} aria-label="ביטול עריכת קטגוריה" className="text-ios-subtle dark:text-ios-dark-subtle p-1">
+                      <X className="w-4 h-4" aria-hidden />
                     </button>
                   </div>
                 ) : (
@@ -940,11 +940,11 @@ export default function SettingsContent({
                       {cat.name}
                     </span>
                     <div className="flex items-center gap-1">
-                      <button onClick={() => startEditCategory(cat)} className="text-ios-blue/80 hover:text-ios-blue p-1">
-                        <Pencil className="w-4 h-4" />
+                      <button type="button" onClick={() => startEditCategory(cat)} aria-label={`עריכת קטגוריה ${cat.name}`} className="text-ios-blue/80 hover:text-ios-blue p-1">
+                        <Pencil className="w-4 h-4" aria-hidden />
                       </button>
-                      <button onClick={() => handleDeleteCategory(cat.id)} className="text-ios-red/70 hover:text-ios-red p-1">
-                        <Trash2 className="w-4 h-4" />
+                      <button type="button" onClick={() => handleDeleteCategory(cat.id)} aria-label={`מחיקת קטגוריה ${cat.name}`} className="text-ios-red/70 hover:text-ios-red p-1">
+                        <Trash2 className="w-4 h-4" aria-hidden />
                       </button>
                     </div>
                   </>
@@ -961,14 +961,14 @@ export default function SettingsContent({
           onClick={() => setSavingsTargetsOpen((o) => !o)}
           aria-expanded={savingsTargetsOpen}
           className={cn(
-            'sticky top-0 z-[2] flex w-full items-center gap-2.5 px-5 pt-5 pb-3 text-right',
+            'sticky top-0 z-[2] flex w-full items-center gap-2.5 px-5 pt-5 pb-3 text-end',
             'bg-ios-card/95 dark:bg-ios-dark-card/95 backdrop-blur-md',
             'transition-[border-radius] duration-300 ease-out',
             savingsTargetsOpen ? 'rounded-t-3xl rounded-b-none' : 'rounded-3xl',
           )}
         >
           <div className="w-8 h-8 bg-ios-green/15 rounded-lg flex items-center justify-center shrink-0">
-            <PiggyBank className="w-4 h-4 text-ios-green" />
+            <PiggyBank className="w-4 h-4 text-ios-green" aria-hidden />
           </div>
           <h2 className="text-base font-bold text-ios-text dark:text-ios-dark-text flex-1 min-w-0">יעדי חיסכון</h2>
           <ChevronDown
@@ -1060,14 +1060,14 @@ export default function SettingsContent({
           onClick={toggleIncomeSection}
           aria-expanded={incomeOpen}
           className={cn(
-            'sticky top-0 z-[2] flex w-full items-center gap-2.5 px-5 pt-5 pb-3 text-right',
+            'sticky top-0 z-[2] flex w-full items-center gap-2.5 px-5 pt-5 pb-3 text-end',
             'bg-ios-card/95 dark:bg-ios-dark-card/95 backdrop-blur-md',
             'transition-[border-radius] duration-300 ease-out',
             incomeOpen ? 'rounded-t-3xl rounded-b-none' : 'rounded-3xl',
           )}
         >
           <div className="w-8 h-8 bg-ios-green/15 rounded-lg flex items-center justify-center shrink-0">
-            <TrendingUp className="w-4 h-4 text-ios-green" />
+            <TrendingUp className="w-4 h-4 text-ios-green" aria-hidden />
           </div>
           <h2 className="text-base font-bold text-ios-text dark:text-ios-dark-text flex-1 min-w-0">הכנסות חד-פעמיות</h2>
           <ChevronDown
@@ -1137,7 +1137,7 @@ export default function SettingsContent({
                 disabled={isAddingIncome}
                 className="w-full py-2.5 rounded-xl bg-ios-green text-white text-sm font-semibold flex items-center justify-center gap-1.5 disabled:opacity-60"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-4 h-4" aria-hidden />
                 {isAddingIncome ? 'מוסיף...' : 'הוספת הכנסה'}
               </button>
             </div>
@@ -1186,7 +1186,7 @@ export default function SettingsContent({
           onClick={() => signOut({ callbackUrl: '/auth/signin' })}
           className="w-full py-3 bg-black dark:bg-white dark:text-black text-white rounded-xl font-medium flex items-center justify-center gap-2"
         >
-          <LogOut className="w-4 h-4" />
+          <LogOut className="w-4 h-4" aria-hidden />
           התנתק
         </button>
         <button
@@ -1218,7 +1218,7 @@ export default function SettingsContent({
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ios-red/10 text-ios-red">
                 <AlertTriangle className="w-5 h-5" aria-hidden />
               </div>
-              <div className="min-w-0 flex-1 space-y-1 text-right">
+              <div className="min-w-0 flex-1 space-y-1 text-end">
                 <h3 id="delete-account-dialog-title" className="text-lg font-bold text-ios-text dark:text-ios-dark-text">
                   למחוק את החשבון?
                 </h3>
@@ -1315,7 +1315,7 @@ export default function SettingsContent({
                 }}
                 className="flex-1 py-2.5 rounded-xl bg-ios-blue text-white text-sm font-semibold flex items-center justify-center gap-1.5"
               >
-                <Copy className="w-4 h-4" />
+                <Copy className="w-4 h-4" aria-hidden />
                 העתק קישור
               </button>
               <button
@@ -1333,7 +1333,7 @@ export default function SettingsContent({
                 }}
                 className="flex-1 py-2.5 rounded-xl bg-ios-indigo text-white text-sm font-semibold flex items-center justify-center gap-1.5"
               >
-                <SendHorizontal className="w-4 h-4" />
+                <SendHorizontal className="w-4 h-4" aria-hidden />
                 שתף
               </button>
             </div>

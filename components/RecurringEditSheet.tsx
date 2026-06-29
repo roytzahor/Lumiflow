@@ -192,7 +192,7 @@ export default function RecurringEditSheet({
                       key={acc.id}
                       type="button"
                       onClick={() => setAccountId(acc.id)}
-                      className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-semibold transition-[background-color,color,box-shadow] ${
                         accountId === acc.id
                           ? 'bg-ios-card dark:bg-ios-dark-card shadow-card text-ios-text dark:text-ios-dark-text'
                           : 'text-ios-subtle dark:text-ios-dark-subtle'
@@ -209,7 +209,7 @@ export default function RecurringEditSheet({
                 <div className="flex items-center justify-between p-4">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-ios-red/10 rounded-lg flex items-center justify-center">
-                      <Calendar className="w-4 h-4 text-ios-red" />
+                      <Calendar className="w-4 h-4 text-ios-red" aria-hidden="true" />
                     </div>
                     <span className="text-[15px] font-medium text-ios-text dark:text-ios-dark-text">תאריך התחלה</span>
                   </div>
@@ -217,7 +217,7 @@ export default function RecurringEditSheet({
                     type="date"
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
-                    className="bg-ios-gray-6 dark:bg-ios-dark-fill border border-gray-200/50 dark:border-white/10 rounded-xl px-3 py-2 text-[15px] text-ios-text dark:text-ios-dark-text focus:outline-none focus:ring-2 focus:ring-ios-blue/30 text-left"
+                    className="bg-ios-gray-6 dark:bg-ios-dark-fill border border-gray-200/50 dark:border-white/10 rounded-xl px-3 py-2 text-[15px] text-ios-text dark:text-ios-dark-text focus:outline-none focus:ring-2 focus:ring-ios-blue/30 text-start"
                   />
                 </div>
                 <div className="px-4 pb-4 -mt-2">
@@ -229,7 +229,7 @@ export default function RecurringEditSheet({
                 <div className="p-4">
                   <div className="flex items-center gap-3 mb-2">
                     <div className="w-8 h-8 bg-ios-blue/10 rounded-lg flex items-center justify-center">
-                      <span className="text-sm">📝</span>
+                      <span className="text-sm" aria-hidden="true">📝</span>
                     </div>
                     <span className="text-[15px] font-medium text-ios-text dark:text-ios-dark-text">תיאור</span>
                   </div>
@@ -251,7 +251,7 @@ export default function RecurringEditSheet({
                       key={cat.id}
                       type="button"
                       onClick={() => setCategory(cat.name)}
-                      className={`flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                      className={`flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-[background-color,color,box-shadow] ${
                         category === cat.name
                           ? 'bg-ios-blue text-white shadow-sm'
                           : 'bg-ios-gray-6 dark:bg-ios-dark-fill text-ios-subtle dark:text-ios-dark-subtle'
@@ -282,7 +282,7 @@ export default function RecurringEditSheet({
                 <button
                   onClick={handleSave}
                   disabled={isSubmitting || !amount || !accountId}
-                  className="w-full bg-ios-blue text-white font-bold text-base py-4 rounded-2xl shadow-lg shadow-ios-blue/20 hover:bg-ios-blue/90 active:scale-[0.98] transition-all disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed"
+                  className="w-full bg-ios-blue text-white font-bold text-base py-4 rounded-2xl shadow-lg shadow-ios-blue/20 hover:bg-ios-blue/90 active:scale-[0.96] transition-[background-color,transform,opacity,box-shadow] disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? 'שומר...' : 'עדכון'}
                 </button>
