@@ -47,3 +47,6 @@ coverage
 
 # misc
 *.pem
+
+# graphify generated knowledge-graph artifacts
+graphify-out/
