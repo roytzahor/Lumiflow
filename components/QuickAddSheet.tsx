@@ -387,7 +387,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                             <div className="bg-ios-card dark:bg-ios-dark-card rounded-2xl p-5 sm:p-6 shadow-card mb-4 text-center">
                                 <p className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle uppercase tracking-wider mb-3">סכום</p>
                                 <div className="flex items-center justify-center gap-1">
-                                    <span className="text-3xl sm:text-4xl text-ios-gray-4 dark:text-ios-dark-subtle/60 font-light">₪</span>
+                                    <span aria-hidden="true" className="text-3xl sm:text-4xl text-ios-gray-4 dark:text-ios-dark-subtle/60 font-light">₪</span>
                                     <input
                                         ref={amountInputRef}
                                         data-testid="quickadd-amount"

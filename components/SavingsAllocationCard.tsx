@@ -58,7 +58,7 @@ export default function SavingsAllocationCard({
             >
               <ChevronDown className="h-5 w-5" />
             </motion.span>
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-ios-green/12 text-ios-green">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-ios-green/12 text-ios-green" aria-hidden="true">
               <PiggyBank className="h-4 w-4" strokeWidth={2} />
             </div>
             <h2 className="min-w-0 flex-1 truncate text-lg font-bold text-ios-text dark:text-ios-dark-text">

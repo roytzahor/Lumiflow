@@ -71,7 +71,7 @@ function SettingsCollapsibleSection({
         onClick={onToggle}
         aria-expanded={open}
         className={cn(
-          'sticky top-0 z-[2] flex w-full items-center gap-2.5 px-5 pt-5 pb-3 text-right',
+          'sticky top-0 z-[2] flex w-full items-center gap-2.5 px-5 pt-5 pb-3 text-end',
           'bg-ios-card/95 dark:bg-ios-dark-card/95 backdrop-blur-md',
           'transition-[border-radius] duration-300 ease-out',
           open ? 'rounded-t-3xl rounded-b-none' : 'rounded-3xl',
@@ -961,7 +961,7 @@ export default function SettingsContent({
           onClick={() => setSavingsTargetsOpen((o) => !o)}
           aria-expanded={savingsTargetsOpen}
           className={cn(
-            'sticky top-0 z-[2] flex w-full items-center gap-2.5 px-5 pt-5 pb-3 text-right',
+            'sticky top-0 z-[2] flex w-full items-center gap-2.5 px-5 pt-5 pb-3 text-end',
             'bg-ios-card/95 dark:bg-ios-dark-card/95 backdrop-blur-md',
             'transition-[border-radius] duration-300 ease-out',
             savingsTargetsOpen ? 'rounded-t-3xl rounded-b-none' : 'rounded-3xl',
@@ -1060,7 +1060,7 @@ export default function SettingsContent({
           onClick={toggleIncomeSection}
           aria-expanded={incomeOpen}
           className={cn(
-            'sticky top-0 z-[2] flex w-full items-center gap-2.5 px-5 pt-5 pb-3 text-right',
+            'sticky top-0 z-[2] flex w-full items-center gap-2.5 px-5 pt-5 pb-3 text-end',
             'bg-ios-card/95 dark:bg-ios-dark-card/95 backdrop-blur-md',
             'transition-[border-radius] duration-300 ease-out',
             incomeOpen ? 'rounded-t-3xl rounded-b-none' : 'rounded-3xl',

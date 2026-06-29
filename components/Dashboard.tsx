@@ -141,7 +141,7 @@ function DashboardAccountBalanceCard({
                     <div className="absolute inset-0 flex items-center justify-center p-3">
                         <div className="w-[235px] rounded-xl bg-white/26 dark:bg-ios-dark-card/42 backdrop-blur-xl border border-white/20 dark:border-white/10 p-3 text-center shadow-card">
                             <div className="w-7 h-7 rounded-full bg-ios-blue/15 text-ios-blue flex items-center justify-center mx-auto mb-2">
-                                <Lock className="w-3.5 h-3.5" />
+                                <Lock className="w-3.5 h-3.5" aria-hidden />
                             </div>
                             <p 
                                 data-testid="account-locked-message"
@@ -809,12 +809,12 @@ export default function Dashboard({
                         ) : null}
                     </div>
                     {!spendingSectionExpanded && chartData.length >= 2 ? (
-                        <p className="mt-2 pr-7 text-xs text-ios-subtle dark:text-ios-dark-subtle">
+                        <p className="mt-2 pe-7 text-xs text-ios-subtle dark:text-ios-dark-subtle">
                             לחצו להרחבת הגרף (התפלגות לפי קטגוריות)
                         </p>
                     ) : null}
                     {!spendingSectionExpanded && chartData.length < 2 ? (
-                        <p className="mt-2 pr-7 text-xs leading-relaxed text-ios-subtle dark:text-ios-dark-subtle">
+                        <p className="mt-2 pe-7 text-xs leading-relaxed text-ios-subtle dark:text-ios-dark-subtle">
                             הוסיפו הוצאות מקטגוריות נוספות כדי לראות התפלגות מלאה.
                         </p>
                     ) : null}
