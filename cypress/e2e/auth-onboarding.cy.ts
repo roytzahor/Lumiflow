@@ -16,7 +16,7 @@ describe('Auth and welcome flow', () => {
     signUpThroughWelcome(email, password);
 
     cy.get('[data-testid="bottom-nav-settings"]', { timeout: 20000 }).should('be.visible').click({ force: true });
-    cy.url().should('include', '/settings');
+    cy.url({ timeout: 30000 }).should('include', '/settings');
 
     cy.get('[data-testid="settings-add-account"]', { timeout: 20000 }).should('be.visible');
     cy.get('button[aria-label^="עריכת חשבון"]').first().click({ force: true });

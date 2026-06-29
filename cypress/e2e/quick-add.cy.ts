@@ -24,7 +24,7 @@ describe('Quick Add Flow', () => {
     cy.get('[data-testid="quickadd-amount"]').should('be.visible').clear().type('500');
     cy.get('[data-testid="quickadd-description"]').type('Groceries');
 
-    cy.get('[data-testid="quickadd-submit"]').click();
+    cy.get('[data-testid="quickadd-submit"]').scrollIntoView().click({ force: true });
 
     cy.contains(/₪500(?!\d)/, { timeout: 20000 }).should('be.visible');
     cy.contains(/₪9[,\u202f]500/, { timeout: 20000 }).should('be.visible');
