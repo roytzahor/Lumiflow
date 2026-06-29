@@ -3,7 +3,7 @@
  * <Money> component. These pure helpers hold all formatting/sign/colour logic.
  */
 import { describe, it, expect } from "vitest";
-import { formatMoneyParts, resolveColorClass } from "./money";
+import { formatMoneyParts, resolveColorClass } from "../lib/money";
 
 // ---------------------------------------------------------------------------
 // formatMoneyParts
