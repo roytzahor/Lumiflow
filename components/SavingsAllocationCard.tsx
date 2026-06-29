@@ -71,7 +71,7 @@ export default function SavingsAllocationCard({
           onClick={onAdd}
           className="flex shrink-0 items-center gap-1 rounded-xl bg-ios-green/15 px-3 py-2 text-xs font-bold text-ios-green transition-colors active:bg-ios-green/25"
         >
-          <Plus className="h-4 w-4" strokeWidth={2.5} />
+          <Plus className="h-4 w-4" strokeWidth={2.5} aria-hidden />
           הוספה
         </button>
         <span className="shrink-0 text-xs font-semibold tabular-nums text-ios-subtle dark:text-ios-dark-subtle">
@@ -80,7 +80,7 @@ export default function SavingsAllocationCard({
       </div>
 
       {!sectionExpanded && allocations.length > 0 && (
-        <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle mt-2 pr-7">
+        <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle mt-2 pe-7">
           סה״כ הפרשות החודש:{' '}
           <span className="font-bold text-ios-text dark:text-ios-dark-text tabular-nums">
             <Money amount={totalAllocations} signed={false} />
@@ -89,7 +89,7 @@ export default function SavingsAllocationCard({
       )}
 
       {!sectionExpanded && allocations.length === 0 && (
-        <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle mt-2 pr-7 leading-relaxed">
+        <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle mt-2 pe-7 leading-relaxed">
           עדיין אין הפרשות — לחצו על &quot;הוספה&quot; או הרחיבו לפרטים.
         </p>
       )}
@@ -149,7 +149,7 @@ export default function SavingsAllocationCard({
                           <span className="text-[15px] font-bold text-ios-green tabular-nums">
                             <Money amount={row.amount} signed={false} />
                           </span>
-                          <ChevronLeft className="w-4 h-4 text-ios-gray-4 dark:text-ios-dark-subtle/60" />
+                          <ChevronLeft className="w-4 h-4 text-ios-gray-4 dark:text-ios-dark-subtle/60" aria-hidden />
                         </div>
                       </button>
                     ))}

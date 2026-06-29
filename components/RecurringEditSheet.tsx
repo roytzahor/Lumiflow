@@ -209,7 +209,7 @@ export default function RecurringEditSheet({
                 <div className="flex items-center justify-between p-4">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-ios-red/10 rounded-lg flex items-center justify-center">
-                      <Calendar className="w-4 h-4 text-ios-red" />
+                      <Calendar className="w-4 h-4 text-ios-red" aria-hidden="true" />
                     </div>
                     <span className="text-[15px] font-medium text-ios-text dark:text-ios-dark-text">תאריך התחלה</span>
                   </div>
@@ -217,7 +217,7 @@ export default function RecurringEditSheet({
                     type="date"
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
-                    className="bg-ios-gray-6 dark:bg-ios-dark-fill border border-gray-200/50 dark:border-white/10 rounded-xl px-3 py-2 text-[15px] text-ios-text dark:text-ios-dark-text focus:outline-none focus:ring-2 focus:ring-ios-blue/30 text-left"
+                    className="bg-ios-gray-6 dark:bg-ios-dark-fill border border-gray-200/50 dark:border-white/10 rounded-xl px-3 py-2 text-[15px] text-ios-text dark:text-ios-dark-text focus:outline-none focus:ring-2 focus:ring-ios-blue/30 text-start"
                   />
                 </div>
                 <div className="px-4 pb-4 -mt-2">
@@ -229,7 +229,7 @@ export default function RecurringEditSheet({
                 <div className="p-4">
                   <div className="flex items-center gap-3 mb-2">
                     <div className="w-8 h-8 bg-ios-blue/10 rounded-lg flex items-center justify-center">
-                      <span className="text-sm">📝</span>
+                      <span className="text-sm" aria-hidden="true">📝</span>
                     </div>
                     <span className="text-[15px] font-medium text-ios-text dark:text-ios-dark-text">תיאור</span>
                   </div>

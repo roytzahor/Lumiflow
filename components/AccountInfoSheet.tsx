@@ -61,7 +61,7 @@ export default function AccountInfoSheet({
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ios-blue/15 text-ios-blue">
-                    <Info className="h-4 w-4" />
+                    <Info className="h-4 w-4" aria-hidden />
                   </div>
                   <div className="min-w-0">
                     <h3 id="account-info-title" className="text-lg font-bold text-ios-text dark:text-ios-dark-text truncate">
@@ -121,7 +121,7 @@ export default function AccountInfoSheet({
                             className="shrink-0 p-2 rounded-lg text-ios-red/80 hover:text-ios-red hover:bg-ios-red/10 disabled:opacity-50"
                             aria-label={`הסרת ${displayName} מהחשבון`}
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-4 h-4" aria-hidden />
                           </button>
                         ) : null}
                       </li>

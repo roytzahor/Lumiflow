@@ -1,7 +1,7 @@
 /** Dashboard route skeleton — used by `app/loading` and Suspense fallbacks. */
 export default function DashboardPageSkeleton() {
     return (
-        <main className="min-h-screen pb-28 pt-safe bg-ios-bg dark:bg-ios-dark-bg">
+        <main role="status" aria-label="טוען" className="min-h-screen pb-28 pt-safe bg-ios-bg dark:bg-ios-dark-bg">
             <div className="w-full max-w-md mx-auto px-5 pt-6 skeleton-shimmer">
                 <header className="mb-3">
                     <div className="h-4 w-36 bg-ios-gray-5 dark:bg-ios-dark-fill rounded-lg mb-2" />
@@ -133,7 +133,7 @@ export default function DashboardPageSkeleton() {
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2 shrink-0 mr-2">
+                                <div className="flex items-center gap-2 shrink-0 me-2">
                                     <div className="h-4 w-14 bg-ios-gray-5 dark:bg-ios-dark-fill rounded" />
                                     <div className="w-4 h-4 rounded bg-ios-gray-6 dark:bg-ios-dark-fill opacity-60" />
                                 </div>

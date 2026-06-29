@@ -222,7 +222,7 @@ export default function SavingsAllocationSheet({
               <div className="bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card border border-gray-200/50 dark:border-white/10 mb-4 overflow-hidden p-4">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-9 h-9 rounded-xl bg-ios-blue/12 flex items-center justify-center shrink-0">
-                    <Landmark className="w-5 h-5 text-ios-blue" strokeWidth={2} />
+                    <Landmark className="w-5 h-5 text-ios-blue" strokeWidth={2} aria-hidden="true" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle uppercase tracking-wider">
@@ -266,7 +266,7 @@ export default function SavingsAllocationSheet({
                 <div className="p-4 space-y-3">
                   <div className="flex items-start gap-3">
                     <div className="w-9 h-9 bg-ios-green/10 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
-                      <Calendar className="w-[18px] h-[18px] text-ios-green" strokeWidth={2} />
+                      <Calendar className="w-[18px] h-[18px] text-ios-green" strokeWidth={2} aria-hidden="true" />
                     </div>
                     <div className="min-w-0 flex-1 space-y-2">
                       <div>
@@ -290,7 +290,7 @@ export default function SavingsAllocationSheet({
                 <div className="p-4 flex items-center justify-between gap-4">
                   <div className="flex items-start gap-3 min-w-0">
                     <div className="w-9 h-9 bg-ios-indigo/10 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
-                      <Repeat className="w-[18px] h-[18px] text-ios-indigo" strokeWidth={2} />
+                      <Repeat className="w-[18px] h-[18px] text-ios-indigo" strokeWidth={2} aria-hidden="true" />
                     </div>
                     <div className="flex min-w-0 items-center gap-1.5">
                       <p className="text-[15px] font-semibold text-ios-text dark:text-ios-dark-text">

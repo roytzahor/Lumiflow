@@ -86,7 +86,7 @@ export default function AccountShareSheet({
                       : "bg-ios-gray-6 dark:bg-ios-dark-fill text-ios-text dark:text-ios-dark-text"
                   }`}
                 >
-                  <Link2 className="w-4 h-4" />
+                  <Link2 className="w-4 h-4" aria-hidden />
                   שיתוף בקישור
                 </button>
                 <button
@@ -98,7 +98,7 @@ export default function AccountShareSheet({
                       : "bg-ios-gray-6 dark:bg-ios-dark-fill text-ios-text dark:text-ios-dark-text"
                   }`}
                 >
-                  <Mail className="w-4 h-4" />
+                  <Mail className="w-4 h-4" aria-hidden />
                   הזמנה במייל
                 </button>
               </div>
@@ -129,7 +129,7 @@ export default function AccountShareSheet({
                 disabled={isLoading || (inviteMethod === "email" && (!inviteEmail.trim() || !inviteEmailIsValid))}
                 className="w-full rounded-xl bg-ios-indigo px-3 py-3 text-sm font-semibold text-white flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Share2 className="w-4 h-4" />
+                <Share2 className="w-4 h-4" aria-hidden />
                 {isLoading ? "יוצר הזמנה..." : inviteMethod === "email" ? "צור הזמנה אישית במייל" : "צור קישור הזמנה"}
               </button>
             </div>

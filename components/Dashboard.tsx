@@ -894,7 +894,7 @@ export default function Dashboard({
                         <span className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle flex-shrink-0">{recurringForScope.length} סה״כ</span>
                     </button>
                     {!recurringSectionExpanded && recurringForScope.length > 0 && (
-                        <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle mt-2 pr-7">
+                        <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle mt-2 pe-7">
                             סה״כ קבועות חודשיות:{" "}
                             <span className="font-bold text-ios-text dark:text-ios-dark-text tabular-nums">
                                 <Money amount={recurringTotalAmount} signed={false} />
@@ -950,7 +950,7 @@ export default function Dashboard({
                                                         </div>
                                                         <div className="flex items-center gap-2 flex-shrink-0">
                                                             <span className="text-[15px] font-bold text-ios-text dark:text-ios-dark-text tabular-nums"><Money amount={item.amount} signed={false} /></span>
-                                                            <ChevronLeft className="w-4 h-4 text-ios-gray-4 dark:text-ios-dark-subtle/60" />
+                                                            <ChevronLeft className="w-4 h-4 text-ios-gray-4 dark:text-ios-dark-subtle/60" aria-hidden />
                                                         </div>
                                                     </button>
                                                 );

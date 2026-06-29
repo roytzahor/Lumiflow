@@ -238,7 +238,7 @@ export default function AccountPopup({
                     onClick={() => setShowDeleteConfirm(true)}
                     className="w-full py-2.5 rounded-xl border border-ios-red/40 text-ios-red text-sm font-semibold flex items-center justify-center gap-1.5"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-4 h-4" aria-hidden />
                     מחיקת חשבון
                   </button>
                 )

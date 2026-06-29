@@ -443,8 +443,8 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                         )}
                                         {accounts.length > 1 && (
                                             isAccountListExpanded
-                                                ? <ChevronUp className="w-4 h-4 text-ios-subtle dark:text-ios-dark-subtle" />
-                                                : <ChevronDown className="w-4 h-4 text-ios-subtle dark:text-ios-dark-subtle" />
+                                                ? <ChevronUp className="w-4 h-4 text-ios-subtle dark:text-ios-dark-subtle" aria-hidden="true" />
+                                                : <ChevronDown className="w-4 h-4 text-ios-subtle dark:text-ios-dark-subtle" aria-hidden="true" />
                                         )}
                                     </button>
                                     {isAccountListExpanded && accounts.length > 1 && (
@@ -459,7 +459,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                                         setIsAccountListExpanded(false);
                                                         trigger(10);
                                                     }}
-                                                    className={`w-full flex items-center gap-2.5 py-3 px-3.5 text-sm font-semibold text-right transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue/30 ${
+                                                    className={`w-full flex items-center gap-2.5 py-3 px-3.5 text-sm font-semibold text-end transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue/30 ${
                                                         accountId === acc.id
                                                             ? 'bg-ios-blue/12 dark:bg-ios-blue/25 text-ios-blue dark:text-white'
                                                             : 'text-ios-subtle dark:text-ios-dark-subtle'
@@ -485,7 +485,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                 <div className="flex items-center justify-between p-4">
                                     <div className="flex items-center gap-3">
                                         <div className="w-8 h-8 bg-ios-red/10 rounded-lg flex items-center justify-center">
-                                            <Calendar className="w-4 h-4 text-ios-red" />
+                                            <Calendar className="w-4 h-4 text-ios-red" aria-hidden="true" />
                                         </div>
                                         <span className="text-[15px] font-medium text-ios-text dark:text-ios-dark-text">תאריך</span>
                                     </div>
@@ -497,7 +497,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                             setDate(e.target.value);
                                             if (dateError) setDateError('');
                                         }}
-                                        className="bg-ios-gray-6 dark:bg-ios-dark-fill border border-gray-200/50 dark:border-white/10 rounded-xl px-3 py-2 text-[15px] text-ios-text dark:text-ios-dark-text focus:outline-none focus:ring-2 focus:ring-ios-blue/30 text-left"
+                                        className="bg-ios-gray-6 dark:bg-ios-dark-fill border border-gray-200/50 dark:border-white/10 rounded-xl px-3 py-2 text-[15px] text-ios-text dark:text-ios-dark-text focus:outline-none focus:ring-2 focus:ring-ios-blue/30 text-start"
                                     />
                                 </div>
                                 <div className="px-4 pb-4 -mt-2">
@@ -513,7 +513,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                 <div className="p-4">
                                     <div className="flex items-center gap-3 mb-2">
                                         <div className="w-8 h-8 bg-ios-blue/10 rounded-lg flex items-center justify-center">
-                                            <span className="text-sm">📝</span>
+                                            <span className="text-sm" aria-hidden="true">📝</span>
                                         </div>
                                         <span className="text-[15px] font-medium text-ios-text dark:text-ios-dark-text">תיאור</span>
                                     </div>
@@ -591,13 +591,13 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                 </div>
                                 <div className="flex gap-2 mb-2">
                                     <div className="flex-1 relative">
-                                        <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-ios-subtle dark:text-ios-dark-subtle" />
+                                        <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-ios-subtle dark:text-ios-dark-subtle" aria-hidden="true" />
                                         <input
                                             type="text"
                                             value={categorySearch}
                                             onChange={(e) => setCategorySearch(e.target.value)}
                                             placeholder="חיפוש קטגוריה קיימת"
-                                            className="w-full bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl py-2.5 pr-9 pl-3 text-sm text-ios-text dark:text-ios-dark-text placeholder:text-ios-subtle dark:placeholder:text-ios-dark-subtle focus:outline-none focus:ring-2 focus:ring-ios-blue/30"
+                                            className="w-full bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl py-2.5 pe-9 ps-3 text-sm text-ios-text dark:text-ios-dark-text placeholder:text-ios-subtle dark:placeholder:text-ios-dark-subtle focus:outline-none focus:ring-2 focus:ring-ios-blue/30"
                                         />
                                     </div>
                                 </div>
@@ -662,7 +662,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                 <div className="bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card mb-4 p-4">
                                     <div className="flex items-center gap-3 mb-2">
                                         <div className="w-8 h-8 bg-ios-teal/10 rounded-lg flex items-center justify-center">
-                                            <span className="text-sm">📅</span>
+                                            <span className="text-sm" aria-hidden="true">📅</span>
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <p className="text-[15px] font-medium text-ios-text dark:text-ios-dark-text">תשלומים</p>
@@ -714,7 +714,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                             <div className="bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card mb-6 p-4 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 bg-ios-orange/10 rounded-lg flex items-center justify-center">
-                                        <span className="text-sm">🔄</span>
+                                        <span className="text-sm" aria-hidden="true">🔄</span>
                                     </div>
                                     <div>
                                         <p className="text-[15px] font-medium text-ios-text dark:text-ios-dark-text">הוצאה קבועה</p>
