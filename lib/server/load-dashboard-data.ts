@@ -1,6 +1,7 @@
 import {
   getAccountContributionTotals,
   getAccounts,
+  getAllAccountContributionRatios,
   getBudgetSettings,
   getCategories,
   getCurrentUserProfile,
@@ -35,6 +36,7 @@ export async function loadDashboardPageData(year: number, month: number) {
     savingsLabels,
     budgetSettings,
     prevTransactions,
+    allAccountContributionRatios,
   ] = await Promise.all([
     getTransactions('All', year, month, { recurringRows }),
     getCategories(),
@@ -47,6 +49,7 @@ export async function loadDashboardPageData(year: number, month: number) {
     getSavingsLabels(),
     getBudgetSettings(),
     getTransactions('All', prevYear, prevMonth),
+    getAllAccountContributionRatios(),
   ]);
 
   // No recurringRows passed → no projected items; sum all returned amounts directly.
@@ -65,5 +68,6 @@ export async function loadDashboardPageData(year: number, month: number) {
     savingsLabels,
     budgetSettings,
     prevMonthTotal,
+    allAccountContributionRatios,
   };
 }
