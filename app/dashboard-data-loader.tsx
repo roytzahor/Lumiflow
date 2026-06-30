@@ -38,6 +38,7 @@ export default async function DashboardDataLoader({
             myContributionRatios,
             savingsAllocations,
             savingsLabels,
+            budgetSettings,
         } = await loadDashboardPageData(year, month);
 
         return (
@@ -58,6 +59,7 @@ export default async function DashboardDataLoader({
                 initialSavingsSectionExpanded={currentUser?.dashboardSavingsSectionExpanded ?? false}
                 initialSpendingSectionExpanded={currentUser?.dashboardSpendingSectionExpanded ?? true}
                 welcomeTourCompletedAt={currentUser?.welcomeTourCompletedAt ?? null}
+                budgetSettings={budgetSettings ?? null}
             />
         );
     } catch (error) {

@@ -1,6 +1,7 @@
 import {
   getAccountContributionTotals,
   getAccounts,
+  getBudgetSettings,
   getCategories,
   getCurrentUserProfile,
   getMonthlyIncomeEntries,
@@ -29,6 +30,7 @@ export async function loadDashboardPageData(year: number, month: number) {
     myContributionRatios,
     savingsAllocations,
     savingsLabels,
+    budgetSettings,
   ] = await Promise.all([
     getTransactions('All', year, month, { recurringRows }),
     getCategories(),
@@ -39,6 +41,7 @@ export async function loadDashboardPageData(year: number, month: number) {
     getMyContributionRatios(),
     getSavingsAllocations(year, month),
     getSavingsLabels(),
+    getBudgetSettings(),
   ]);
 
   return {
@@ -52,5 +55,6 @@ export async function loadDashboardPageData(year: number, month: number) {
     myContributionRatios,
     savingsAllocations,
     savingsLabels,
+    budgetSettings,
   };
 }

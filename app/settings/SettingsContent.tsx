@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { useTheme } from 'next-themes';
@@ -32,14 +31,16 @@ import {
 } from '../actions';
 import type { SettingsSectionKey } from '../actions';
 import type { AccountMemberSummary } from '../actions';
-import { User, MoonStar, Pencil, Check, X, Trash2, Plus, Share2, LogOut, Copy, SendHorizontal, Info, ChevronDown, Landmark, Tag, TrendingUp, PiggyBank, Eye, EyeOff, AlertTriangle } from 'lucide-react';
+import { User, Pencil, Trash2, Plus, Share2, LogOut, Copy, SendHorizontal, Info, ChevronDown, Landmark, TrendingUp, PiggyBank, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import type { AccountSummary, Category, IncomeEntryItem, SavingsLabel } from '@/lib/types';
 import AccountPopup from '@/components/AccountPopup';
 import ProfileEditSheet from '@/components/ProfileEditSheet';
 import AccountShareSheet from '@/components/AccountShareSheet';
 import AccountInfoSheet from '@/components/AccountInfoSheet';
 import { cn } from '@/lib/utils';
-import { CATEGORY_EMOJIS } from '@/lib/category-emojis';
+import SettingsCollapsibleSection from '@/components/settings/SettingsCollapsibleSection';
+import AppearanceSection from '@/components/settings/AppearanceSection';
+import CategoriesSection from '@/components/settings/CategoriesSection';
 
 type SettingsAccount = AccountSummary & { members?: AccountMemberSummary[] };
 
@@ -49,64 +50,6 @@ function mapThemePreferenceToClientTheme(theme: 'LIGHT' | 'DARK' | 'SYSTEM'): 'l
   return 'system';
 }
 
-function SettingsCollapsibleSection({
-  open,
-  onToggle,
-  title,
-  headerStart,
-  children,
-}: {
-  open: boolean;
-  onToggle: () => void;
-  title: string;
-  headerStart?: ReactNode;
-  children: ReactNode;
-}) {
-  const reduceMotion = useReducedMotion();
-
-  return (
-    <section className="rounded-3xl shadow-card bg-ios-card dark:bg-ios-dark-card">
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={open}
-        className={cn(
-          'sticky top-0 z-[2] flex w-full items-center gap-2.5 px-5 pt-5 pb-3 text-end',
-          'bg-ios-card/95 dark:bg-ios-dark-card/95 backdrop-blur-md',
-          'transition-[border-radius] duration-300 ease-out',
-          open ? 'rounded-t-3xl rounded-b-none' : 'rounded-3xl',
-        )}
-      >
-        {headerStart}
-        <h2 className="text-base font-bold text-ios-text dark:text-ios-dark-text flex-1 min-w-0">{title}</h2>
-        <ChevronDown
-          className={cn(
-            'w-5 h-5 shrink-0 text-ios-subtle dark:text-ios-dark-subtle transition-transform duration-200',
-            open ? 'rotate-0' : '-rotate-90',
-          )}
-          aria-hidden
-        />
-      </button>
-      {reduceMotion ? (
-        open ? <div className="px-5 pb-5 pt-1 rounded-b-3xl">{children}</div> : null
-      ) : (
-        <div className="overflow-hidden">
-          <motion.div
-            initial={false}
-            animate={{
-              height: open ? 'auto' : 0,
-              opacity: open ? 1 : 0,
-            }}
-            transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-            style={{ overflow: 'hidden' }}
-          >
-            <div className="px-5 pb-5 pt-1 rounded-b-3xl">{children}</div>
-          </motion.div>
-        </div>
-      )}
-    </section>
-  );
-}
 
 interface SettingsContentProps {
   initialCategories: Category[];
@@ -502,12 +445,6 @@ export default function SettingsContent({
     }
   };
 
-  const startEditCategory = (cat: Category) => {
-    setEditingCategoryId(cat.id);
-    setEditingCategoryName(cat.name);
-    setEditingCategoryEmojiInput(cat.icon || '✨');
-  };
-
   const cancelEditCategory = () => {
     setEditingCategoryId(null);
     setEditingCategoryName('');
@@ -747,57 +684,13 @@ export default function SettingsContent({
         </div>
       </SettingsCollapsibleSection>
 
-      <SettingsCollapsibleSection
+      <AppearanceSection
+        themePreference={themePreference}
+        isThemeSaving={isThemeSaving}
         open={settingsSectionOpen.appearance}
         onToggle={() => toggleSettingsSection('appearance')}
-        title="תצוגה"
-        headerStart={
-          <div className="w-8 h-8 bg-ios-purple/15 rounded-lg flex items-center justify-center shrink-0">
-            <MoonStar className="w-4 h-4 text-ios-purple" aria-hidden />
-          </div>
-        }
-      >
-        <div className="grid grid-cols-3 gap-2">
-          <button
-            data-testid="settings-theme-light"
-            type="button"
-            onClick={() => handleThemeChange('LIGHT')}
-            disabled={isThemeSaving}
-            className={`py-2.5 rounded-xl text-sm font-semibold transition ${
-              themePreference === 'LIGHT'
-                ? 'bg-ios-blue text-white'
-                : 'bg-ios-gray-6 dark:bg-ios-dark-fill text-ios-text dark:text-ios-dark-text'
-            } ${isThemeSaving ? 'opacity-60 cursor-wait' : ''}`}
-          >
-            בהיר
-          </button>
-          <button
-            data-testid="settings-theme-dark"
-            type="button"
-            onClick={() => handleThemeChange('DARK')}
-            disabled={isThemeSaving}
-            className={`py-2.5 rounded-xl text-sm font-semibold transition ${
-              themePreference === 'DARK'
-                ? 'bg-ios-blue text-white'
-                : 'bg-ios-gray-6 dark:bg-ios-dark-fill text-ios-text dark:text-ios-dark-text'
-            } ${isThemeSaving ? 'opacity-60 cursor-wait' : ''}`}
-          >
-            כהה
-          </button>
-          <button
-            type="button"
-            onClick={() => handleThemeChange('SYSTEM')}
-            disabled={isThemeSaving}
-            className={`py-2.5 rounded-xl text-sm font-semibold transition ${
-              themePreference === 'SYSTEM'
-                ? 'bg-ios-blue text-white'
-                : 'bg-ios-gray-6 dark:bg-ios-dark-fill text-ios-text dark:text-ios-dark-text'
-            } ${isThemeSaving ? 'opacity-60 cursor-wait' : ''}`}
-          >
-            מערכת
-          </button>
-        </div>
-      </SettingsCollapsibleSection>
+        onThemeChange={handleThemeChange}
+      />
 
       <SettingsCollapsibleSection
         open={settingsSectionOpen.accounts}
@@ -871,89 +764,29 @@ export default function SettingsContent({
         </div>
       </SettingsCollapsibleSection>
 
-      <SettingsCollapsibleSection
+      <CategoriesSection
+        categories={categories}
         open={settingsSectionOpen.categories}
         onToggle={() => toggleSettingsSection('categories')}
-        title="קטגוריות"
-        headerStart={
-          <div className="w-8 h-8 bg-ios-orange/15 rounded-lg flex items-center justify-center shrink-0">
-            <Tag className="w-4 h-4 text-ios-orange" aria-hidden />
-          </div>
-        }
-      >
-        <div className="space-y-3">
-          <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder="שם קטגוריה חדשה"
-              value={newCatName}
-              onChange={(e) => setNewCatName(e.target.value)}
-              className="flex-1 bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-3.5 py-2.5 text-sm text-ios-text dark:text-ios-dark-text"
-            />
-            <input
-              type="text"
-              value={newCatEmojiInput}
-              onChange={(e) => setNewCatEmojiInput(e.target.value)}
-              placeholder="בחר/י או הקלד/י 😀"
-              list="settings-category-emoji-list"
-              className="w-20 text-center bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-1 py-2.5 text-sm text-ios-text dark:text-ios-dark-text"
-              aria-label="בחירת אימוג׳י לקטגוריה"
-            />
-            <datalist id="settings-category-emoji-list">
-              {CATEGORY_EMOJIS.map((emoji) => <option key={emoji} value={emoji}>{emoji}</option>)}
-            </datalist>
-            <button type="button" onClick={handleAddCategory} aria-label="הוספת קטגוריה" className="w-11 bg-ios-blue text-white rounded-xl flex items-center justify-center">
-              <Plus className="w-5 h-5" aria-hidden />
-            </button>
-          </div>
-
-          <div className="bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl divide-y divide-gray-200/50 dark:divide-white/10 overflow-hidden max-h-52 overflow-y-auto">
-            {categories.map((cat) => (
-              <div key={cat.id} className="flex items-center justify-between px-4 py-3">
-                {editingCategoryId === cat.id ? (
-                  <div className="flex items-center gap-2 flex-1">
-                    <input
-                      type="text"
-                      value={editingCategoryEmojiInput}
-                      onChange={(e) => setEditingCategoryEmojiInput(e.target.value)}
-                      placeholder="אימוג׳י"
-                      list="settings-category-emoji-list"
-                      className="w-20 text-center bg-ios-card dark:bg-ios-dark-card rounded-lg px-1 py-2 text-sm text-ios-text dark:text-ios-dark-text"
-                      aria-label="בחירת אימוג׳י לעריכת קטגוריה"
-                    />
-                    <input
-                      value={editingCategoryName}
-                      onChange={(e) => setEditingCategoryName(e.target.value)}
-                      className="flex-1 bg-ios-card dark:bg-ios-dark-card rounded-lg px-3 py-2 text-sm text-ios-text dark:text-ios-dark-text"
-                    />
-                    <button type="button" onClick={handleSaveCategory} aria-label="שמירת עריכת קטגוריה" className="text-ios-green p-1">
-                      <Check className="w-4 h-4" aria-hidden />
-                    </button>
-                    <button type="button" onClick={cancelEditCategory} aria-label="ביטול עריכת קטגוריה" className="text-ios-subtle dark:text-ios-dark-subtle p-1">
-                      <X className="w-4 h-4" aria-hidden />
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <span className="flex items-center gap-2.5 text-sm font-medium text-ios-text dark:text-ios-dark-text">
-                      <span className="text-lg">{cat.icon}</span>
-                      {cat.name}
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <button type="button" onClick={() => startEditCategory(cat)} aria-label={`עריכת קטגוריה ${cat.name}`} className="text-ios-blue/80 hover:text-ios-blue p-1">
-                        <Pencil className="w-4 h-4" aria-hidden />
-                      </button>
-                      <button type="button" onClick={() => handleDeleteCategory(cat.id)} aria-label={`מחיקת קטגוריה ${cat.name}`} className="text-ios-red/70 hover:text-ios-red p-1">
-                        <Trash2 className="w-4 h-4" aria-hidden />
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </SettingsCollapsibleSection>
+        newCatName={newCatName}
+        newCatEmojiInput={newCatEmojiInput}
+        editingCategoryId={editingCategoryId}
+        editingCategoryName={editingCategoryName}
+        editingCategoryEmojiInput={editingCategoryEmojiInput}
+        onNewCatNameChange={setNewCatName}
+        onNewCatEmojiChange={setNewCatEmojiInput}
+        onAddCategory={handleAddCategory}
+        onStartEdit={(id, name, emoji) => {
+          setEditingCategoryId(id);
+          setEditingCategoryName(name);
+          setEditingCategoryEmojiInput(emoji);
+        }}
+        onSaveEdit={() => void handleSaveCategory()}
+        onCancelEdit={cancelEditCategory}
+        onEditNameChange={setEditingCategoryName}
+        onEditEmojiChange={setEditingCategoryEmojiInput}
+        onDeleteCategory={handleDeleteCategory}
+      />
 
       <section className="rounded-3xl shadow-card bg-ios-card dark:bg-ios-dark-card">
         <button

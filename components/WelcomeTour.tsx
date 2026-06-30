@@ -30,7 +30,7 @@ export default function WelcomeTour({ welcomeTourCompletedAt }: WelcomeTourProps
         showProgress: true,
         animate: true,
         popoverClass: 'lumiflow-welcome-tour-popover',
-        overlayColor: '#0C121B',
+        overlayColor: 'var(--background)',
         overlayOpacity: 0.42,
         stagePadding: 10,
         stageRadius: 16,
