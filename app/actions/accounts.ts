@@ -293,6 +293,66 @@ export async function getMyContributionRatios() {
   }
 }
 
+export async function getAccountMemberContributions(accountId: string) {
+  try {
+    const userId = await requireUserId();
+    await assertUserHasAccount(userId, accountId);
+
+    const plans = await prisma.accountContributionPlan.findMany({
+      where: { accountId },
+      include: { user: { select: { id: true, name: true, email: true } } },
+      orderBy: { monthlyAmount: 'desc' },
+    });
+
+    const total = plans.reduce((sum, p) => sum + p.monthlyAmount, 0);
+
+    return plans.map((p) => ({
+      userId: p.userId,
+      name: p.user.name?.trim() || p.user.email,
+      monthlyAmount: p.monthlyAmount,
+      ratio: total > 0 ? p.monthlyAmount / total : 0,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function getAllAccountContributionRatios() {
+  try {
+    const userId = await requireUserId();
+    const accountIds = await getUserAccountIds(userId);
+    if (accountIds.length === 0) return [];
+
+    const plans = await prisma.accountContributionPlan.findMany({
+      where: { accountId: { in: accountIds } },
+      include: { user: { select: { id: true, name: true, email: true } } },
+    });
+
+    const byAccount = new Map<string, typeof plans>();
+    for (const p of plans) {
+      const list = byAccount.get(p.accountId) ?? [];
+      list.push(p);
+      byAccount.set(p.accountId, list);
+    }
+
+    return accountIds.map((accountId) => {
+      const accountPlans = byAccount.get(accountId) ?? [];
+      const total = accountPlans.reduce((sum, p) => sum + p.monthlyAmount, 0);
+      return {
+        accountId,
+        members: accountPlans.map((p) => ({
+          userId: p.userId,
+          name: p.user.name?.trim() || p.user.email,
+          monthlyAmount: p.monthlyAmount,
+          ratio: total > 0 ? p.monthlyAmount / total : 0,
+        })),
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
 export async function getAccountContributionTotals() {
   try {
     const userId = await requireUserId();

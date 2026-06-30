@@ -40,6 +40,7 @@ export default async function DashboardDataLoader({
             savingsLabels,
             budgetSettings,
             prevMonthTotal,
+            allAccountContributionRatios,
         } = await loadDashboardPageData(year, month);
 
         return (
@@ -55,6 +56,8 @@ export default async function DashboardDataLoader({
                 contributionTotals={contributionTotals}
                 monthlyIncomeEntries={monthlyIncomeEntries}
                 myContributionRatios={myContributionRatios}
+                allAccountContributionRatios={allAccountContributionRatios}
+                currentUserId={currentUser?.id ?? null}
                 viewerName={currentUser?.name ?? null}
                 initialRecurringSectionExpanded={currentUser?.dashboardRecurringSectionExpanded ?? false}
                 initialSavingsSectionExpanded={currentUser?.dashboardSavingsSectionExpanded ?? false}

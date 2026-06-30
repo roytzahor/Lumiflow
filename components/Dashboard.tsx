@@ -23,6 +23,8 @@ const SavingsAllocationSheet = dynamic(() => import("./SavingsAllocationSheet"),
 const SavingsAllocationCard = dynamic(() => import("./SavingsAllocationCard"), { ssr: false });
 const BudgetHealthCard = dynamic(() => import("./BudgetHealthCard"), { ssr: false });
 const SpendingTrendCard = dynamic(() => import("./SpendingTrendCard"), { ssr: false });
+const SharedSplitCard = dynamic(() => import("./SharedSplitCard"), { ssr: false });
+const PersonalIncomeSummaryCard = dynamic(() => import("./PersonalIncomeSummaryCard"), { ssr: false });
 const PieChart = dynamic(() => import("./PieChart"), {
     ssr: false,
     loading: () => (
@@ -41,7 +43,7 @@ import type {
     SavingsLabel,
 } from "@/lib/types";
 import { parseScopeAccountId } from "@/lib/scope-account";
-import { computeMyMoneyBreakdown } from "@/lib/my-money-utils";
+import { computeMyMoneyBreakdown, computeAccountMemberSplit } from "@/lib/my-money-utils";
 
 interface DashboardProps {
     initialTransactions: TransactionListItem[];
@@ -60,6 +62,11 @@ interface DashboardProps {
     }>;
     monthlyIncomeEntries?: MonthlyIncomeTotal[];
     myContributionRatios?: ContributionRatio[];
+    allAccountContributionRatios?: Array<{
+        accountId: string;
+        members: Array<{ userId: string; name: string; monthlyAmount: number; ratio: number }>;
+    }>;
+    currentUserId?: string | null;
     viewerName?: string | null;
     initialRecurringSectionExpanded?: boolean;
     initialSavingsSectionExpanded?: boolean;
@@ -202,6 +209,8 @@ export default function Dashboard({
     contributionTotals = [],
     monthlyIncomeEntries = [],
     myContributionRatios = [],
+    allAccountContributionRatios = [],
+    currentUserId = null,
     viewerName = null,
     initialRecurringSectionExpanded = false,
     initialSavingsSectionExpanded = false,
@@ -340,6 +349,45 @@ export default function Dashboard({
         if (scopeAccountId === "all" || scopeAccountId === "my-money") return initialSavingsAllocations;
         return initialSavingsAllocations.filter((s) => s.accountId === scopeAccountId);
     }, [initialSavingsAllocations, scopeAccountId]);
+
+    const mySharedAccountContributions = useMemo(() => {
+        const ratioByAccountId = new Map(myContributionRatios.map((r) => [r.accountId, r]));
+        return accounts
+            .filter((a) => a.type === "SHARED" && ratioByAccountId.has(a.id))
+            .map((a) => ({ accountName: a.name, amount: ratioByAccountId.get(a.id)!.myAmount }));
+    }, [accounts, myContributionRatios]);
+
+    const myPrivateSpend = useMemo(
+        () =>
+            initialTransactions
+                .filter((t) => t.account.type === "PRIVATE" && t.amount > 0)
+                .reduce((sum, t) => sum + t.amount, 0),
+        [initialTransactions]
+    );
+
+    const sharedAccountSplits = useMemo(() => {
+        const membersByAccountId = new Map(allAccountContributionRatios.map((r) => [r.accountId, r.members]));
+        return accounts
+            .filter((a) => a.type === "SHARED")
+            .map((account) => {
+                const members = membersByAccountId.get(account.id) ?? [];
+                const transactionsForAccount = initialTransactions
+                    .filter((t) => t.accountId === account.id && t.amount > 0)
+                    .map((t) => ({ category: t.category, amount: t.amount }));
+                const splits = computeAccountMemberSplit({ transactions: transactionsForAccount, members });
+                const hasAllMembersContributing = members.length > 0 && members.every((m) => m.ratio > 0);
+                return { account, splits, hasAllMembersContributing };
+            });
+    }, [accounts, allAccountContributionRatios, initialTransactions]);
+
+    // Show every shared account's split when viewing "all"/"my-money"; when the
+    // user has filtered to one specific shared account, show only that
+    // account's card (it reads better scoped, and avoids duplicating the same
+    // breakdown they already filtered down to see).
+    const visibleSharedAccountSplits = useMemo(() => {
+        if (scopeAccountId === "all" || scopeAccountId === "my-money") return sharedAccountSplits;
+        return sharedAccountSplits.filter((s) => s.account.id === scopeAccountId);
+    }, [sharedAccountSplits, scopeAccountId]);
 
     const chartColors = [
         '#007AFF', '#FF9500', '#FF2D55', '#5856D6',
@@ -745,6 +793,21 @@ export default function Dashboard({
                     )}
                 </motion.div>
 
+                {budgetSettings && budgetSettings.monthlyIncome > 0 && (
+                    <motion.div
+                        initial={sectionEnter}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={sectionDelay(0.15)}
+                        className="mb-6"
+                    >
+                        <PersonalIncomeSummaryCard
+                            netIncome={budgetSettings.monthlyIncome}
+                            contributions={mySharedAccountContributions}
+                            privateSpend={myPrivateSpend}
+                        />
+                    </motion.div>
+                )}
+
                 {perAccountBreakdownVisible ? (
                     <motion.div
                         data-testid="dashboard-per-account-section"
@@ -874,6 +937,26 @@ export default function Dashboard({
                         )}
                     </AnimatePresence>
                 </motion.div>
+
+                {currentUserId && visibleSharedAccountSplits.length > 0 && (
+                    <div className="space-y-3 mb-6">
+                        {visibleSharedAccountSplits.map(({ account, splits, hasAllMembersContributing }, index) => (
+                            <motion.div
+                                key={account.id}
+                                initial={sectionEnter}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={sectionDelay(0.36 + index * 0.02)}
+                            >
+                                <SharedSplitCard
+                                    accountName={account.name}
+                                    splits={splits}
+                                    currentUserId={currentUserId}
+                                    hasAllMembersContributing={hasAllMembersContributing}
+                                />
+                            </motion.div>
+                        ))}
+                    </div>
+                )}
 
                 {budgetSettings && budgetSettings.monthlyIncome > 0 && (
                     <motion.div

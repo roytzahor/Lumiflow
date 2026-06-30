@@ -19,6 +19,7 @@ import {
   acceptAccountInvite,
   getInvitePreview,
   upsertContributionPlan,
+  getAccountMemberContributions,
   removeAccountMember,
   updateSettingsSectionExpanded,
   addIncomeEntry,
@@ -114,6 +115,10 @@ export default function SettingsContent({
   const [shareSheetLoading, setShareSheetLoading] = useState(false);
   const [infoSheetAccount, setInfoSheetAccount] = useState<SettingsAccount | null>(null);
   const [infoRemovingUserId, setInfoRemovingUserId] = useState<string | null>(null);
+  const [memberContributions, setMemberContributions] = useState<
+    Array<{ userId: string; name: string; monthlyAmount: number; ratio: number }>
+  >([]);
+  const [isLoadingContributions, setIsLoadingContributions] = useState(false);
   const [pendingInviteToken, setPendingInviteToken] = useState<string | null>(null);
   const [invitePreview, setInvitePreview] = useState<{
     accountName: string;
@@ -349,11 +354,22 @@ export default function SettingsContent({
 
   const openAccountInfoSheet = (account: SettingsAccount) => {
     setInfoSheetAccount(account);
+    if (account.type === 'SHARED') {
+      setIsLoadingContributions(true);
+      void getAccountMemberContributions(account.id).then((rows) => {
+        setMemberContributions(rows);
+        setIsLoadingContributions(false);
+      });
+    } else {
+      setMemberContributions([]);
+    }
   };
 
   const closeAccountInfoSheet = () => {
     if (infoRemovingUserId) return;
     setInfoSheetAccount(null);
+    setMemberContributions([]);
+    setIsLoadingContributions(false);
   };
 
   const handleRemoveMemberFromInfo = async (memberUserId: string) => {
@@ -1225,7 +1241,8 @@ export default function SettingsContent({
         isOpen={infoSheetAccount !== null}
         accountName={infoSheetAccount?.name ?? ''}
         accountType={infoSheetAccount?.type ?? 'PRIVATE'}
-        monthlyIncome={infoSheetAccount ? contributionPlansByAccount[infoSheetAccount.id] ?? infoSheetAccount.income ?? 0 : 0}
+        memberContributions={memberContributions}
+        isLoadingContributions={isLoadingContributions}
         members={infoSheetAccount?.members ?? []}
         currentUserId={currentUser?.id ?? ''}
         removingUserId={infoRemovingUserId}

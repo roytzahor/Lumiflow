@@ -126,6 +126,22 @@ export type MyMoneyBreakdown = {
   freeBalance: number;
 };
 
+/** One member's ratio + pledged amount for a specific shared account. */
+export type AccountMemberRatio = {
+  userId: string;
+  name: string;
+  monthlyAmount: number;
+  /** monthlyAmount / sum of all members' monthlyAmount for this account. 0 if account total is 0. */
+  ratio: number;
+};
+
+/** Per-category spend split across all members of one shared account, for one month. */
+export type CategoryMemberSplit = {
+  category: string;
+  total: number;
+  members: Array<{ userId: string; name: string; amount: number; ratio: number }>;
+};
+
 /** Savings allocation row for lists / history (dates from server are ISO strings in JSON). */
 export type SavingsAllocationListItem = {
   id: string;

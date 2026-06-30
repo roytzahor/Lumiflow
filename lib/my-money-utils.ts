@@ -1,4 +1,11 @@
-import type { ContributionRatio, MonthlyIncomeTotal, MyMoneyBreakdown, MyMoneyCategory } from '@/lib/types';
+import type {
+  AccountMemberRatio,
+  CategoryMemberSplit,
+  ContributionRatio,
+  MonthlyIncomeTotal,
+  MyMoneyBreakdown,
+  MyMoneyCategory,
+} from '@/lib/types';
 
 export type TransactionFlat = {
   accountId: string;
@@ -89,4 +96,48 @@ export function computeMyMoneyBreakdown(params: {
     totalAttributedSavingsAllocations,
     freeBalance,
   };
+}
+
+/**
+ * Computes, for ALL members of a shared account, their attributed share of
+ * each spending category for one month — e.g. "Food: ₪300 total — Roy ₪200
+ * (67%), Dana ₪100 (33%)".
+ *
+ * Unlike `computeMyMoneyBreakdown` (which attributes spend to a single user),
+ * this fans a category's total out across every member by their contribution
+ * ratio. If no members are passed, or every member's ratio is 0 (nobody has
+ * pledged a contribution yet), categories are still returned with the
+ * correct `total` but an empty `members` array — no division by zero, no
+ * phantom attribution.
+ */
+export function computeAccountMemberSplit(params: {
+  /** Transactions already filtered to ONE account and ONE month. */
+  transactions: Array<{ category: string; amount: number }>;
+  /** All members of that account, each with their ratio (sums to 1 across members when account total > 0). */
+  members: AccountMemberRatio[];
+}): CategoryMemberSplit[] {
+  const { transactions, members } = params;
+
+  const categoryTotals = new Map<string, number>();
+  for (const t of transactions) {
+    if (t.amount <= 0) continue;
+    categoryTotals.set(t.category, (categoryTotals.get(t.category) ?? 0) + t.amount);
+  }
+
+  const hasContributingMembers = members.some((m) => m.ratio > 0);
+
+  return Array.from(categoryTotals.entries())
+    .map(([category, total]) => ({
+      category,
+      total,
+      members: hasContributingMembers
+        ? members.map((m) => ({
+            userId: m.userId,
+            name: m.name,
+            amount: total * m.ratio,
+            ratio: m.ratio,
+          }))
+        : [],
+    }))
+    .sort((a, b) => b.total - a.total);
 }

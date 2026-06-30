@@ -154,6 +154,11 @@ export default function AccountPopup({
                     <option value="PRIVATE">פרטי</option>
                     <option value="SHARED">משותף</option>
                   </select>
+                  {values.type === 'SHARED' ? (
+                    <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">
+                      בחשבון משותף, כל חבר מגדיר את התרומה שלו בנפרד.
+                    </p>
+                  ) : null}
                 </label>
 
                 <label className="block space-y-1">
@@ -168,7 +173,11 @@ export default function AccountPopup({
                 </label>
 
                 <label className="block space-y-1">
-                  <span className="text-xs text-ios-subtle dark:text-ios-dark-subtle">תרומה חודשית לחשבון (₪)</span>
+                  <span className="text-xs text-ios-subtle dark:text-ios-dark-subtle">
+                    {values.type === 'SHARED'
+                      ? 'ההעברה החודשית שלי לחשבון המשותף (₪)'
+                      : 'הכנסה חודשית לחשבון זה (₪)'}
+                  </span>
                   <input
                     type="text"
                     inputMode="numeric"
@@ -183,7 +192,9 @@ export default function AccountPopup({
                     dir="ltr"
                   />
                   <p className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">
-                    ההכנסה החודשית של החשבון מחושבת אוטומטית מסכום התרומות של כל חברי החשבון.
+                    {values.type === 'SHARED'
+                      ? 'זהו הסכום שאתה מעביר מההכנסה האישית שלך לקופה המשותפת. סכום החשבון יחושב משילוב התרומות של כל החברים.'
+                      : 'הסכום הזה הוא ההכנסה החודשית הצפויה לחשבון הפרטי הזה — לדוגמה משכורת או הכנסה קבועה אחרת.'}
                   </p>
                 </label>
               </div>
