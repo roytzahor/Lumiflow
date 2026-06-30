@@ -32,19 +32,45 @@ export const requireUserId = cache(async () => {
   });
 });
 
-/** Budget defaults + seeded categories/labels at most once per user per request. */
+/**
+ * Budget defaults + seeded categories/labels at most once per user per request.
+ *
+ * Uses upsert/skipDuplicates rather than check-then-create: `cache()` only
+ * dedupes within a single request, so two concurrent requests for a brand-new
+ * user (e.g. two tabs on first load) can both observe "missing" before either
+ * write commits. A plain create would then throw on the second writer.
+ *
+ * `upsert` alone isn't a full guarantee here: under genuinely simultaneous
+ * writers it can still surface the underlying unique-constraint violation
+ * (verified empirically against Postgres, not just in theory) rather than
+ * silently resolving to the existing row. Treat that specific violation as
+ * success — a `BudgetSettings` row existing is the only postcondition this
+ * function promises, and a concurrent writer satisfying that is fine.
+ */
+function isUniqueConstraintViolation(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error as { code?: string }).code === 'P2002'
+  );
+}
+
 export const ensureUserBootstrap = cache(async (userId: string) => {
-  const budgetExists = await prisma.budgetSettings.findUnique({ where: { userId } });
-  if (!budgetExists) {
-    await prisma.budgetSettings.create({
-      data: {
+  try {
+    await prisma.budgetSettings.upsert({
+      where: { userId },
+      create: {
         userId,
         monthlyIncome: 0,
         needsPercent: 50,
         wantsPercent: 30,
         savingsPercent: 20,
       },
+      update: {},
     });
+  } catch (error) {
+    if (!isUniqueConstraintViolation(error)) throw error;
   }
 
   const categoryCount = await prisma.category.count({ where: { userId } });
@@ -55,6 +81,7 @@ export const ensureUserBootstrap = cache(async (userId: string) => {
         isCustom: false,
         userId,
       })),
+      skipDuplicates: true,
     });
   }
 
@@ -68,6 +95,7 @@ export const ensureUserBootstrap = cache(async (userId: string) => {
         isCustom: false,
         hidden: false,
       })),
+      skipDuplicates: true,
     });
   }
 });

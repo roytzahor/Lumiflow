@@ -31,8 +31,23 @@ export async function ensureDefaultWorkspace() {
       return { ok: true as const, createdAccount: false };
     }
 
-    let newAccountId = '';
-    await prisma.$transaction(async (tx) => {
+    // `Account` has no unique constraint tied to its owner, so a plain
+    // check-then-create here can't be guarded by a DB constraint the way
+    // duplicate categories/invites are: two concurrent requests for the same
+    // brand-new user (two tabs on first load, a retried request) would both
+    // see `memberCount === 0` and both succeed, creating two default accounts.
+    // A Postgres advisory lock scoped to this transaction serializes the
+    // critical section per-user without any schema change: the second
+    // transaction blocks until the first commits, then its re-check inside
+    // the lock correctly observes the already-created membership and skips.
+    const result = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${userId}))`;
+
+      const recheckedCount = await tx.accountMember.count({ where: { userId } });
+      if (recheckedCount > 0) {
+        return { createdAccount: false, newAccountId: null as string | null };
+      }
+
       const personal = await tx.account.create({
         data: {
           name: 'החשבון האישי שלי',
@@ -40,7 +55,6 @@ export async function ensureDefaultWorkspace() {
           income: 0,
         },
       });
-      newAccountId = personal.id;
       await tx.accountMember.create({
         data: {
           userId,
@@ -52,11 +66,15 @@ export async function ensureDefaultWorkspace() {
         where: { id: userId },
         data: { onboardingCompletedAt: new Date() },
       });
+
+      return { createdAccount: true, newAccountId: personal.id };
     });
 
-    await recalculateAccountIncome(newAccountId);
+    if (result.newAccountId) {
+      await recalculateAccountIncome(result.newAccountId);
+    }
     deferRefreshAllViews(userId);
-    return { ok: true as const, createdAccount: true };
+    return { ok: true as const, createdAccount: result.createdAccount };
   } catch (error) {
     logServerDev('ensure_default_workspace_failed', error);
     return { ok: false as const, createdAccount: false };

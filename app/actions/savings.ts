@@ -109,8 +109,14 @@ export async function addSavingsAllocation(formData: FormData) {
 export async function updateSavingsAllocation(id: string, formData: FormData) {
   try {
     const userId = await requireUserId();
-    const existing = await prisma.savingsAllocation.findFirst({ where: { id, userId } });
+    const existing = await prisma.savingsAllocation.findUnique({
+      where: { id },
+      select: { account: { select: { members: { select: { userId: true } } } } },
+    });
     if (!existing) return { success: false, error: 'Not found' };
+    if (!existing.account.members.some((m) => m.userId === userId)) {
+      return { success: false, error: 'Forbidden' };
+    }
 
     const amount = parseFloat(String(formData.get('amount') ?? '0'));
     const label = String(formData.get('label') ?? '').trim();
@@ -148,8 +154,15 @@ export async function updateSavingsAllocation(id: string, formData: FormData) {
 export async function deleteSavingsAllocation(id: string) {
   try {
     const userId = await requireUserId();
-    const deleted = await prisma.savingsAllocation.deleteMany({ where: { id, userId } });
-    if (deleted.count === 0) return { success: false, error: 'Not found' };
+    const existing = await prisma.savingsAllocation.findUnique({
+      where: { id },
+      select: { account: { select: { members: { select: { userId: true } } } } },
+    });
+    if (!existing) return { success: false, error: 'Not found' };
+    if (!existing.account.members.some((m) => m.userId === userId)) {
+      return { success: false, error: 'Forbidden' };
+    }
+    await prisma.savingsAllocation.delete({ where: { id } });
     refreshAllViews(userId);
     return { success: true };
   } catch {

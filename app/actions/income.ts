@@ -82,8 +82,14 @@ export async function getIncomeEntries(accountId?: string, year?: number, month?
 export async function deleteIncomeEntry(id: string) {
   try {
     const userId = await requireUserId();
-    const entry = await prisma.incomeEntry.findFirst({ where: { id, userId } });
+    const entry = await prisma.incomeEntry.findUnique({
+      where: { id },
+      select: { account: { select: { members: { select: { userId: true } } } } },
+    });
     if (!entry) return { success: false, error: 'רשומה לא נמצאה' };
+    if (!entry.account.members.some((m) => m.userId === userId)) {
+      return { success: false, error: 'אין הרשאה למחוק רשומה זו' };
+    }
     await prisma.incomeEntry.delete({ where: { id } });
     refreshAllViews(userId);
     return { success: true };
