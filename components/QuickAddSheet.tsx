@@ -3,16 +3,16 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence, useDragControls, PanInfo } from 'framer-motion';
-import { X, Calendar, Plus, Search, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 import LiquidToggle from './ui/LiquidToggle';
+import Money from '@/components/ui/Money';
+import CategoryPickerSection from '@/components/CategoryPickerSection';
 import { addCategory, addTransaction } from '@/app/actions';
 import { useHaptic } from '@/hooks/useHaptic';
 import { detectAllCategoryMatches } from '@/lib/category-dictionary';
 import { formatDateInputForDisplay, getTodayDateInputValue, toDateInputValueFromUtc } from '@/lib/date-only';
-import { formatIlsAmount } from '@/lib/formatters';
 import type { TransactionListItem, AccountSummary, Category, RecurringMonthPolicy } from '@/lib/types';
-import { CATEGORY_EMOJIS } from '@/lib/category-emojis';
 import { splitInstallmentAmounts } from '@/lib/installment-utils';
 
 interface QuickAddSheetProps {
@@ -553,99 +553,24 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                             </div>
 
                             {/* Category */}
-                            <div className="bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card mb-4 p-4">
-                                <p className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle uppercase tracking-wider mb-3">קטגוריה</p>
-                                <div className="flex gap-2 mb-3">
-                                    <input
-                                        type="text"
-                                        placeholder="שם קטגוריה חדשה"
-                                        value={newCategoryName}
-                                        onChange={(e) => setNewCategoryName(e.target.value)}
-                                        className="flex-1 bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-3.5 py-2.5 text-sm text-ios-text dark:text-ios-dark-text placeholder:text-ios-subtle dark:placeholder:text-ios-dark-subtle focus:outline-none focus:ring-2 focus:ring-ios-blue/30"
-                                    />
-                                    <input
-                                        type="text"
-                                        value={newCategoryEmojiInput}
-                                        onChange={(e) => setNewCategoryEmojiInput(e.target.value)}
-                                        placeholder="בחר/י או הקלד/י 😀"
-                                        list="quickadd-category-emoji-list"
-                                        className="w-20 text-center bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-1 py-2.5 text-sm text-ios-text dark:text-ios-dark-text focus:outline-none focus:ring-2 focus:ring-ios-blue/30"
-                                        aria-label="בחירת אימוג׳י לקטגוריה"
-                                    />
-                                    <datalist id="quickadd-category-emoji-list">
-                                        {CATEGORY_EMOJIS.map((emoji) => (
-                                            <option key={emoji} value={emoji}>
-                                                {emoji}
-                                            </option>
-                                        ))}
-                                    </datalist>
-                                    <button
-                                        type="button"
-                                        onClick={() => void handleCreateCategory()}
-                                        disabled={isAddingCategory}
-                                        className="w-11 shrink-0 bg-ios-blue text-white rounded-xl flex items-center justify-center disabled:opacity-50"
-                                        aria-label="הוספת קטגוריה"
-                                    >
-                                        <Plus className="w-5 h-5" />
-                                    </button>
-                                </div>
-                                <div className="flex gap-2 mb-2">
-                                    <div className="flex-1 relative">
-                                        <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-ios-subtle dark:text-ios-dark-subtle" aria-hidden="true" />
-                                        <input
-                                            type="text"
-                                            value={categorySearch}
-                                            onChange={(e) => setCategorySearch(e.target.value)}
-                                            placeholder="חיפוש קטגוריה קיימת"
-                                            className="w-full bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl py-2.5 pe-9 ps-3 text-sm text-ios-text dark:text-ios-dark-text placeholder:text-ios-subtle dark:placeholder:text-ios-dark-subtle focus:outline-none focus:ring-2 focus:ring-ios-blue/30"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1" style={{ WebkitOverflowScrolling: 'touch' }}>
-                                    {filteredCategories.map((cat) => (
-                                        <button
-                                            key={cat.id}
-                                            type="button"
-                                            onClick={() => {
-                                                setCategory(cat.name);
-                                                setIsCategoryTouched(true);
-                                                trigger(10);
-                                            }}
-                                            className={`flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-[background-color,color,box-shadow] ${
-                                                category === cat.name
-                                                    ? 'bg-ios-blue text-white shadow-sm'
-                                                    : 'bg-ios-gray-6 dark:bg-ios-dark-fill text-ios-subtle dark:text-ios-dark-subtle'
-                                            }`}
-                                        >
-                                            <span>{cat.icon}</span>
-                                            <span>{cat.name}</span>
-                                        </button>
-                                    ))}
-                                    {!availableCategories.some((c) => c.name === 'כללי') && (
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setCategory('כללי');
-                                                setIsCategoryTouched(true);
-                                            }}
-                                            className={`flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-[background-color,color,box-shadow] ${
-                                                category === 'כללי'
-                                                    ? 'bg-ios-blue text-white shadow-sm'
-                                                    : 'bg-ios-gray-6 dark:bg-ios-dark-fill text-ios-subtle dark:text-ios-dark-subtle'
-                                            }`}
-                                        >
-                                            <span>✨</span>
-                                            <span>כללי</span>
-                                        </button>
-                                    )}
-                                </div>
-                                {filteredCategories.length === 0 && (
-                                    <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle mt-2">
-                                        לא נמצאו קטגוריות תואמות לחיפוש. ניתן להוסיף קטגוריה חדשה בשורה למעלה.
-                                    </p>
-                                )}
-                            </div>
+                            <CategoryPickerSection
+                                categories={filteredCategories}
+                                allCategories={availableCategories}
+                                selectedCategory={category}
+                                categorySearch={categorySearch}
+                                newCategoryName={newCategoryName}
+                                newCategoryEmojiInput={newCategoryEmojiInput}
+                                isAddingCategory={isAddingCategory}
+                                onSelectCategory={(name) => {
+                                    setCategory(name);
+                                    setIsCategoryTouched(true);
+                                    trigger(10);
+                                }}
+                                onSearchChange={setCategorySearch}
+                                onNewNameChange={setNewCategoryName}
+                                onNewEmojiChange={setNewCategoryEmojiInput}
+                                onConfirmAddCategory={() => void handleCreateCategory()}
+                            />
 
                             {isEditingInstallment && initialData && (
                                 <div className="bg-ios-blue/8 dark:bg-ios-blue/15 rounded-2xl shadow-card mb-4 p-4">
@@ -693,16 +618,13 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                     />
                                     {installmentPreviewParts && installmentPreviewParts.length > 0 && (
                                         <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle mt-2">
-                                            סכום לכל חודש: ₪{formatIlsAmount(installmentPreviewParts[0] ?? 0)}
+                                            סכום לכל חודש: <Money amount={installmentPreviewParts[0] ?? 0} signed={false} />
                                             {installmentPreviewParts.length > 1 &&
                                                 installmentPreviewParts[0] !==
                                                     installmentPreviewParts[installmentPreviewParts.length - 1] && (
                                                     <span>
                                                         {' '}
-                                                        – ₪
-                                                        {formatIlsAmount(
-                                                            installmentPreviewParts[installmentPreviewParts.length - 1] ?? 0
-                                                        )}
+                                                        – <Money amount={installmentPreviewParts[installmentPreviewParts.length - 1] ?? 0} signed={false} />
                                                     </span>
                                                 )}
                                         </p>

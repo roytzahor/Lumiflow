@@ -20,6 +20,9 @@ export async function loadDashboardPageData(year: number, month: number) {
   const accountIds = await getUserAccountIds(userId);
   const recurringRows = await fetchActiveRecurringForAccounts(accountIds);
 
+  const prevMonth = month === 0 ? 11 : month - 1;
+  const prevYear = month === 0 ? year - 1 : year;
+
   const [
     transactions,
     categories,
@@ -31,6 +34,7 @@ export async function loadDashboardPageData(year: number, month: number) {
     savingsAllocations,
     savingsLabels,
     budgetSettings,
+    prevTransactions,
   ] = await Promise.all([
     getTransactions('All', year, month, { recurringRows }),
     getCategories(),
@@ -42,7 +46,11 @@ export async function loadDashboardPageData(year: number, month: number) {
     getSavingsAllocations(year, month),
     getSavingsLabels(),
     getBudgetSettings(),
+    getTransactions('All', prevYear, prevMonth),
   ]);
+
+  // No recurringRows passed → no projected items; sum all returned amounts directly.
+  const prevMonthTotal = prevTransactions.reduce((s, t) => s + t.amount, 0);
 
   return {
     transactions,
@@ -56,5 +64,6 @@ export async function loadDashboardPageData(year: number, month: number) {
     savingsAllocations,
     savingsLabels,
     budgetSettings,
+    prevMonthTotal,
   };
 }

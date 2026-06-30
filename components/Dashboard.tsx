@@ -22,6 +22,7 @@ const RecurringEditSheet = dynamic(() => import("./RecurringEditSheet"), { ssr: 
 const SavingsAllocationSheet = dynamic(() => import("./SavingsAllocationSheet"), { ssr: false });
 const SavingsAllocationCard = dynamic(() => import("./SavingsAllocationCard"), { ssr: false });
 const BudgetHealthCard = dynamic(() => import("./BudgetHealthCard"), { ssr: false });
+const SpendingTrendCard = dynamic(() => import("./SpendingTrendCard"), { ssr: false });
 const PieChart = dynamic(() => import("./PieChart"), {
     ssr: false,
     loading: () => (
@@ -65,6 +66,7 @@ interface DashboardProps {
     initialSpendingSectionExpanded?: boolean;
     welcomeTourCompletedAt?: Date | string | null;
     budgetSettings?: { monthlyIncome: number; needsPercent: number; wantsPercent: number; savingsPercent: number } | null;
+    prevMonthTotal?: number;
 }
 
 function getGreeting(now: Date): string {
@@ -206,6 +208,7 @@ export default function Dashboard({
     initialSpendingSectionExpanded = true,
     welcomeTourCompletedAt = null,
     budgetSettings = null,
+    prevMonthTotal = 0,
 }: DashboardProps) {
     const [isSheetOpen, setIsSheetOpen] = useState(false);
     const [savingsSheetOpen, setSavingsSheetOpen] = useState(false);
@@ -835,6 +838,11 @@ export default function Dashboard({
                                 className="overflow-hidden"
                             >
                                 <div className="pt-3">
+                                    {(prevMonthTotal > 0 || totalSpent > 0) && (
+                                        <div className="mb-3">
+                                            <SpendingTrendCard currentSpent={totalSpent} prevMonthTotal={prevMonthTotal} />
+                                        </div>
+                                    )}
                                     <div className="relative overflow-hidden rounded-2xl">
                                         <div
                                             className={
