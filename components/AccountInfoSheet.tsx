@@ -4,12 +4,21 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Info, Trash2, X } from "lucide-react";
 import type { AccountMemberSummary } from "@/app/actions";
 import type { AccountType } from "@/lib/types";
+import Money from "@/components/ui/Money";
+
+interface MemberContribution {
+  userId: string;
+  name: string;
+  monthlyAmount: number;
+  ratio: number;
+}
 
 interface AccountInfoSheetProps {
   isOpen: boolean;
   accountName: string;
   accountType: AccountType;
-  monthlyIncome: number;
+  memberContributions: MemberContribution[];
+  isLoadingContributions: boolean;
   members: AccountMemberSummary[];
   currentUserId: string;
   removingUserId: string | null;
@@ -21,7 +30,8 @@ export default function AccountInfoSheet({
   isOpen,
   accountName,
   accountType,
-  monthlyIncome,
+  memberContributions,
+  isLoadingContributions,
   members,
   currentUserId,
   removingUserId,
@@ -82,12 +92,57 @@ export default function AccountInfoSheet({
                 </button>
               </div>
 
-              <div className="rounded-xl bg-ios-gray-6 dark:bg-ios-dark-fill px-3 py-2.5">
-                <p className="text-xs font-medium text-ios-subtle dark:text-ios-dark-subtle">הכנסה חודשית (סכום תרומות)</p>
-                <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text">
-                  ₪{Math.round(monthlyIncome).toLocaleString("he-IL")}
-                </p>
-              </div>
+              {accountType === "SHARED" ? (
+                <div>
+                  <p className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle mb-2">תרומות חודשיות</p>
+                  {isLoadingContributions ? (
+                    <div className="rounded-xl bg-ios-gray-6 dark:bg-ios-dark-fill px-3 py-2.5">
+                      <div className="h-4 w-2/3 rounded bg-ios-gray-5 dark:bg-ios-dark-subtle/30 animate-pulse" />
+                    </div>
+                  ) : memberContributions.length === 0 ? (
+                    <div className="rounded-xl bg-ios-gray-6 dark:bg-ios-dark-fill px-3 py-2.5">
+                      <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle">
+                        אף אחד עדיין לא הגדיר תרומה חודשית לחשבון זה
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <ul className="space-y-1.5">
+                        {memberContributions.map((c) => {
+                          const isMe = c.userId === currentUserId;
+                          return (
+                            <li
+                              key={c.userId}
+                              className={`flex items-center justify-between gap-2 rounded-xl px-3 py-2 ${
+                                isMe ? "bg-ios-blue/10" : "bg-ios-gray-6 dark:bg-ios-dark-fill"
+                              }`}
+                            >
+                              <p className="text-sm font-medium text-ios-text dark:text-ios-dark-text truncate">
+                                {c.name}
+                                {isMe ? " (אתה)" : ""}
+                              </p>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className="text-[11px] text-ios-subtle dark:text-ios-dark-subtle">
+                                  {Math.round(c.ratio * 100)}%
+                                </span>
+                                <Money amount={c.monthlyAmount} signed={false} className="text-sm font-semibold" />
+                              </div>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                      <div className="flex items-center justify-between gap-2 rounded-xl border border-gray-200/80 dark:border-white/10 px-3 py-2">
+                        <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text">סה״כ</p>
+                        <Money
+                          amount={memberContributions.reduce((sum, c) => sum + c.monthlyAmount, 0)}
+                          signed={false}
+                          className="text-sm font-semibold"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : null}
 
               <div>
                 <p className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle mb-2">
