@@ -28,10 +28,11 @@ import {
   deleteSavingsLabel,
   setSavingsLabelHidden,
   deleteCurrentUserAccount,
+  updateBudgetSettings,
 } from '../actions';
 import type { SettingsSectionKey } from '../actions';
 import type { AccountMemberSummary } from '../actions';
-import { User, Pencil, Trash2, Plus, Share2, LogOut, Copy, SendHorizontal, Info, ChevronDown, Landmark, TrendingUp, PiggyBank, Eye, EyeOff, AlertTriangle } from 'lucide-react';
+import { Pencil, Trash2, Plus, Share2, LogOut, Copy, SendHorizontal, Info, ChevronDown, Landmark, TrendingUp, PiggyBank, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import type { AccountSummary, Category, IncomeEntryItem, SavingsLabel } from '@/lib/types';
 import AccountPopup from '@/components/AccountPopup';
 import ProfileEditSheet from '@/components/ProfileEditSheet';
@@ -41,6 +42,8 @@ import { cn } from '@/lib/utils';
 import SettingsCollapsibleSection from '@/components/settings/SettingsCollapsibleSection';
 import AppearanceSection from '@/components/settings/AppearanceSection';
 import CategoriesSection from '@/components/settings/CategoriesSection';
+import BudgetSection from '@/components/settings/BudgetSection';
+import ProfileSection from '@/components/settings/ProfileSection';
 
 type SettingsAccount = AccountSummary & { members?: AccountMemberSummary[] };
 
@@ -56,6 +59,12 @@ interface SettingsContentProps {
   initialAccounts: SettingsAccount[];
   initialContributionPlans: Array<{ accountId: string; monthlyAmount: number }>;
   initialSavingsLabels: SavingsLabel[];
+  initialBudgetSettings?: {
+    monthlyIncome: number;
+    needsPercent: number;
+    wantsPercent: number;
+    savingsPercent: number;
+  } | null;
   currentUser: {
     id: string;
     name: string | null;
@@ -73,6 +82,7 @@ export default function SettingsContent({
   initialAccounts,
   initialContributionPlans,
   initialSavingsLabels,
+  initialBudgetSettings,
   currentUser,
 }: SettingsContentProps) {
   const router = useRouter();
@@ -139,6 +149,7 @@ export default function SettingsContent({
   const [deletingIncomeId, setDeletingIncomeId] = useState<string | null>(null);
   const [showDeleteAccountDialog, setShowDeleteAccountDialog] = useState(false);
   const [deleteAccountWorking, setDeleteAccountWorking] = useState(false);
+  const [isBudgetSaving, setIsBudgetSaving] = useState(false);
 
   const toggleSettingsSection = (key: SettingsSectionKey) => {
     const next = !settingsSectionOpenRef.current[key];
@@ -629,6 +640,19 @@ export default function SettingsContent({
     }
   };
 
+  const handleBudgetSave = async (monthlyIncome: number) => {
+    setIsBudgetSaving(true);
+    const res = await updateBudgetSettings({
+      monthlyIncome,
+      needsPercent: initialBudgetSettings?.needsPercent ?? 50,
+      wantsPercent: initialBudgetSettings?.wantsPercent ?? 30,
+      savingsPercent: initialBudgetSettings?.savingsPercent ?? 20,
+    });
+    setIsBudgetSaving(false);
+    if (res?.success) toast.success('תקציב עודכן');
+    else toast.error('שמירת התקציב נכשלה');
+  };
+
   const createInviteFromShareSheet = async () => {
     if (!shareSheetAccount) return;
     setShareSheetLoading(true);
@@ -645,44 +669,14 @@ export default function SettingsContent({
 
   return (
     <div className="space-y-6 animate-fade-in pb-8">
-      <SettingsCollapsibleSection
+      <ProfileSection
+        name={currentUser?.name ?? null}
+        email={currentUser?.email ?? ''}
         open={settingsSectionOpen.profile}
         onToggle={() => toggleSettingsSection('profile')}
-        title="פרופיל משתמש"
-        headerStart={
-          <div className="w-8 h-8 bg-ios-blue/12 rounded-lg flex items-center justify-center shrink-0">
-            <User className="w-4 h-4 text-ios-blue" aria-hidden />
-          </div>
-        }
-      >
-        <div className="space-y-4">
-          <div className="rounded-xl bg-ios-gray-6 dark:bg-ios-dark-fill px-4 py-3">
-            <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle">שם</p>
-            <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text">{currentUser?.name?.trim() || 'לא הוגדר עדיין'}</p>
-            <div className="my-2 border-t border-gray-200/70 dark:border-white/10" />
-            <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle">אימייל</p>
-            <p dir="ltr" className="text-[13px] text-ios-text dark:text-ios-dark-text">{currentUser?.email ?? '—'}</p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <button
-              data-testid="settings-edit-profile"
-              type="button"
-              onClick={saveProfile}
-              className="w-full py-2.5 rounded-xl bg-ios-blue text-white text-sm font-semibold"
-            >
-              עריכת פרטים
-            </button>
-            <button
-              type="button"
-              onClick={savePassword}
-              className="w-full py-2.5 rounded-xl bg-ios-indigo text-white text-sm font-semibold"
-            >
-              עדכון סיסמה
-            </button>
-          </div>
-        </div>
-      </SettingsCollapsibleSection>
+        onEditProfile={saveProfile}
+        onEditPassword={savePassword}
+      />
 
       <AppearanceSection
         themePreference={themePreference}
@@ -690,6 +684,14 @@ export default function SettingsContent({
         open={settingsSectionOpen.appearance}
         onToggle={() => toggleSettingsSection('appearance')}
         onThemeChange={handleThemeChange}
+      />
+
+      <BudgetSection
+        initialMonthlyIncome={initialBudgetSettings?.monthlyIncome ?? 0}
+        open={true}
+        onToggle={() => {}}
+        onSave={handleBudgetSave}
+        isSaving={isBudgetSaving}
       />
 
       <SettingsCollapsibleSection

@@ -4,6 +4,7 @@ import {
   getCurrentUserProfile,
   getContributionPlans,
   getSavingsLabels,
+  getBudgetSettings,
 } from '../actions';
 import SettingsContent from './SettingsContent';
 import BottomNav from '@/components/BottomNav';
@@ -11,12 +12,13 @@ import { redirectToOnboardingIfNeeded } from '@/lib/onboarding';
 
 export default async function SettingsPage() {
   await redirectToOnboardingIfNeeded();
-  const [categories, accounts, contributionPlans, currentUser, savingsLabels] = await Promise.all([
+  const [categories, accounts, contributionPlans, currentUser, savingsLabels, budgetSettings] = await Promise.all([
     getCategories(),
     getAccountsWithMembersForSettings(),
     getContributionPlans(),
     getCurrentUserProfile(),
     getSavingsLabels(),
+    getBudgetSettings(),
   ]);
 
   return (
@@ -37,6 +39,7 @@ export default async function SettingsPage() {
             initialContributionPlans={contributionPlans}
             initialSavingsLabels={savingsLabels}
             currentUser={currentUser}
+            initialBudgetSettings={budgetSettings ?? null}
           />
 
           {/* Footer */}
