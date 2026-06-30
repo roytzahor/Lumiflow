@@ -95,32 +95,42 @@ export default function RecurringEditSheet({
     formData.append('category', category);
     formData.append('monthPolicy', monthPolicy);
 
-    const res = await updateRecurringTransaction(recurring.id, formData);
-    setIsSubmitting(false);
-    if (!res.success) {
-      toast.error('שמירה נכשלה. נסה שוב.');
-      return;
-    }
+    try {
+      const res = await updateRecurringTransaction(recurring.id, formData);
+      if (!res.success) {
+        toast.error(res.error || 'שמירה נכשלה. נסה שוב.');
+        return;
+      }
 
-    toast.success('עודכן בהצלחה');
-    router.refresh();
-    onClose();
+      toast.success('עודכן בהצלחה');
+      router.refresh();
+      onClose();
+    } catch {
+      toast.error('אירעה תקלה בחיבור. בדקו את הרשת ונסו שוב.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleDelete = async () => {
     if (!recurring) return;
     setIsDeleting(true);
-    const { deleteRecurringTransaction } = await import('@/app/actions');
-    const res = await deleteRecurringTransaction(recurring.id);
-    setIsDeleting(false);
-    if (!res.success) {
-      toast.error('מחיקה נכשלה. נסה שוב.');
-      return;
-    }
+    try {
+      const { deleteRecurringTransaction } = await import('@/app/actions');
+      const res = await deleteRecurringTransaction(recurring.id);
+      if (!res.success) {
+        toast.error(res.error || 'מחיקה נכשלה. נסה שוב.');
+        return;
+      }
 
-    toast.success('נמחק בהצלחה');
-    router.refresh();
-    onClose();
+      toast.success('נמחק בהצלחה');
+      router.refresh();
+      onClose();
+    } catch {
+      toast.error('אירעה תקלה בחיבור. בדקו את הרשת ונסו שוב.');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const onDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {

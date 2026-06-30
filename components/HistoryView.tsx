@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
+import { Search } from "lucide-react";
 import TransactionFeed from "./TransactionFeed";
 import QuickAddSheet from "./QuickAddSheet";
 import RecurringEditSheet from "./RecurringEditSheet";
@@ -160,6 +161,7 @@ export default function HistoryView({
     const [showSavingsInFeed, setShowSavingsInFeed] = useState(true);
     const [savingsSheetOpen, setSavingsSheetOpen] = useState(false);
     const [editingSavings, setEditingSavings] = useState<SavingsAllocationListItem | null>(null);
+    const [searchQuery, setSearchQuery] = useState("");
     const { trigger } = useHaptic();
 
     useEffect(() => {
@@ -182,14 +184,23 @@ export default function HistoryView({
         return savingsAllocations.filter((s) => s.accountId === effectiveHistoryAccountId);
     }, [savingsAllocations, effectiveHistoryAccountId]);
 
+    const normalizedSearchQuery = searchQuery.trim().toLocaleLowerCase("he");
+
     const visibleTransactions = useMemo(() => {
         let result = showRecurring ? transactionsForView : transactionsForView.filter((t) => !t.isRecurring);
         if (selectedCategories.length > 0) {
             const set = new Set(selectedCategories);
             result = result.filter((t) => set.has(t.category));
         }
+        if (normalizedSearchQuery) {
+            result = result.filter((t) => {
+                const description = (t.description ?? "").toLocaleLowerCase("he");
+                const category = t.category.toLocaleLowerCase("he");
+                return description.includes(normalizedSearchQuery) || category.includes(normalizedSearchQuery);
+            });
+        }
         return result;
-    }, [transactionsForView, showRecurring, selectedCategories]);
+    }, [transactionsForView, showRecurring, selectedCategories, normalizedSearchQuery]);
 
     const visibleSavings = useMemo(() => {
         if (selectedCategories.length > 0) return [];
@@ -269,25 +280,38 @@ export default function HistoryView({
                     showSavingsSummaryRow={
                         selectedCategories.length === 0 && showSavingsInFeed && visibleSavingsTotal > 0
                     }
+                    searchQuery={searchQuery}
                     onAccountChange={setHistoryAccountFilter}
                     onToggleCategory={toggleCategoryFilter}
                     onClearCategories={clearCategoryFilters}
                     onToggleRecurring={toggleShowRecurring}
                     onToggleSavingsInFeed={() => setShowSavingsInFeed((v) => !v)}
+                    onSearchChange={setSearchQuery}
                 />
             </div>
 
             {/* Transactions */}
             <div className="px-5 mt-3 min-w-0">
-                <TransactionFeed
-                    transactions={visibleTransactions}
-                    categories={categories}
-                    onTransactionClick={handleTransactionClick}
-                    savingsAllocations={visibleSavings}
-                    savingsLabels={savingsLabels}
-                    showSavingsInFeed={showSavingsInFeed && selectedCategories.length === 0}
-                    onSavingsClick={handleSavingsClick}
-                />
+                {normalizedSearchQuery && visibleTransactions.length === 0 && visibleSavings.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-ios-subtle dark:text-ios-dark-subtle">
+                        <div className="w-14 h-14 bg-ios-gray-6 dark:bg-ios-dark-fill rounded-full flex items-center justify-center mb-3">
+                            <Search className="h-6 w-6 opacity-60" aria-hidden />
+                        </div>
+                        <p className="text-sm font-medium text-center px-4 text-ios-subtle dark:text-ios-dark-subtle">
+                            אין תוצאות עבור &quot;{searchQuery.trim()}&quot;
+                        </p>
+                    </div>
+                ) : (
+                    <TransactionFeed
+                        transactions={visibleTransactions}
+                        categories={categories}
+                        onTransactionClick={handleTransactionClick}
+                        savingsAllocations={visibleSavings}
+                        savingsLabels={savingsLabels}
+                        showSavingsInFeed={showSavingsInFeed && selectedCategories.length === 0}
+                        onSavingsClick={handleSavingsClick}
+                    />
+                )}
             </div>
 
             <BottomNav />

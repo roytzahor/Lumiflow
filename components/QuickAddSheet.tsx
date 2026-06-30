@@ -208,54 +208,64 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
         formData.append('monthPolicy', monthPolicy);
         formData.append('installmentCount', String(installmentCount));
 
-        let res;
-        if (initialData) {
-            const { updateTransaction } = await import('@/app/actions');
-            res = await updateTransaction(initialData.id, formData);
-        } else {
-            res = await addTransaction(formData);
-        }
-
-        setIsSubmitting(false);
-        if (res.success) {
-            toast.success(initialData ? 'עודכן בהצלחה' : 'נוסף בהצלחה');
-            router.refresh();
+        try {
+            let res;
             if (initialData) {
-                onClose();
+                const { updateTransaction } = await import('@/app/actions');
+                res = await updateTransaction(initialData.id, formData);
             } else {
-                setAmount('');
-                setDescription('');
-                setDate(getTodayDateInputValue());
-                setIsRecurring(false);
-                setInstallmentCount(1);
-                setMonthPolicy('ROLL_TO_LAST_DAY');
-                setAccountId(accounts.length > 1 ? '' : getDefaultAccountId(accounts));
-                setHasUserPickedAccount(accounts.length <= 1);
-                setCategory('כללי');
-                setIsCategoryTouched(false);
-                setCategorySearch('');
-                setAmountError('');
-                setAccountError('');
-                setDateError('');
-                requestAnimationFrame(() => amountInputRef.current?.focus());
+                res = await addTransaction(formData);
             }
-        } else {
-            toast.error('שמירה נכשלה. נסה שוב.');
+
+            if (res.success) {
+                toast.success(initialData ? 'עודכן בהצלחה' : 'נוסף בהצלחה');
+                router.refresh();
+                if (initialData) {
+                    onClose();
+                } else {
+                    setAmount('');
+                    setDescription('');
+                    setDate(getTodayDateInputValue());
+                    setIsRecurring(false);
+                    setInstallmentCount(1);
+                    setMonthPolicy('ROLL_TO_LAST_DAY');
+                    setAccountId(accounts.length > 1 ? '' : getDefaultAccountId(accounts));
+                    setHasUserPickedAccount(accounts.length <= 1);
+                    setCategory('כללי');
+                    setIsCategoryTouched(false);
+                    setCategorySearch('');
+                    setAmountError('');
+                    setAccountError('');
+                    setDateError('');
+                    requestAnimationFrame(() => amountInputRef.current?.focus());
+                }
+            } else {
+                toast.error(res.error || 'שמירה נכשלה. נסה שוב.');
+            }
+        } catch {
+            toast.error('אירעה תקלה בחיבור. בדקו את הרשת ונסו שוב.');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
     const handleDelete = async (scope: 'single' | 'installment_group' = 'single') => {
         if (!initialData) return;
         setIsDeleting(true);
-        const { deleteTransaction } = await import('@/app/actions');
-        const res = await deleteTransaction(initialData.id, scope);
-        setIsDeleting(false);
-        if (res.success) {
-            toast.success('נמחק בהצלחה');
-            router.refresh();
-            onClose();
-        } else {
-            toast.error('מחיקה נכשלה. נסה שוב.');
+        try {
+            const { deleteTransaction } = await import('@/app/actions');
+            const res = await deleteTransaction(initialData.id, scope);
+            if (res.success) {
+                toast.success('נמחק בהצלחה');
+                router.refresh();
+                onClose();
+            } else {
+                toast.error(res.error || 'מחיקה נכשלה. נסה שוב.');
+            }
+        } catch {
+            toast.error('אירעה תקלה בחיבור. בדקו את הרשת ונסו שוב.');
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -304,30 +314,35 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
 
         setIsAddingCategory(true);
         const resolvedIcon = newCategoryEmojiInput.trim() || '✨';
-        const res = await addCategory(candidate, resolvedIcon, 'expense');
-        setIsAddingCategory(false);
-        if (!res.success) {
-            toast.error(res.error ?? 'הוספת קטגוריה נכשלה');
-            return;
-        }
+        try {
+            const res = await addCategory(candidate, resolvedIcon, 'expense');
+            if (!res.success) {
+                toast.error(res.error ?? 'הוספת קטגוריה נכשלה');
+                return;
+            }
 
-        const createdCategory = {
-            id: `local-${Date.now()}`,
-            name: candidate,
-            icon: resolvedIcon,
-            type: 'expense',
-            isCustom: true,
-            userId: (availableCategories[0] as { userId?: string } | undefined)?.userId ?? '',
-        } as Category;
-        setAvailableCategories((prev) =>
-            [...prev, createdCategory].sort((a, b) => a.name.localeCompare(b.name, 'he'))
-        );
-        setCategory(createdCategory.name);
-        setIsCategoryTouched(true);
-        setCategorySearch('');
-        setNewCategoryName('');
-        setNewCategoryEmojiInput('');
-        toast.success('קטגוריה נוספה');
+            const createdCategory = {
+                id: `local-${Date.now()}`,
+                name: candidate,
+                icon: resolvedIcon,
+                type: 'expense',
+                isCustom: true,
+                userId: (availableCategories[0] as { userId?: string } | undefined)?.userId ?? '',
+            } as Category;
+            setAvailableCategories((prev) =>
+                [...prev, createdCategory].sort((a, b) => a.name.localeCompare(b.name, 'he'))
+            );
+            setCategory(createdCategory.name);
+            setIsCategoryTouched(true);
+            setCategorySearch('');
+            setNewCategoryName('');
+            setNewCategoryEmojiInput('');
+            toast.success('קטגוריה נוספה');
+        } catch {
+            toast.error('אירעה תקלה בחיבור. בדקו את הרשת ונסו שוב.');
+        } finally {
+            setIsAddingCategory(false);
+        }
     };
 
     return (

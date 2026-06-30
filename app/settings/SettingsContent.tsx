@@ -229,22 +229,27 @@ export default function SettingsContent({
     const token = tokenFromUrl ?? pendingInviteToken;
     if (!token) return;
     setAcceptingInvite(true);
-    const res = await acceptAccountInvite(token);
-    setAcceptingInvite(false);
-    if (res.success) {
-      toast.success('ההזמנה אושרה בהצלחה');
-      setShowInvitePopup(false);
-      setInvitePreview(null);
-      setPendingInviteToken(null);
-      // Full navigation drops ?invite= reliably; client replace+refresh could leave the overlay
-      // mounted while searchParams briefly still expose the token (flaky Cypress + invite UX).
-      if (typeof window !== 'undefined') {
-        window.location.assign(`${window.location.origin}/settings`);
+    try {
+      const res = await acceptAccountInvite(token);
+      if (res.success) {
+        toast.success('ההזמנה אושרה בהצלחה');
+        setShowInvitePopup(false);
+        setInvitePreview(null);
+        setPendingInviteToken(null);
+        // Full navigation drops ?invite= reliably; client replace+refresh could leave the overlay
+        // mounted while searchParams briefly still expose the token (flaky Cypress + invite UX).
+        if (typeof window !== 'undefined') {
+          window.location.assign(`${window.location.origin}/settings`);
+        } else {
+          router.replace('/settings');
+        }
       } else {
-        router.replace('/settings');
+        toast.error(res.error ?? 'אישור ההזמנה נכשל');
       }
-    } else {
-      toast.error(res.error ?? 'אישור ההזמנה נכשל');
+    } catch {
+      toast.error('אירעה תקלה בחיבור. בדקו את הרשת ונסו שוב.');
+    } finally {
+      setAcceptingInvite(false);
     }
   };
 
@@ -268,81 +273,94 @@ export default function SettingsContent({
 
   const handleAccountSubmit = async (payload: { name: string; type: 'PRIVATE' | 'SHARED'; monthlyContribution: number }) => {
     setAccountSaving(true);
-    const res = accountPopupMode === 'create'
-      ? await createAccount(payload)
-      : selectedAccount
-        ? await updateAccount(selectedAccount.id, payload)
-        : { success: false, error: 'לא נמצא חשבון לעריכה' };
-    if (!res.success) {
-      setAccountSaving(false);
-      toast.error(res.error ?? 'שמירת החשבון נכשלה');
-      return;
-    }
-
-    const createdAccount = accountPopupMode === 'create'
-      ? (res as { account?: AccountSummary }).account
-      : null;
-    const accountId = accountPopupMode === 'create'
-      ? createdAccount?.id ?? null
-      : selectedAccount?.id ?? null;
-
-    if (!accountId) {
-      setAccountSaving(false);
-      toast.error('לא נמצא חשבון לשמירת התרומה החודשית');
-      return;
-    }
-
-    const contributionRes = await upsertContributionPlan({
-      accountId,
-      monthlyAmount: payload.monthlyContribution,
-    });
-    setAccountSaving(false);
-
-    if (!contributionRes.success) {
-      toast.error(contributionRes.error ?? 'שמירת התרומה החודשית נכשלה');
-      if (accountPopupMode === 'create' && createdAccount) {
-        setAccountPopupMode('edit');
-        setSelectedAccount(createdAccount);
+    try {
+      const res = accountPopupMode === 'create'
+        ? await createAccount(payload)
+        : selectedAccount
+          ? await updateAccount(selectedAccount.id, payload)
+          : { success: false, error: 'לא נמצא חשבון לעריכה' };
+      if (!res.success) {
+        toast.error(res.error ?? 'שמירת החשבון נכשלה');
+        return;
       }
-      router.refresh();
-      return;
-    }
 
-    setContributionPlansByAccount((prev) => ({
-      ...prev,
-      [accountId]: payload.monthlyContribution,
-    }));
-    toast.success(accountPopupMode === 'create' ? 'החשבון נוצר' : 'החשבון עודכן');
-    setIsAccountPopupOpen(false);
-    setSelectedAccount(null);
-    router.refresh();
+      const createdAccount = accountPopupMode === 'create'
+        ? (res as { account?: AccountSummary }).account
+        : null;
+      const accountId = accountPopupMode === 'create'
+        ? createdAccount?.id ?? null
+        : selectedAccount?.id ?? null;
+
+      if (!accountId) {
+        toast.error('לא נמצא חשבון לשמירת התרומה החודשית');
+        return;
+      }
+
+      const contributionRes = await upsertContributionPlan({
+        accountId,
+        monthlyAmount: payload.monthlyContribution,
+      });
+
+      if (!contributionRes.success) {
+        toast.error(contributionRes.error ?? 'שמירת התרומה החודשית נכשלה');
+        if (accountPopupMode === 'create' && createdAccount) {
+          setAccountPopupMode('edit');
+          setSelectedAccount(createdAccount);
+        }
+        router.refresh();
+        return;
+      }
+
+      setContributionPlansByAccount((prev) => ({
+        ...prev,
+        [accountId]: payload.monthlyContribution,
+      }));
+      toast.success(accountPopupMode === 'create' ? 'החשבון נוצר' : 'החשבון עודכן');
+      setIsAccountPopupOpen(false);
+      setSelectedAccount(null);
+      router.refresh();
+    } catch {
+      toast.error('אירעה תקלה בחיבור. בדקו את הרשת ונסו שוב.');
+    } finally {
+      setAccountSaving(false);
+    }
   };
 
   const handleAccountDelete = async () => {
     if (!selectedAccount) return;
     setAccountDeleting(true);
-    const res = await archiveAccount(selectedAccount.id);
-    setAccountDeleting(false);
-    if (res.success) {
-      toast.success('החשבון הועבר לארכיון');
-      setIsAccountPopupOpen(false);
-      setSelectedAccount(null);
-      router.refresh();
-    } else {
-      toast.error(res.error ?? 'מחיקת החשבון נכשלה');
+    try {
+      const res = await archiveAccount(selectedAccount.id);
+      if (res.success) {
+        toast.success('החשבון הועבר לארכיון');
+        setIsAccountPopupOpen(false);
+        setSelectedAccount(null);
+        router.refresh();
+      } else {
+        toast.error(res.error ?? 'מחיקת החשבון נכשלה');
+      }
+    } catch {
+      toast.error('אירעה תקלה בחיבור. בדקו את הרשת ונסו שוב.');
+    } finally {
+      setAccountDeleting(false);
     }
   };
 
   const handleAccountDeleteFromCard = async (account: SettingsAccount) => {
     if (!window.confirm(`למחוק את החשבון "${account.name}"? החשבון יועבר לארכיון.`)) return;
     setAccountDeleting(true);
-    const res = await archiveAccount(account.id);
-    setAccountDeleting(false);
-    if (res.success) {
-      toast.success('החשבון הועבר לארכיון');
-      router.refresh();
-    } else {
-      toast.error(res.error ?? 'מחיקת החשבון נכשלה');
+    try {
+      const res = await archiveAccount(account.id);
+      if (res.success) {
+        toast.success('החשבון הועבר לארכיון');
+        router.refresh();
+      } else {
+        toast.error(res.error ?? 'מחיקת החשבון נכשלה');
+      }
+    } catch {
+      toast.error('אירעה תקלה בחיבור. בדקו את הרשת ונסו שוב.');
+    } finally {
+      setAccountDeleting(false);
     }
   };
 
@@ -379,28 +397,33 @@ export default function SettingsContent({
     if (!window.confirm(`להסיר את ${label} מהחשבון "${infoSheetAccount.name}"?`)) return;
 
     setInfoRemovingUserId(memberUserId);
-    const res = await removeAccountMember(infoSheetAccount.id, memberUserId);
-    setInfoRemovingUserId(null);
+    try {
+      const res = await removeAccountMember(infoSheetAccount.id, memberUserId);
 
-    if (!res.success) {
-      toast.error(res.error ?? 'הסרת המשתמש נכשלה');
-      return;
+      if (!res.success) {
+        toast.error(res.error ?? 'הסרת המשתמש נכשלה');
+        return;
+      }
+
+      toast.success('המשתמש הוסר מהחשבון');
+      setAccounts((prev) =>
+        prev.map((a) =>
+          a.id !== infoSheetAccount.id
+            ? a
+            : { ...a, members: (a.members ?? []).filter((m) => m.userId !== memberUserId) },
+        ),
+      );
+      setInfoSheetAccount((prev) =>
+        prev && prev.id === infoSheetAccount.id
+          ? { ...prev, members: (prev.members ?? []).filter((m) => m.userId !== memberUserId) }
+          : prev,
+      );
+      router.refresh();
+    } catch {
+      toast.error('אירעה תקלה בחיבור. בדקו את הרשת ונסו שוב.');
+    } finally {
+      setInfoRemovingUserId(null);
     }
-
-    toast.success('המשתמש הוסר מהחשבון');
-    setAccounts((prev) =>
-      prev.map((a) =>
-        a.id !== infoSheetAccount.id
-          ? a
-          : { ...a, members: (a.members ?? []).filter((m) => m.userId !== memberUserId) },
-      ),
-    );
-    setInfoSheetAccount((prev) =>
-      prev && prev.id === infoSheetAccount.id
-        ? { ...prev, members: (prev.members ?? []).filter((m) => m.userId !== memberUserId) }
-        : prev,
-    );
-    router.refresh();
   };
 
   const closeAccountShareSheet = () => {
@@ -413,62 +436,82 @@ export default function SettingsContent({
   const handleAddCategory = async () => {
     if (!newCatName.trim()) return;
     const resolvedIcon = newCatEmojiInput.trim() || '✨';
-    const res = await addCategory(newCatName.trim(), resolvedIcon, 'expense');
-    if (res.success) {
-      toast.success('קטגוריה נוספה');
-      setNewCatName('');
-      setNewCatEmojiInput('');
-      router.refresh();
-    } else {
-      toast.error(res.error ?? 'הוספת קטגוריה נכשלה');
+    try {
+      const res = await addCategory(newCatName.trim(), resolvedIcon, 'expense');
+      if (res.success) {
+        toast.success('קטגוריה נוספה');
+        setNewCatName('');
+        setNewCatEmojiInput('');
+        router.refresh();
+      } else {
+        toast.error(res.error ?? 'הוספת קטגוריה נכשלה');
+      }
+    } catch {
+      toast.error('אירעה תקלה בחיבור. בדקו את הרשת ונסו שוב.');
     }
   };
 
   const handleDeleteCategory = async (id: string) => {
-    const res = await deleteCategory(id);
-    if (res.success) {
-      setCategories((prev) => prev.filter((c) => c.id !== id));
-      toast.success('הקטגוריה נמחקה');
-    } else {
-      toast.error(res.error ?? 'מחיקת קטגוריה נכשלה');
+    try {
+      const res = await deleteCategory(id);
+      if (res.success) {
+        setCategories((prev) => prev.filter((c) => c.id !== id));
+        toast.success('הקטגוריה נמחקה');
+      } else {
+        toast.error(res.error ?? 'מחיקת קטגוריה נכשלה');
+      }
+    } catch {
+      toast.error('אירעה תקלה בחיבור. בדקו את הרשת ונסו שוב.');
     }
   };
 
   const handleAddSavingsLabel = async () => {
     if (!newSavingsName.trim()) return;
     const icon = newSavingsEmoji.trim() || '💰';
-    const res = await addSavingsLabel(newSavingsName.trim(), icon);
-    if (res.success) {
-      toast.success('יעד חיסכון נוסף');
-      setNewSavingsName('');
-      setNewSavingsEmoji('💰');
-      router.refresh();
-    } else {
-      toast.error(res.error ?? 'הוספה נכשלה');
+    try {
+      const res = await addSavingsLabel(newSavingsName.trim(), icon);
+      if (res.success) {
+        toast.success('יעד חיסכון נוסף');
+        setNewSavingsName('');
+        setNewSavingsEmoji('💰');
+        router.refresh();
+      } else {
+        toast.error(res.error ?? 'הוספה נכשלה');
+      }
+    } catch {
+      toast.error('אירעה תקלה בחיבור. בדקו את הרשת ונסו שוב.');
     }
   };
 
   const handleDeleteSavingsLabel = async (id: string) => {
-    const res = await deleteSavingsLabel(id);
-    if (res.success) {
-      setSavingsLabels((prev) => prev.filter((l) => l.id !== id));
-      toast.success('נמחק');
-      router.refresh();
-    } else {
-      toast.error(res.error ?? 'מחיקה נכשלה');
+    try {
+      const res = await deleteSavingsLabel(id);
+      if (res.success) {
+        setSavingsLabels((prev) => prev.filter((l) => l.id !== id));
+        toast.success('נמחק');
+        router.refresh();
+      } else {
+        toast.error(res.error ?? 'מחיקה נכשלה');
+      }
+    } catch {
+      toast.error('אירעה תקלה בחיבור. בדקו את הרשת ונסו שוב.');
     }
   };
 
   const handleToggleSavingsBuiltinHidden = async (label: SavingsLabel) => {
     if (label.isCustom) return;
-    const res = await setSavingsLabelHidden(label.id, !label.hidden);
-    if (res.success) {
-      setSavingsLabels((prev) =>
-        prev.map((l) => (l.id === label.id ? { ...l, hidden: !l.hidden } : l)),
-      );
-      router.refresh();
-    } else {
-      toast.error(res.error ?? 'עדכון נכשל');
+    try {
+      const res = await setSavingsLabelHidden(label.id, !label.hidden);
+      if (res.success) {
+        setSavingsLabels((prev) =>
+          prev.map((l) => (l.id === label.id ? { ...l, hidden: !l.hidden } : l)),
+        );
+        router.refresh();
+      } else {
+        toast.error(res.error ?? 'עדכון נכשל');
+      }
+    } catch {
+      toast.error('אירעה תקלה בחיבור. בדקו את הרשת ונסו שוב.');
     }
   };
 
@@ -481,23 +524,27 @@ export default function SettingsContent({
   const handleSaveCategory = async () => {
     if (!editingCategoryId || !editingCategoryName.trim()) return;
     const resolvedIcon = editingCategoryEmojiInput.trim() || '✨';
-    const res = await updateCategory({
-      id: editingCategoryId,
-      name: editingCategoryName.trim(),
-      icon: resolvedIcon,
-      type: 'expense',
-    });
-    if (!res.success) {
-      toast.error(res.error ?? 'עדכון קטגוריה נכשל');
-      return;
+    try {
+      const res = await updateCategory({
+        id: editingCategoryId,
+        name: editingCategoryName.trim(),
+        icon: resolvedIcon,
+        type: 'expense',
+      });
+      if (!res.success) {
+        toast.error(res.error ?? 'עדכון קטגוריה נכשל');
+        return;
+      }
+      setCategories((prev) => prev.map((cat) => (
+        cat.id === editingCategoryId
+          ? { ...cat, name: editingCategoryName.trim(), icon: resolvedIcon }
+          : cat
+      )));
+      toast.success('הקטגוריה עודכנה');
+      cancelEditCategory();
+    } catch {
+      toast.error('אירעה תקלה בחיבור. בדקו את הרשת ונסו שוב.');
     }
-    setCategories((prev) => prev.map((cat) => (
-      cat.id === editingCategoryId
-        ? { ...cat, name: editingCategoryName.trim(), icon: resolvedIcon }
-        : cat
-    )));
-    toast.success('הקטגוריה עודכנה');
-    cancelEditCategory();
   };
 
   const loadIncomeEntries = async () => {
@@ -529,36 +576,46 @@ export default function SettingsContent({
       return;
     }
     setIsAddingIncome(true);
-    const formData = new FormData();
-    formData.append('amount', String(num));
-    formData.append('description', incomeFormDescription);
-    formData.append('date', incomeFormDate);
-    formData.append('accountId', incomeFormAccountId);
-    const res = await addIncomeEntry(formData);
-    setIsAddingIncome(false);
-    if (!res.success) {
-      toast.error(res.error ?? 'הוספת ההכנסה נכשלה');
-      return;
+    try {
+      const formData = new FormData();
+      formData.append('amount', String(num));
+      formData.append('description', incomeFormDescription);
+      formData.append('date', incomeFormDate);
+      formData.append('accountId', incomeFormAccountId);
+      const res = await addIncomeEntry(formData);
+      if (!res.success) {
+        toast.error(res.error ?? 'הוספת ההכנסה נכשלה');
+        return;
+      }
+      toast.success('הכנסה נוספה');
+      setIncomeFormAmount('');
+      setIncomeFormDescription('');
+      setIncomeFormDate(new Date().toISOString().slice(0, 10));
+      void loadIncomeEntries();
+      router.refresh();
+    } catch {
+      toast.error('אירעה תקלה בחיבור. בדקו את הרשת ונסו שוב.');
+    } finally {
+      setIsAddingIncome(false);
     }
-    toast.success('הכנסה נוספה');
-    setIncomeFormAmount('');
-    setIncomeFormDescription('');
-    setIncomeFormDate(new Date().toISOString().slice(0, 10));
-    void loadIncomeEntries();
-    router.refresh();
   };
 
   const handleDeleteIncome = async (id: string) => {
     setDeletingIncomeId(id);
-    const res = await deleteIncomeEntry(id);
-    setDeletingIncomeId(null);
-    if (!res.success) {
-      toast.error(res.error ?? 'מחיקת ההכנסה נכשלה');
-      return;
+    try {
+      const res = await deleteIncomeEntry(id);
+      if (!res.success) {
+        toast.error(res.error ?? 'מחיקת ההכנסה נכשלה');
+        return;
+      }
+      setIncomeEntries((prev) => prev.filter((e) => e.id !== id));
+      toast.success('ההכנסה נמחקה');
+      router.refresh();
+    } catch {
+      toast.error('אירעה תקלה בחיבור. בדקו את הרשת ונסו שוב.');
+    } finally {
+      setDeletingIncomeId(null);
     }
-    setIncomeEntries((prev) => prev.filter((e) => e.id !== id));
-    toast.success('ההכנסה נמחקה');
-    router.refresh();
   };
 
   const createInviteForAccount = async (payload: { accountId: string; method: 'link' | 'email'; email: string }) => {
@@ -608,35 +665,47 @@ export default function SettingsContent({
 
   const saveProfileDetails = async (payload: { name: string; email: string }) => {
     setIsProfileSaving(true);
-    const profileRes = await updateCurrentUserProfile({
-      name: payload.name,
-      email: payload.email,
-    });
+    try {
+      const profileRes = await updateCurrentUserProfile({
+        name: payload.name,
+        email: payload.email,
+      });
 
-    setIsProfileSaving(false);
-    if (!profileRes.success) {
-      toast.error(profileRes.error ?? 'עדכון פרופיל נכשל');
+      if (!profileRes.success) {
+        toast.error(profileRes.error ?? 'עדכון פרופיל נכשל');
+        return false;
+      }
+
+      toast.success('הפרופיל עודכן בהצלחה');
+      router.refresh();
+      return true;
+    } catch {
+      toast.error('אירעה תקלה בחיבור. בדקו את הרשת ונסו שוב.');
       return false;
+    } finally {
+      setIsProfileSaving(false);
     }
-
-    toast.success('הפרופיל עודכן בהצלחה');
-    router.refresh();
-    return true;
   };
 
   const savePasswordDetails = async (payload: { currentPassword: string; newPassword: string }) => {
     setIsPasswordSaving(true);
-    const res = await updateCurrentUserPassword({
-      currentPassword: payload.currentPassword,
-      newPassword: payload.newPassword,
-    });
-    setIsPasswordSaving(false);
-    if (res.success) {
-      toast.success('הסיסמה עודכנה');
-      return true;
-    } else {
-      toast.error(res.error ?? 'עדכון סיסמה נכשל');
+    try {
+      const res = await updateCurrentUserPassword({
+        currentPassword: payload.currentPassword,
+        newPassword: payload.newPassword,
+      });
+      if (res.success) {
+        toast.success('הסיסמה עודכנה');
+        return true;
+      } else {
+        toast.error(res.error ?? 'עדכון סיסמה נכשל');
+        return false;
+      }
+    } catch {
+      toast.error('אירעה תקלה בחיבור. בדקו את הרשת ונסו שוב.');
       return false;
+    } finally {
+      setIsPasswordSaving(false);
     }
   };
 
@@ -646,40 +715,57 @@ export default function SettingsContent({
     setThemePreference(nextTheme);
     setTheme(mapThemePreferenceToClientTheme(nextTheme));
     setIsThemeSaving(true);
-    const res = await updateThemePreference(nextTheme);
-    setIsThemeSaving(false);
-    if (!res.success) {
+    try {
+      const res = await updateThemePreference(nextTheme);
+      if (!res.success) {
+        setThemePreference(previousTheme);
+        setTheme(mapThemePreferenceToClientTheme(previousTheme));
+        toast.error(res.error ?? 'עדכון תצוגה נכשל');
+        return;
+      }
+    } catch {
       setThemePreference(previousTheme);
       setTheme(mapThemePreferenceToClientTheme(previousTheme));
-      toast.error(res.error ?? 'עדכון תצוגה נכשל');
-      return;
+      toast.error('אירעה תקלה בחיבור. בדקו את הרשת ונסו שוב.');
+    } finally {
+      setIsThemeSaving(false);
     }
   };
 
   const handleBudgetSave = async (monthlyIncome: number) => {
     setIsBudgetSaving(true);
-    const res = await updateBudgetSettings({
-      monthlyIncome,
-      needsPercent: initialBudgetSettings?.needsPercent ?? 50,
-      wantsPercent: initialBudgetSettings?.wantsPercent ?? 30,
-      savingsPercent: initialBudgetSettings?.savingsPercent ?? 20,
-    });
-    setIsBudgetSaving(false);
-    if (res?.success) toast.success('תקציב עודכן');
-    else toast.error('שמירת התקציב נכשלה');
+    try {
+      const res = await updateBudgetSettings({
+        monthlyIncome,
+        needsPercent: initialBudgetSettings?.needsPercent ?? 50,
+        wantsPercent: initialBudgetSettings?.wantsPercent ?? 30,
+        savingsPercent: initialBudgetSettings?.savingsPercent ?? 20,
+      });
+      if (res?.success) toast.success('תקציב עודכן');
+      else toast.error(res?.error ?? 'שמירת התקציב נכשלה');
+    } catch {
+      toast.error('אירעה תקלה בחיבור. בדקו את הרשת ונסו שוב.');
+    } finally {
+      setIsBudgetSaving(false);
+    }
   };
 
   const createInviteFromShareSheet = async () => {
     if (!shareSheetAccount) return;
     setShareSheetLoading(true);
-    const success = await createInviteForAccount({
-      accountId: shareSheetAccount.id,
-      method: shareSheetMethod,
-      email: shareSheetEmail,
-    });
-    setShareSheetLoading(false);
-    if (success) {
-      closeAccountShareSheet();
+    try {
+      const success = await createInviteForAccount({
+        accountId: shareSheetAccount.id,
+        method: shareSheetMethod,
+        email: shareSheetEmail,
+      });
+      if (success) {
+        closeAccountShareSheet();
+      }
+    } catch {
+      toast.error('אירעה תקלה בחיבור. בדקו את הרשת ונסו שוב.');
+    } finally {
+      setShareSheetLoading(false);
     }
   };
 
@@ -1095,15 +1181,20 @@ export default function SettingsContent({
                 onClick={() => {
                   void (async () => {
                     setDeleteAccountWorking(true);
-                    const res = await deleteCurrentUserAccount();
-                    setDeleteAccountWorking(false);
-                    if (!res.success) {
-                      toast.error(res.error);
-                      return;
+                    try {
+                      const res = await deleteCurrentUserAccount();
+                      if (!res.success) {
+                        toast.error(res.error);
+                        return;
+                      }
+                      setShowDeleteAccountDialog(false);
+                      toast.success('החשבון נמחק');
+                      await signOut({ callbackUrl: '/auth/signin' });
+                    } catch {
+                      toast.error('אירעה תקלה בחיבור. בדקו את הרשת ונסו שוב.');
+                    } finally {
+                      setDeleteAccountWorking(false);
                     }
-                    setShowDeleteAccountDialog(false);
-                    toast.success('החשבון נמחק');
-                    await signOut({ callbackUrl: '/auth/signin' });
                   })();
                 }}
                 className="flex-1 py-2.5 rounded-xl bg-ios-red text-white text-sm font-semibold disabled:opacity-50"

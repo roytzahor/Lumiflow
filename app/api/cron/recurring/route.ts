@@ -34,38 +34,55 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ message: 'No recurring transactions to process.' });
         }
 
-        const createdTransactions = await prisma.$transaction(async (tx) => {
-            const results: Awaited<ReturnType<typeof tx.transaction.create>>[] = [];
-            for (const rt of dueTransactions) {
-                const newTransaction = await tx.transaction.create({
-                    data: {
-                        amount: rt.amount,
-                        description: rt.description,
-                        category: rt.category,
-                        accountId: rt.accountId,
-                        date: rt.nextRun,
-                        recurringTransactionId: rt.id,
-                    },
-                });
-                results.push(newTransaction);
+        const results: { id: string; status: 'created' | 'skipped' | 'failed'; error?: string }[] = [];
 
+        for (const rt of dueTransactions) {
+            try {
                 const nextRunDate = getNextRunDateFromCurrent(new Date(rt.nextRun), rt.dayOfMonth, rt.monthPolicy);
 
-                await tx.recurringTransaction.update({
-                    where: { id: rt.id },
-                    data: {
-                        lastRun: new Date(),
-                        nextRun: nextRunDate,
-                    },
+                const outcome = await prisma.$transaction(async (tx) => {
+                    // Optimistic claim: only proceed if nextRun still matches what we read.
+                    // If another invocation already advanced it, claimed.count will be 0.
+                    const claimed = await tx.recurringTransaction.updateMany({
+                        where: { id: rt.id, nextRun: rt.nextRun },
+                        data: { lastRun: new Date(), nextRun: nextRunDate },
+                    });
+                    if (claimed.count === 0) {
+                        return { status: 'skipped' as const };
+                    }
+
+                    await tx.transaction.create({
+                        data: {
+                            amount: rt.amount,
+                            description: rt.description,
+                            category: rt.category,
+                            accountId: rt.accountId,
+                            date: rt.nextRun,
+                            recurringTransactionId: rt.id,
+                        },
+                    });
+
+                    return { status: 'created' as const };
                 });
+
+                results.push({ id: rt.id, status: outcome.status });
+            } catch (error) {
+                console.error('Error processing recurring transaction', { id: rt.id, error });
+                results.push({ id: rt.id, status: 'failed', error: error instanceof Error ? error.message : String(error) });
             }
-            return results;
-        });
+        }
+
+        const created = results.filter((r) => r.status === 'created').length;
+        const skipped = results.filter((r) => r.status === 'skipped').length;
+        const failed = results.filter((r) => r.status === 'failed').length;
 
         return NextResponse.json({
             success: true,
             processed: dueTransactions.length,
-            transactions: createdTransactions,
+            created,
+            skipped,
+            failed,
+            results,
         });
     } catch (error) {
         console.error('Error processing recurring transactions:', error);
