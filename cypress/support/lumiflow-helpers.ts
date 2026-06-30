@@ -1,4 +1,4 @@
-/** Sign up and complete the welcome screen (save profile + theme) to reach the dashboard root. */
+/** Sign up and complete the welcome wizard (profile step, then "solo" mode) to reach the dashboard root. */
 export function signUpThroughWelcome(email: string, password: string) {
   cy.visit('/auth/signup');
   cy.get('[data-testid="signup-email"]').type(email);
@@ -6,13 +6,15 @@ export function signUpThroughWelcome(email: string, password: string) {
   cy.get('[data-testid="signup-submit"]').click({ force: true });
   cy.url({ timeout: 30000 }).should('include', '/welcome');
   cy.get('[data-testid="welcome-continue"]', { timeout: 20000 }).should('be.visible').click({ force: true });
+  // Profile step advances to the solo/couple mode-choice step (still on /welcome, not a navigation).
+  cy.get('[data-testid="welcome-mode-solo"]', { timeout: 20000 }).should('be.visible').click({ force: true });
   cy.url({ timeout: 20000 }).should('eq', `${Cypress.config('baseUrl')}/`);
 }
 
 /** Set the default account’s monthly contribution from Settings (replaces old onboarding income step). */
 export function setMonthlyContributionFromSettings(amount: string) {
   cy.get('[data-testid="bottom-nav-settings"]', { timeout: 20000 }).should('be.visible').click({ force: true });
-  cy.url().should('include', '/settings');
+  cy.url({ timeout: 30000 }).should('include', '/settings');
   cy.get('button[aria-label^="עריכת חשבון"]').first().click({ force: true });
   cy.get('[data-testid="account-popup-monthly-contribution"]', { timeout: 15000 })
     .clear()
