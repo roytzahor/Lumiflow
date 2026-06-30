@@ -25,6 +25,7 @@ const BudgetHealthCard = dynamic(() => import("./BudgetHealthCard"), { ssr: fals
 const SpendingTrendCard = dynamic(() => import("./SpendingTrendCard"), { ssr: false });
 const SharedSplitCard = dynamic(() => import("./SharedSplitCard"), { ssr: false });
 const PersonalIncomeSummaryCard = dynamic(() => import("./PersonalIncomeSummaryCard"), { ssr: false });
+const DailySnapshotCard = dynamic(() => import("./DailySnapshotCard"), { ssr: false });
 const PieChart = dynamic(() => import("./PieChart"), {
     ssr: false,
     loading: () => (
@@ -41,6 +42,8 @@ import type {
     ContributionRatio,
     SavingsAllocationListItem,
     SavingsLabel,
+    BudgetAlert,
+    DailyNudge,
 } from "@/lib/types";
 import { parseScopeAccountId } from "@/lib/scope-account";
 import { computeMyMoneyBreakdown, computeAccountMemberSplit } from "@/lib/my-money-utils";
@@ -74,6 +77,8 @@ interface DashboardProps {
     welcomeTourCompletedAt?: Date | string | null;
     budgetSettings?: { monthlyIncome: number; needsPercent: number; wantsPercent: number; savingsPercent: number } | null;
     prevMonthTotal?: number;
+    dailyAlert?: BudgetAlert | null;
+    dailyNudge?: DailyNudge | null;
 }
 
 function getGreeting(now: Date): string {
@@ -218,6 +223,8 @@ export default function Dashboard({
     welcomeTourCompletedAt = null,
     budgetSettings = null,
     prevMonthTotal = 0,
+    dailyAlert = null,
+    dailyNudge = null,
 }: DashboardProps) {
     const [isSheetOpen, setIsSheetOpen] = useState(false);
     const [savingsSheetOpen, setSavingsSheetOpen] = useState(false);
@@ -476,6 +483,8 @@ export default function Dashboard({
         ? myMoneyBreakdown.totalIncome
         : totalMonthlyInflowScope;
     const hasIncomeConfigured = income > 0;
+    const hasAnyTransactionsThisMonth = useMemo(() => initialTransactions.length > 0, [initialTransactions]);
+    const isFirstExpenseEmptyState = hasIncomeConfigured && !hasAnyTransactionsThisMonth;
     const savedSoFar = hasIncomeConfigured ? income - totalSpent : 0;
     const rawRatio = hasIncomeConfigured ? (savedSoFar / income) * 100 : 0;
     const savingsRatio = Math.max(Math.min(rawRatio, 100), 0);
@@ -793,6 +802,17 @@ export default function Dashboard({
                     )}
                 </motion.div>
 
+                {(scopeAccountId === "all" || scopeAccountId === "my-money") && hasIncomeConfigured && (
+                    <motion.div
+                        initial={sectionEnter}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={sectionDelay(0.12)}
+                        className="mb-6"
+                    >
+                        <DailySnapshotCard alert={dailyAlert} nudge={dailyNudge} />
+                    </motion.div>
+                )}
+
                 {budgetSettings && budgetSettings.monthlyIncome > 0 && (
                     <motion.div
                         initial={sectionEnter}
@@ -884,7 +904,9 @@ export default function Dashboard({
                     ) : null}
                     {!spendingSectionExpanded && chartData.length < 2 ? (
                         <p className="mt-2 pe-7 text-xs leading-relaxed text-ios-subtle dark:text-ios-dark-subtle">
-                            הוסיפו הוצאות מקטגוריות נוספות כדי לראות התפלגות מלאה.
+                            {isFirstExpenseEmptyState
+                                ? "הוסיפו את ההוצאה הראשונה שלכם החודש כדי לראות כאן את הפירוט."
+                                : "הוסיפו הוצאות מקטגוריות נוספות כדי לראות התפלגות מלאה."}
                         </p>
                     ) : null}
                     <AnimatePresence initial={false}>
@@ -906,32 +928,50 @@ export default function Dashboard({
                                             <SpendingTrendCard currentSpent={totalSpent} prevMonthTotal={prevMonthTotal} />
                                         </div>
                                     )}
-                                    <div className="relative overflow-hidden rounded-2xl">
-                                        <div
-                                            className={
-                                                shouldShowSpendingTeaser
-                                                    ? "pointer-events-none select-none blur-[3px] opacity-90"
-                                                    : ""
-                                            }
-                                        >
-                                            <PieChart
-                                                data={spendingTeaserData}
-                                                onSliceClick={shouldShowSpendingTeaser ? undefined : handlePieSliceClick}
-                                            />
+                                    {isFirstExpenseEmptyState ? (
+                                        <div className="rounded-2xl border border-ios-blue/15 bg-ios-blue/5 p-5 text-center">
+                                            <p className="mb-1 text-sm font-semibold text-balance text-ios-text dark:text-ios-dark-text">
+                                                בואו נתחיל לעקוב!
+                                            </p>
+                                            <p className="mb-4 text-xs leading-relaxed text-pretty text-ios-subtle dark:text-ios-dark-subtle">
+                                                הוסיפו את ההוצאה הראשונה שלכם החודש כדי לראות כאן את הפירוט.
+                                            </p>
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsSheetOpen(true)}
+                                                className="inline-flex items-center justify-center rounded-xl bg-ios-blue px-5 py-2.5 text-xs font-semibold text-white active:opacity-90"
+                                            >
+                                                הוספת הוצאה
+                                            </button>
                                         </div>
-                                        {shouldShowSpendingTeaser && (
-                                            <div className="absolute inset-0 flex items-center justify-center px-4">
-                                                <div className="w-[270px] rounded-2xl border border-white/20 bg-white/28 px-4 py-3.5 text-center shadow-card backdrop-blur-xl dark:border-white/10 dark:bg-ios-dark-card/42">
-                                                    <p className="mb-1 text-sm font-semibold text-balance text-ios-text dark:text-ios-dark-text">
-                                                        ההתפלגות תיפתח כשתתווספנה קטגוריות נוספות
-                                                    </p>
-                                                    <p className="text-xs leading-relaxed text-pretty text-ios-subtle dark:text-ios-dark-subtle">
-                                                        יש להוסיף הוצאות מקטגוריות נוספות כדי לראות את התפלגות ההוצאות
-                                                    </p>
-                                                </div>
+                                    ) : (
+                                        <div className="relative overflow-hidden rounded-2xl">
+                                            <div
+                                                className={
+                                                    shouldShowSpendingTeaser
+                                                        ? "pointer-events-none select-none blur-[3px] opacity-90"
+                                                        : ""
+                                                }
+                                            >
+                                                <PieChart
+                                                    data={spendingTeaserData}
+                                                    onSliceClick={shouldShowSpendingTeaser ? undefined : handlePieSliceClick}
+                                                />
                                             </div>
-                                        )}
-                                    </div>
+                                            {shouldShowSpendingTeaser && (
+                                                <div className="absolute inset-0 flex items-center justify-center px-4">
+                                                    <div className="w-[270px] rounded-2xl border border-white/20 bg-white/28 px-4 py-3.5 text-center shadow-card backdrop-blur-xl dark:border-white/10 dark:bg-ios-dark-card/42">
+                                                        <p className="mb-1 text-sm font-semibold text-balance text-ios-text dark:text-ios-dark-text">
+                                                            ההתפלגות תיפתח כשתתווספנה קטגוריות נוספות
+                                                        </p>
+                                                        <p className="text-xs leading-relaxed text-pretty text-ios-subtle dark:text-ios-dark-subtle">
+                                                            יש להוסיף הוצאות מקטגוריות נוספות כדי לראות את התפלגות ההוצאות
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             </motion.div>
                         )}

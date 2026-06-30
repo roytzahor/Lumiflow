@@ -41,6 +41,8 @@ export default async function DashboardDataLoader({
             budgetSettings,
             prevMonthTotal,
             allAccountContributionRatios,
+            dailyAlert,
+            dailyNudge,
         } = await loadDashboardPageData(year, month);
 
         return (
@@ -65,6 +67,8 @@ export default async function DashboardDataLoader({
                 welcomeTourCompletedAt={currentUser?.welcomeTourCompletedAt ?? null}
                 budgetSettings={budgetSettings ?? null}
                 prevMonthTotal={prevMonthTotal}
+                dailyAlert={dailyAlert}
+                dailyNudge={dailyNudge}
             />
         );
     } catch (error) {
