@@ -21,6 +21,7 @@ const WelcomeTour = dynamic(() => import("./WelcomeTour"), { ssr: false });
 const RecurringEditSheet = dynamic(() => import("./RecurringEditSheet"), { ssr: false });
 const SavingsAllocationSheet = dynamic(() => import("./SavingsAllocationSheet"), { ssr: false });
 const SavingsAllocationCard = dynamic(() => import("./SavingsAllocationCard"), { ssr: false });
+const BudgetHealthCard = dynamic(() => import("./BudgetHealthCard"), { ssr: false });
 const PieChart = dynamic(() => import("./PieChart"), {
     ssr: false,
     loading: () => (
@@ -63,6 +64,7 @@ interface DashboardProps {
     initialSavingsSectionExpanded?: boolean;
     initialSpendingSectionExpanded?: boolean;
     welcomeTourCompletedAt?: Date | string | null;
+    budgetSettings?: { monthlyIncome: number; needsPercent: number; wantsPercent: number; savingsPercent: number } | null;
 }
 
 function getGreeting(now: Date): string {
@@ -203,6 +205,7 @@ export default function Dashboard({
     initialSavingsSectionExpanded = false,
     initialSpendingSectionExpanded = true,
     welcomeTourCompletedAt = null,
+    budgetSettings = null,
 }: DashboardProps) {
     const [isSheetOpen, setIsSheetOpen] = useState(false);
     const [savingsSheetOpen, setSavingsSheetOpen] = useState(false);
@@ -863,6 +866,22 @@ export default function Dashboard({
                         )}
                     </AnimatePresence>
                 </motion.div>
+
+                {budgetSettings && budgetSettings.monthlyIncome > 0 && (
+                    <motion.div
+                        initial={sectionEnter}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={sectionDelay(0.38)}
+                        className="mt-3"
+                    >
+                        <BudgetHealthCard
+                            monthlyIncome={budgetSettings.monthlyIncome}
+                            needsPercent={budgetSettings.needsPercent}
+                            wantsPercent={budgetSettings.wantsPercent}
+                            spent={totalSpent}
+                        />
+                    </motion.div>
+                )}
 
                 <motion.div
                     initial={sectionEnter}
