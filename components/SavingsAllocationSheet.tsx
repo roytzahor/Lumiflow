@@ -113,40 +113,49 @@ export default function SavingsAllocationSheet({
     formData.append('label', label.trim());
     formData.append('standingOrderToInvestment', standingOrderToInvestment ? 'true' : 'false');
 
-    if (initialData) {
-      const res = await updateSavingsAllocation(initialData.id, formData);
-      setIsSubmitting(false);
-      if (!res.success) {
-        toast.error('שמירה נכשלה. נסה שוב.');
-        return;
+    try {
+      if (initialData) {
+        const res = await updateSavingsAllocation(initialData.id, formData);
+        if (!res.success) {
+          toast.error(res.error || 'שמירה נכשלה. נסה שוב.');
+          return;
+        }
+        toast.success('עודכן בהצלחה');
+      } else {
+        const res = await addSavingsAllocation(formData);
+        if (!res.success) {
+          toast.error(res.error || 'שמירה נכשלה. נסה שוב.');
+          return;
+        }
+        toast.success('נוסף בהצלחה');
       }
-      toast.success('עודכן בהצלחה');
-    } else {
-      const res = await addSavingsAllocation(formData);
-      setIsSubmitting(false);
-      if (!res.success) {
-        toast.error('שמירה נכשלה. נסה שוב.');
-        return;
-      }
-      toast.success('נוסף בהצלחה');
-    }
 
-    router.refresh();
-    onClose();
+      router.refresh();
+      onClose();
+    } catch {
+      toast.error('אירעה תקלה בחיבור. בדקו את הרשת ונסו שוב.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleDelete = async () => {
     if (!initialData) return;
     setIsDeleting(true);
-    const res = await deleteSavingsAllocation(initialData.id);
-    setIsDeleting(false);
-    if (!res.success) {
-      toast.error('מחיקה נכשלה. נסה שוב.');
-      return;
+    try {
+      const res = await deleteSavingsAllocation(initialData.id);
+      if (!res.success) {
+        toast.error(res.error || 'מחיקה נכשלה. נסה שוב.');
+        return;
+      }
+      toast.success('נמחק בהצלחה');
+      router.refresh();
+      onClose();
+    } catch {
+      toast.error('אירעה תקלה בחיבור. בדקו את הרשת ונסו שוב.');
+    } finally {
+      setIsDeleting(false);
     }
-    toast.success('נמחק בהצלחה');
-    router.refresh();
-    onClose();
   };
 
   const onDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {

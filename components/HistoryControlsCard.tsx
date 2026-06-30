@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, ChevronDown, ListFilter } from "lucide-react";
+import { Check, ChevronDown, ListFilter, Search, X } from "lucide-react";
 import LiquidToggle from "./ui/LiquidToggle";
 import InfoHint from "./InfoHint";
 import Money from "@/components/ui/Money";
@@ -25,11 +25,13 @@ export type HistoryControlsCardProps = {
     displayTotal: number;
     visibleSavingsTotal: number;
     showSavingsSummaryRow: boolean;
+    searchQuery: string;
     onAccountChange: (accountId: "all" | string) => void;
     onToggleCategory: (categoryName: string) => void;
     onClearCategories: () => void;
     onToggleRecurring: () => void;
     onToggleSavingsInFeed: () => void;
+    onSearchChange: (value: string) => void;
 };
 
 export default function HistoryControlsCard({
@@ -45,11 +47,13 @@ export default function HistoryControlsCard({
     displayTotal,
     visibleSavingsTotal,
     showSavingsSummaryRow,
+    searchQuery,
     onAccountChange,
     onToggleCategory,
     onClearCategories,
     onToggleRecurring,
     onToggleSavingsInFeed,
+    onSearchChange,
 }: HistoryControlsCardProps) {
     const [filtersOpen, setFiltersOpen] = useState(false);
     const filtersPopoverRef = useRef<HTMLDivElement>(null);
@@ -257,6 +261,36 @@ export default function HistoryControlsCard({
                         </div>
                     ) : null}
                 </div>
+            </div>
+
+            <div className="relative min-w-0">
+                <label htmlFor="history-search-input" className="sr-only">
+                    חיפוש לפי תיאור או קטגוריה
+                </label>
+                <Search
+                    className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ios-subtle dark:text-ios-dark-subtle"
+                    aria-hidden
+                />
+                <input
+                    id="history-search-input"
+                    data-testid="history-search-input"
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => onSearchChange(e.target.value)}
+                    placeholder="חיפוש לפי תיאור או קטגוריה"
+                    aria-label="חיפוש לפי תיאור או קטגוריה"
+                    className="w-full min-w-0 rounded-xl border border-gray-200/50 dark:border-white/10 bg-ios-gray-6 dark:bg-ios-dark-fill text-sm text-ios-text dark:text-ios-dark-text placeholder:text-ios-subtle dark:placeholder:text-ios-dark-subtle py-2.5 ps-9 pe-9 shadow-sm outline-none transition-[box-shadow] focus-visible:ring-2 focus-visible:ring-ios-blue/40"
+                />
+                {searchQuery ? (
+                    <button
+                        type="button"
+                        onClick={() => onSearchChange("")}
+                        aria-label="ניקוי חיפוש"
+                        className="absolute end-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-ios-subtle hover:bg-ios-gray-5 active:bg-ios-gray-4/60 dark:text-ios-dark-subtle dark:hover:bg-ios-dark-fill transition-[background-color]"
+                    >
+                        <X className="h-4 w-4" aria-hidden />
+                    </button>
+                ) : null}
             </div>
 
             {selectedCategories.length > 0 ? (

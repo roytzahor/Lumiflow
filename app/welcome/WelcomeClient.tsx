@@ -50,20 +50,25 @@ export default function WelcomeClient({ initialName, initialTheme }: WelcomeClie
   const onSaveAndContinue = async () => {
     setSaving(true);
     setError('');
-    const nameRes = await updateCurrentUserProfile({ name: name.trim() || undefined });
-    if (!nameRes.success) {
+    try {
+      const nameRes = await updateCurrentUserProfile({ name: name.trim() || undefined });
+      if (!nameRes.success) {
+        setSaving(false);
+        setError(nameRes.error ?? 'שמירה נכשלה');
+        return;
+      }
+      const themeRes = await updateThemePreference(themePreference);
+      if (!themeRes.success) {
+        setSaving(false);
+        setError(themeRes.error ?? 'שמירה נכשלה');
+        return;
+      }
       setSaving(false);
-      setError(nameRes.error ?? 'שמירה נכשלה');
-      return;
-    }
-    const themeRes = await updateThemePreference(themePreference);
-    if (!themeRes.success) {
+      setStep('mode');
+    } catch {
       setSaving(false);
-      setError(themeRes.error ?? 'שמירה נכשלה');
-      return;
+      setError('אירעה תקלה בחיבור. בדקו את הרשת ונסו שוב.');
     }
-    setSaving(false);
-    setStep('mode');
   };
 
   const onChooseSolo = () => {
@@ -83,25 +88,30 @@ export default function WelcomeClient({ initialName, initialTheme }: WelcomeClie
     }
     setSharedError('');
     setCreatingShared(true);
-    const res = await completeOnboarding({
-      createShared: true,
-      sharedAccountName: sharedName.trim() || undefined,
-      invitedEmail: partnerEmail.trim() || undefined,
-    });
-    setCreatingShared(false);
+    try {
+      const res = await completeOnboarding({
+        createShared: true,
+        sharedAccountName: sharedName.trim() || undefined,
+        invitedEmail: partnerEmail.trim() || undefined,
+      });
+      setCreatingShared(false);
 
-    if (!res.success) {
-      setSharedError(res.error ?? 'יצירת החשבון המשותף נכשלה');
-      return;
+      if (!res.success) {
+        setSharedError(res.error ?? 'יצירת החשבון המשותף נכשלה');
+        return;
+      }
+
+      if (res.inviteUrl) {
+        setInviteUrl(res.inviteUrl);
+        setStep('invite');
+        return;
+      }
+
+      goToDashboard();
+    } catch {
+      setCreatingShared(false);
+      setSharedError('אירעה תקלה בחיבור. בדקו את הרשת ונסו שוב.');
     }
-
-    if (res.inviteUrl) {
-      setInviteUrl(res.inviteUrl);
-      setStep('invite');
-      return;
-    }
-
-    goToDashboard();
   };
 
   const onCopyInviteLink = async () => {
