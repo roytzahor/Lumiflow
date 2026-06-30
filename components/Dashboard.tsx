@@ -618,7 +618,7 @@ export default function Dashboard({
                             {heroTitle}
                         </h2>
                         {scopeSelectorVisible ? (
-                            <div className="relative w-full min-w-0 max-w-[11rem] shrink-0">
+                            <div className="relative w-full min-w-0 max-w-[11rem] shrink-0" data-testid="dashboard-scope-selector">
                                 <label htmlFor="dashboard-scope-account" className="sr-only">
                                     חשבון לתצוגה בסקירה
                                 </label>
@@ -808,6 +808,7 @@ export default function Dashboard({
                         animate={{ opacity: 1, y: 0 }}
                         transition={sectionDelay(0.12)}
                         className="mb-6"
+                        data-testid="dashboard-daily-snapshot"
                     >
                         <DailySnapshotCard alert={dailyAlert} nudge={dailyNudge} />
                     </motion.div>
@@ -819,6 +820,7 @@ export default function Dashboard({
                         animate={{ opacity: 1, y: 0 }}
                         transition={sectionDelay(0.15)}
                         className="mb-6"
+                        data-testid="dashboard-personal-income"
                     >
                         <PersonalIncomeSummaryCard
                             netIncome={budgetSettings.monthlyIncome}
@@ -979,7 +981,7 @@ export default function Dashboard({
                 </motion.div>
 
                 {currentUserId && visibleSharedAccountSplits.length > 0 && (
-                    <div className="space-y-3 mb-6">
+                    <div className="space-y-3 mb-6" data-testid="dashboard-shared-split">
                         {visibleSharedAccountSplits.map(({ account, splits, hasAllMembersContributing }, index) => (
                             <motion.div
                                 key={account.id}
