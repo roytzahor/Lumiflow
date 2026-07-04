@@ -26,6 +26,8 @@ const SpendingTrendCard = dynamic(() => import("./SpendingTrendCard"), { ssr: fa
 const SharedSplitCard = dynamic(() => import("./SharedSplitCard"), { ssr: false });
 const PersonalIncomeSummaryCard = dynamic(() => import("./PersonalIncomeSummaryCard"), { ssr: false });
 const DailySnapshotCard = dynamic(() => import("./DailySnapshotCard"), { ssr: false });
+const BudgetSetupPromptCard = dynamic(() => import("./BudgetSetupPromptCard"), { ssr: false });
+const IncomeEntrySheet = dynamic(() => import("./IncomeEntrySheet"), { ssr: false });
 const PieChart = dynamic(() => import("./PieChart"), {
     ssr: false,
     loading: () => (
@@ -75,7 +77,7 @@ interface DashboardProps {
     initialSavingsSectionExpanded?: boolean;
     initialSpendingSectionExpanded?: boolean;
     welcomeTourCompletedAt?: Date | string | null;
-    budgetSettings?: { monthlyIncome: number; needsPercent: number; wantsPercent: number; savingsPercent: number } | null;
+    budgetSettings?: { monthlyIncome: number; needsPercent: number; wantsPercent: number; savingsPercent: number; savingsGoal?: string | null; savingsGoalAmount?: number | null } | null;
     prevMonthTotal?: number;
     dailyAlert?: BudgetAlert | null;
     dailyNudge?: DailyNudge | null;
@@ -227,6 +229,7 @@ export default function Dashboard({
     dailyNudge = null,
 }: DashboardProps) {
     const [isSheetOpen, setIsSheetOpen] = useState(false);
+    const [incomeSheetOpen, setIncomeSheetOpen] = useState(false);
     const [savingsSheetOpen, setSavingsSheetOpen] = useState(false);
     const [editingSavings, setEditingSavings] = useState<SavingsAllocationListItem | null>(null);
     const [quickAddIntent, setQuickAddIntent] = useState<{ recurring: boolean } | null>(null);
@@ -802,6 +805,18 @@ export default function Dashboard({
                     )}
                 </motion.div>
 
+                {(!budgetSettings || budgetSettings.monthlyIncome === 0) && (
+                    <motion.div
+                        initial={sectionEnter}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={sectionDelay(0.11)}
+                        className="mb-4"
+                        data-testid="dashboard-budget-prompt"
+                    >
+                        <BudgetSetupPromptCard />
+                    </motion.div>
+                )}
+
                 {(scopeAccountId === "all" || scopeAccountId === "my-money") && hasIncomeConfigured && (
                     <motion.div
                         initial={sectionEnter}
@@ -826,6 +841,7 @@ export default function Dashboard({
                             netIncome={budgetSettings.monthlyIncome}
                             contributions={mySharedAccountContributions}
                             privateSpend={myPrivateSpend}
+                            onAddIncome={() => setIncomeSheetOpen(true)}
                         />
                     </motion.div>
                 )}
@@ -1127,6 +1143,8 @@ export default function Dashboard({
                         reduceMotion={!!reduceMotion}
                         sectionExpanded={savingsSectionExpanded}
                         onToggleSection={toggleSavingsSection}
+                        savingsGoalName={budgetSettings?.savingsGoal ?? null}
+                        savingsGoalAmount={budgetSettings?.savingsGoalAmount ?? null}
                         onAdd={() => {
                             setEditingSavings(null);
                             setSavingsSheetOpen(true);
@@ -1164,6 +1182,11 @@ export default function Dashboard({
                 initialData={editingSavings}
                 accounts={accounts}
                 savingsLabels={savingsLabels}
+            />
+            <IncomeEntrySheet
+                isOpen={incomeSheetOpen}
+                onClose={() => setIncomeSheetOpen(false)}
+                accounts={accounts}
             />
             {welcomeTourCompletedAt == null ? (
                 <WelcomeTour welcomeTourCompletedAt={welcomeTourCompletedAt} />

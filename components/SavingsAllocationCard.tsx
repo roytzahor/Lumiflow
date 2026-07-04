@@ -14,6 +14,10 @@ interface SavingsAllocationCardProps {
   onToggleSection: () => void;
   onAdd: () => void;
   onEdit: (row: SavingsAllocationListItem) => void;
+  /** Monthly savings goal name from BudgetSettings.savingsGoal */
+  savingsGoalName?: string | null;
+  /** Monthly savings goal target amount from BudgetSettings.savingsGoalAmount */
+  savingsGoalAmount?: number | null;
 }
 
 function iconForLabel(labels: SavingsLabel[], name: string): string {
@@ -29,7 +33,12 @@ export default function SavingsAllocationCard({
   onToggleSection,
   onAdd,
   onEdit,
+  savingsGoalName,
+  savingsGoalAmount,
 }: SavingsAllocationCardProps) {
+  const goalProgress = savingsGoalAmount && savingsGoalAmount > 0
+    ? Math.min(Math.round((totalAllocations / savingsGoalAmount) * 100), 100)
+    : null;
   const sectionEnter = reduceMotion ? false : ({ opacity: 0, y: 20 } as const);
   const sectionDelay = (seconds: number) => ({ delay: reduceMotion ? 0 : seconds });
 
@@ -160,6 +169,29 @@ export default function SavingsAllocationCard({
                       <Money amount={totalAllocations} signed={false} />
                     </span>
                   </div>
+                  {goalProgress !== null && savingsGoalAmount && (
+                    <div className="mt-3 rounded-xl bg-ios-gray-6 dark:bg-ios-dark-fill px-3 py-3">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <p className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle">
+                          יעד{savingsGoalName ? ` — ${savingsGoalName}` : ''} חודשי
+                        </p>
+                        <p className="text-xs font-bold tabular-nums text-ios-green">{goalProgress}%</p>
+                      </div>
+                      <div className="overflow-hidden rounded-full bg-ios-gray-5 dark:bg-ios-dark-card h-2">
+                        <div
+                          className="h-full rounded-full bg-ios-green transition-[width] duration-500"
+                          style={{ width: `${goalProgress}%` }}
+                          role="progressbar"
+                          aria-valuenow={goalProgress}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                        />
+                      </div>
+                      <p className="text-[10px] text-ios-subtle dark:text-ios-dark-subtle mt-1.5 tabular-nums">
+                        <Money amount={totalAllocations} signed={false} /> מתוך <Money amount={savingsGoalAmount} signed={false} />
+                      </p>
+                    </div>
+                  )}
                 </>
               )}
             </div>
