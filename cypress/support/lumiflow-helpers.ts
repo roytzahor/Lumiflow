@@ -11,6 +11,33 @@ export function signUpThroughWelcome(email: string, password: string) {
   cy.url({ timeout: 20000 }).should('eq', `${Cypress.config('baseUrl')}/`);
 }
 
+/**
+ * Open the Quick Add sheet via the FAB and wait for it to be usable.
+ * The FAB is visible before React hydration attaches its handler, so the first click can be
+ * swallowed right after signup/navigation; retry once after a grace period.
+ */
+export function openQuickAddSheet() {
+  cy.get('[data-testid="fab-add-button"]', { timeout: 20000 }).should('be.visible').click({ force: true });
+  cy.wait(1000);
+  cy.get('body').then(($body) => {
+    if ($body.find('[data-testid="quickadd-sheet-dialog"]').length === 0) {
+      cy.get('[data-testid="fab-add-button"]').click({ force: true });
+    }
+  });
+  cy.get('[data-testid="quickadd-amount"]', { timeout: 15000 }).should('be.visible');
+}
+
+/** Set the monthly income (budget) from Settings — unlocks the budget-gated dashboard/insights surfaces (S7-5/S7-9). */
+export function setMonthlyIncomeFromSettings(amount: string) {
+  cy.visit('/settings');
+  cy.get('[data-testid="settings-budget-income"]', { timeout: 20000 })
+    .clear()
+    .type(amount)
+    .should('have.value', amount);
+  cy.get('[data-testid="settings-budget-save"]').click({ force: true });
+  cy.contains('תקציב עודכן', { timeout: 20000 }).should('be.visible');
+}
+
 /** Set the default account’s monthly contribution from Settings (replaces old onboarding income step). */
 export function setMonthlyContributionFromSettings(amount: string) {
   cy.get('[data-testid="bottom-nav-settings"]', { timeout: 20000 }).should('be.visible').click({ force: true });

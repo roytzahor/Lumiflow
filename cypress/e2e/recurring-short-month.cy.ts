@@ -1,4 +1,4 @@
-import { signUpThroughWelcome } from '../support/lumiflow-helpers';
+import { openQuickAddSheet, signUpThroughWelcome } from '../support/lumiflow-helpers';
 
 describe('Recurring short month policy visibility', () => {
   Cypress.on('uncaught:exception', (err) => {
@@ -18,8 +18,7 @@ describe('Recurring short month policy visibility', () => {
 
     signUpThroughWelcome(email, password);
 
-    cy.get('[data-testid="fab-add-button"]').click({ force: true });
-    cy.get('[data-testid="quickadd-amount"]', { timeout: 15000 }).should('be.visible');
+    openQuickAddSheet();
     cy.get('[data-testid="quickadd-recurring-toggle"]').click();
 
     cy.get('[data-testid="quickadd-date"]').clear().type('2026-04-28');

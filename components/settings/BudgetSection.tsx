@@ -49,6 +49,7 @@ export default function BudgetSection({
             הכנסה חודשית
           </label>
           <input
+            data-testid="settings-budget-income"
             type="number"
             min="0"
             step="100"
@@ -64,6 +65,7 @@ export default function BudgetSection({
           )}
         </div>
         <button
+          data-testid="settings-budget-save"
           type="button"
           onClick={() => void handleSave()}
           disabled={isSaving || isUnchanged}

@@ -148,6 +148,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
             setIsCategoryTouched(false);
         }
         setShowDeleteConfirm(false);
+        setShowDismissConfirm(false);
         setAmountError('');
         setAccountError('');
         setDateError('');
@@ -240,7 +241,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                     onClose();
                 } else {
                     setSavedSummary({ amount: parseFloat(normalizedAmount), category });
-                    setTimeout(() => setSavedSummary(null), 750);
+                    setTimeout(() => setSavedSummary(null), 1500);
                     setAmount('');
                     setDescription('');
                     setDate(getTodayDateInputValue());
@@ -405,27 +406,28 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                         </div>
 
                         <div className="flex-1 overflow-y-auto px-5 pb-8">
-                            {/* Save success banner (S7-7) */}
-                            <AnimatePresence>
-                                {savedSummary && (
-                                    <motion.div
-                                        key="save-success"
-                                        initial={{ opacity: 0, scale: 0.95, y: -8 }}
-                                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                                        exit={{ opacity: 0, scale: 0.95, y: -8 }}
-                                        transition={{ type: 'spring', damping: 30, stiffness: 400 }}
-                                        className="mb-4 flex items-center gap-3 rounded-2xl bg-ios-green/12 dark:bg-ios-green/20 px-4 py-3"
-                                    >
-                                        <span className="text-xl" aria-hidden>✓</span>
-                                        <div>
-                                            <p className="text-sm font-bold text-ios-green">נוסף בהצלחה</p>
-                                            <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle tabular-nums">
-                                                <Money amount={savedSummary.amount} signed={false} /> · {savedSummary.category}
-                                            </p>
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
+                            {/* Save success banner (S7-7). Removal must NOT depend on an
+                                AnimatePresence exit callback: a router.refresh() RSC commit can
+                                land mid-exit and drop the unmount, leaving an invisible banner
+                                occupying layout (see LESSONS.md 2026-07-04). */}
+                            {savedSummary && (
+                                <motion.div
+                                    data-testid="quickadd-save-success"
+                                    key="save-success"
+                                    initial={{ opacity: 0, scale: 0.95, y: -8 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    transition={{ type: 'spring', damping: 30, stiffness: 400 }}
+                                    className="mb-4 flex items-center gap-3 rounded-2xl bg-ios-green/12 dark:bg-ios-green/20 px-4 py-3"
+                                >
+                                    <span className="text-xl" aria-hidden>✓</span>
+                                    <div>
+                                        <p className="text-sm font-bold text-ios-green">נוסף בהצלחה</p>
+                                        <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle tabular-nums">
+                                            <Money amount={savedSummary.amount} signed={false} /> · {savedSummary.category}
+                                        </p>
+                                    </div>
+                                </motion.div>
+                            )}
 
                             {/* Header */}
                             <div className="flex items-center justify-between mb-6">
@@ -663,6 +665,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                         מספר חודשים
                                     </label>
                                     <input
+                                        data-testid="quickadd-installments"
                                         type="number"
                                         inputMode="numeric"
                                         min={1}
@@ -680,7 +683,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                         className="w-full bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-3 py-2.5 text-sm text-ios-text dark:text-ios-dark-text focus:outline-none focus:ring-2 focus:ring-ios-blue/30 disabled:opacity-50"
                                     />
                                     {installmentPreviewParts && installmentPreviewParts.length > 0 && (
-                                        <div className="mt-2 rounded-xl bg-ios-blue/8 dark:bg-ios-blue/15 px-3 py-2">
+                                        <div data-testid="quickadd-installment-preview" className="mt-2 rounded-xl bg-ios-blue/8 dark:bg-ios-blue/15 px-3 py-2">
                                             <p className="text-xs font-semibold text-ios-blue tabular-nums">
                                                 {installmentCount} תשלומים × <Money amount={installmentPreviewParts[0] ?? 0} signed={false} />
                                                 {installmentPreviewParts.length > 1 && installmentPreviewParts[0] !== installmentPreviewParts[installmentPreviewParts.length - 1] && (
@@ -734,6 +737,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                             <AnimatePresence>
                                 {showDismissConfirm && (
                                     <motion.div
+                                        data-testid="quickadd-dismiss-confirm"
                                         key="dismiss-confirm"
                                         initial={{ opacity: 0, y: 8 }}
                                         animate={{ opacity: 1, y: 0 }}

@@ -8,6 +8,66 @@ Entry format: `## <date> — <title>` with **Mistake / Root cause / Rule**.
 
 ---
 
+## 2026-07-04 — Full-suite E2E against `next dev` flakes under load; verify against a production build
+- **Mistake:** Chased one-off failures (signin page-load timeout, settings profile-save latency,
+  Quick Add sheet-open timeout) across otherwise-green ~5-minute dev-mode suite runs as if they
+  were regressions. The failing test was different in every run and passed in isolation each time.
+- **Root cause:** `next dev` on-demand compilation and HMR overhead make page loads and server
+  actions intermittently slow when 20 tests run back-to-back. A production build
+  (`yarn build && yarn start`, local `DATABASE_URL`) runs the same suite in ~90s with stable
+  timing — 19/19 green, the only exclusion being the `?dashboardFail=1` retry test, which is
+  `NODE_ENV !== "production"`-gated by design (`app/dashboard-data-loader.tsx`).
+- **Rule:** For suite-level green/red verdicts, run Cypress against a production build; use the
+  dev-mode script for the dev-only failure-injection test and for iterating on a single spec.
+  Before treating any one-off dev-mode failure as a regression, re-run it in isolation.
+
+## 2026-07-04 — S7-7 save banner can get stuck invisible: AnimatePresence exit vs. router.refresh()
+- **Mistake:** The Quick Add save-success banner is removed via `setTimeout(750)` +
+  `AnimatePresence` exit. In full-suite runs it intermittently stayed mounted at `opacity: 0`
+  for 20+ seconds (screenshot shows a phantom gap above the sheet header), which also broke the
+  `₪500` assertion in `quick-add.cy.ts`. A dedicated diagnostic spec against a light dashboard
+  could not reproduce it.
+- **Root cause:** `handleSubmit` calls `router.refresh()` right before scheduling the banner
+  dismissal. When the RSC re-render commits during the exit-animation window (likelier with a
+  heavy dashboard payload), framer-motion's `onExitComplete`-driven unmount is dropped — the
+  element finishes animating to `opacity: 0` but is never removed from the DOM.
+- **Rule:** Never gate the *removal* of an element on an AnimatePresence exit callback when a
+  `router.refresh()` / RSC commit can land mid-exit. Auto-dismissing transients owned by a
+  timer must unmount via plain conditional rendering (entrance animation only), or via the
+  toast system.
+- **Mistake:** A new E2E test clicked `[data-testid="fab-add-button"]` right after
+  `signUpThroughWelcome` lands on `/`; the click fired before React hydration attached the
+  onClick handler, so the Quick Add sheet never opened and the test timed out. Three sibling
+  tests with the identical pattern passed in the same run — it's a timing flake, not a
+  deterministic failure.
+- **Root cause:** `signUpThroughWelcome` only asserts the URL; the dashboard DOM is server-
+  rendered and visible before hydration completes, so element visibility does not imply
+  interactivity.
+- **Rule:** Never follow a navigation assertion directly with a click on a client-handler
+  element. Open the Quick Add sheet only via the `openQuickAddSheet()` helper
+  (`cypress/support/lumiflow-helpers.ts`), which verifies the sheet actually opened and
+  retries the click once after a grace period.
+
+## 2026-07-04 — Sprint 7 UI changes shipped without updating the E2E specs that assert those surfaces
+- **Mistake:** Phase 1 baseline run (10/14 passing) showed 4 failures caused by Sprint 7 itself:
+  1. `insights.cy.ts` ×3 — S7-9 gates the whole Insights body behind budget setup, but all three
+     specs sign up fresh users (no budget) and assert the pre-Sprint-7 anomaly section
+     (`שינויים בולטים החודש`, example cards), which now never renders for them.
+  2. `history.cy.ts` ×1 — `quickadd-submit` click failed with "center of this element is hidden
+     from view": the spec clicks without scrolling inside the sheet's inner overflow container,
+     and the Sprint 7 sheet is taller (installments card copy + preview). The passing
+     `quick-add.cy.ts` already uses `.scrollIntoView().click({ force: true })`. Downstream, the
+     same spec asserts TransactionFeed's `לא נוספו עדיין הוצאות`, which HistoryView's new S7-8
+     empty state (`אין הוצאות החודש`) now supersedes on the history page.
+- **Root cause:** Features that change user-visible copy/branches landed with unit tests only;
+  the E2E suite was already red for environmental reasons (broken remote DB in `.env`), so spec
+  drift was invisible. The 19 Jun-29/30 failure screenshots were environmental — with the local
+  DB script, 5 of the 9 previously-failing specs pass unchanged.
+- **Rule:** A change to user-visible copy or a rendering branch must update the E2E specs that
+  assert that surface *in the same commit*. Run E2E via `scripts/cypress-e2e-local.sh` so a
+  broken `.env` can never mask drift. Inside the Quick Add sheet, always
+  `.scrollIntoView().click({ force: true })` on elements in the inner scroll container.
+
 ## 2026-07-04 — Sprint 7 landed as a large uncommitted tree with a red E2E suite
 - **Mistake:** All ten Sprint 7 features were implemented in the working tree with no new tests
   and no commits, while `cypress/screenshots/` accumulated 19 `(failed)` screenshots (Jun 29–30)
