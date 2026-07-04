@@ -50,3 +50,10 @@ coverage
 
 # graphify generated knowledge-graph artifacts
 graphify-out/
+
+# repomix context snapshot (regenerate with `repomix`)
+repomix-output.xml
+
+# cypress run artifacts
+cypress/screenshots/
+cypress/videos/
