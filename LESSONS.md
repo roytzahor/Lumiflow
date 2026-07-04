@@ -8,6 +8,19 @@ Entry format: `## <date> — <title>` with **Mistake / Root cause / Rule**.
 
 ---
 
+## 2026-07-04 — Barrel-retirement importer census missed dynamic imports and undercounted by half
+- **Mistake:** The Phase 2 plan inventoried "7+ importers" of the legacy `app/actions.ts` barrel
+  from a static-import grep. The real count was 16 files with static imports plus 3 dynamic
+  `await import('@/app/actions')` call sites (`QuickAddSheet.tsx` ×2, `RecurringEditSheet.tsx` ×1)
+  that the `from ['"]...` pattern can never match. Had the barrel been deleted on the planned
+  list alone, the build would have broken.
+- **Root cause:** Grepping only for `from '...'`-style module specifiers; dynamic `import(...)`
+  expressions use the specifier without `from`, so they are invisible to that pattern.
+- **Rule:** Before deleting any module, sweep for the bare specifier itself (e.g.
+  `grep -rn "app/actions['\"\`]"`) — not just `from`-clauses — and only delete when the bare-
+  specifier sweep returns zero hits. Verify with `tsc --noEmit` *and* `yarn build` (bundler
+  resolution catches what the type-checker's cache can miss).
+
 ## 2026-07-04 — Full-suite E2E against `next dev` flakes under load; verify against a production build
 - **Mistake:** Chased one-off failures (signin page-load timeout, settings profile-save latency,
   Quick Add sheet-open timeout) across otherwise-green ~5-minute dev-mode suite runs as if they

@@ -1,4 +1,4 @@
-import { ensureDefaultWorkspace } from '@/app/actions';
+import { ensureDefaultWorkspace } from '@/app/actions/onboarding';
 import { getCachedServerSession } from '@/lib/get-cached-server-session';
 import { prisma } from '@/lib/prisma';
 import { resolveOrRestoreSessionUserId } from '@/lib/session-user';

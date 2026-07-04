@@ -10,7 +10,7 @@ import {
     updateDashboardRecurringSectionExpanded,
     updateDashboardSavingsSectionExpanded,
     updateDashboardSpendingSectionExpanded,
-} from "@/app/actions";
+} from "@/app/actions/settings";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, ChevronLeft, Lock } from "lucide-react";

@@ -1,6 +1,6 @@
 "use client";
 
-import { acceptPendingAccountInvite, getPendingAccountInvites } from "@/app/actions";
+import { acceptPendingAccountInvite, getPendingAccountInvites } from "@/app/actions/invites";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";

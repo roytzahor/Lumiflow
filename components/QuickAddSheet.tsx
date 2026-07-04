@@ -8,7 +8,8 @@ import { toast } from 'sonner';
 import LiquidToggle from './ui/LiquidToggle';
 import Money from '@/components/ui/Money';
 import CategoryPickerSection from '@/components/CategoryPickerSection';
-import { addCategory, addTransaction } from '@/app/actions';
+import { addCategory } from '@/app/actions/categories';
+import { addTransaction } from '@/app/actions/transactions';
 import { useHaptic } from '@/hooks/useHaptic';
 import { detectAllCategoryMatches } from '@/lib/category-dictionary';
 import { formatDateInputForDisplay, getTodayDateInputValue, toDateInputValueFromUtc } from '@/lib/date-only';
@@ -227,7 +228,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
         try {
             let res;
             if (initialData) {
-                const { updateTransaction } = await import('@/app/actions');
+                const { updateTransaction } = await import('@/app/actions/transactions');
                 res = await updateTransaction(initialData.id, formData);
             } else {
                 res = await addTransaction(formData);
@@ -274,7 +275,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
         if (!initialData) return;
         setIsDeleting(true);
         try {
-            const { deleteTransaction } = await import('@/app/actions');
+            const { deleteTransaction } = await import('@/app/actions/transactions');
             const res = await deleteTransaction(initialData.id, scope);
             if (res.success) {
                 toast.success('נמחק בהצלחה');

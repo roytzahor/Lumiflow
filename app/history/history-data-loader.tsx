@@ -1,11 +1,9 @@
-import {
-    getMonthlyStats,
-    getAccounts,
-    getCategories,
-    getRecurringTransactions,
-    getCurrentUserProfile,
-    getSavingsLabels,
-} from "@/app/actions";
+import { getMonthlyStats } from "@/app/actions/stats";
+import { getAccounts } from "@/app/actions/accounts";
+import { getCategories } from "@/app/actions/categories";
+import { getRecurringTransactions } from "@/app/actions/recurring";
+import { getCurrentUserProfile } from "@/app/actions/profile";
+import { getSavingsLabels } from "@/app/actions/savings";
 import HistoryView from "@/components/HistoryView";
 
 export default async function HistoryDataLoader({

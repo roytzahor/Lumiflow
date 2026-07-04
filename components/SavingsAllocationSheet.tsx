@@ -12,7 +12,7 @@ import {
   addSavingsAllocation,
   updateSavingsAllocation,
   deleteSavingsAllocation,
-} from '@/app/actions';
+} from '@/app/actions/savings';
 import InfoHint from '@/components/InfoHint';
 
 interface SavingsAllocationSheetProps {

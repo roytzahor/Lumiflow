@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { Info, Trash2, X } from "lucide-react";
-import type { AccountMemberSummary } from "@/app/actions";
+import type { AccountMemberSummary } from "@/app/actions/_shared";
 import type { AccountType } from "@/lib/types";
 import Money from "@/components/ui/Money";
 

@@ -21,7 +21,7 @@ import type {
     SavingsAllocationListItem,
     SavingsLabel,
 } from "@/lib/types";
-import { updateHistoryShowRecurringTransactions } from "@/app/actions";
+import { updateHistoryShowRecurringTransactions } from "@/app/actions/settings";
 import { useRouter, useSearchParams } from "next/navigation";
 import { parseScopeAccountId } from "@/lib/scope-account";
 

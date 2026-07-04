@@ -1,4 +1,6 @@
-import { getCategoryAnomalies, getCategories, getSavingsAllocationInsights } from "@/app/actions";
+import { getCategoryAnomalies } from "@/app/actions/insights";
+import { getCategories } from "@/app/actions/categories";
+import { getSavingsAllocationInsights } from "@/app/actions/savings";
 import { getBudgetSettings } from "@/app/actions/settings";
 import { formatIlsAmount } from "@/lib/formatters";
 import InsightsAnomalyCard from "@/components/insights-anomaly-card";

@@ -1,11 +1,8 @@
-import {
-  getCategories,
-  getAccountsWithMembersForSettings,
-  getCurrentUserProfile,
-  getContributionPlans,
-  getSavingsLabels,
-  getBudgetSettings,
-} from '../actions';
+import { getCategories } from '../actions/categories';
+import { getAccountsWithMembersForSettings, getContributionPlans } from '../actions/accounts';
+import { getCurrentUserProfile } from '../actions/profile';
+import { getSavingsLabels } from '../actions/savings';
+import { getBudgetSettings } from '../actions/settings';
 import SettingsContent from './SettingsContent';
 import BottomNav from '@/components/BottomNav';
 import { redirectToOnboardingIfNeeded } from '@/lib/onboarding';

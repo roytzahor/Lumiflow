@@ -1,6 +1,6 @@
 'use client';
 
-import { markWelcomeTourCompleted } from '@/app/actions';
+import { markWelcomeTourCompleted } from '@/app/actions/onboarding';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import '@/components/welcome-tour.css';

@@ -7,7 +7,7 @@ import { Calendar, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDateInputForDisplay, toDateInputValueFromUtc } from '@/lib/date-only';
 import type { AccountSummary, Category, RecurringMonthPolicy, RecurringWithAccount } from '@/lib/types';
-import { updateRecurringTransaction } from '@/app/actions';
+import { updateRecurringTransaction } from '@/app/actions/recurring';
 
 interface RecurringEditSheetProps {
   isOpen: boolean;
@@ -116,7 +116,7 @@ export default function RecurringEditSheet({
     if (!recurring) return;
     setIsDeleting(true);
     try {
-      const { deleteRecurringTransaction } = await import('@/app/actions');
+      const { deleteRecurringTransaction } = await import('@/app/actions/recurring');
       const res = await deleteRecurringTransaction(recurring.id);
       if (!res.success) {
         toast.error(res.error || 'מחיקה נכשלה. נסה שוב.');

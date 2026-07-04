@@ -1,5 +1,6 @@
 import WelcomeClient from '@/app/welcome/WelcomeClient';
-import { ensureDefaultWorkspace, getCurrentUserProfile } from '@/app/actions';
+import { ensureDefaultWorkspace } from '@/app/actions/onboarding';
+import { getCurrentUserProfile } from '@/app/actions/profile';
 import { getCachedServerSession } from '@/lib/get-cached-server-session';
 import { redirect } from 'next/navigation';
 

@@ -5,34 +5,26 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { useTheme } from 'next-themes';
 import { toast } from 'sonner';
+import { updateCurrentUserProfile, updateCurrentUserPassword } from '../actions/profile';
 import {
-  updateCurrentUserProfile,
-  updateCurrentUserPassword,
   updateThemePreference,
-  addCategory,
-  updateCategory,
-  deleteCategory,
+  updateSettingsSectionExpanded,
+  updateBudgetSettings,
+} from '../actions/settings';
+import { addCategory, updateCategory, deleteCategory } from '../actions/categories';
+import {
   updateAccount,
   createAccount,
   archiveAccount,
-  createAccountInvite,
-  acceptAccountInvite,
-  getInvitePreview,
   upsertContributionPlan,
   getAccountMemberContributions,
   removeAccountMember,
-  updateSettingsSectionExpanded,
-  addIncomeEntry,
-  getIncomeEntries,
-  deleteIncomeEntry,
-  addSavingsLabel,
-  deleteSavingsLabel,
-  setSavingsLabelHidden,
-  deleteCurrentUserAccount,
-  updateBudgetSettings,
-} from '../actions';
-import type { SettingsSectionKey } from '../actions';
-import type { AccountMemberSummary } from '../actions';
+} from '../actions/accounts';
+import { createAccountInvite, acceptAccountInvite, getInvitePreview } from '../actions/invites';
+import { addIncomeEntry, getIncomeEntries, deleteIncomeEntry } from '../actions/income';
+import { addSavingsLabel, deleteSavingsLabel, setSavingsLabelHidden } from '../actions/savings';
+import { deleteCurrentUserAccount } from '../actions/onboarding';
+import type { SettingsSectionKey, AccountMemberSummary } from '../actions/_shared';
 import { Pencil, Trash2, Plus, Share2, LogOut, Copy, SendHorizontal, Info, ChevronDown, Landmark, TrendingUp, PiggyBank, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import type { AccountSummary, Category, IncomeEntryItem, SavingsLabel } from '@/lib/types';
 import AccountPopup from '@/components/AccountPopup';

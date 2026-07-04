@@ -38,7 +38,6 @@ app/
   page.tsx                 # Dashboard route (home)
   history/ insights/        # feature routes (RSC pages → data loaders → client views)
   settings/ onboarding/ welcome/ auth/
-  actions.ts               # ⚠ Legacy stubs only — real logic split into app/actions/*
   actions/                 # Domain-split Server Actions (transactions, recurring, savings,
                            #   income, accounts, categories, settings, insights,
                            #   invites, profile, onboarding)
@@ -202,7 +201,6 @@ attribution %), `Category`, `AccountInvite`.
 ---
 
 ## Known Hotspots (architecture)
-- `app/actions.ts` (~legacy stubs) — domain actions are now in `app/actions/`; the root file should eventually be deleted.
 - `requireUserId` (68 call sites) and `formatIlsAmount()` (17 call sites) are cross-cutting hubs — change them with care.
 - `lib/server/load-dashboard-data.ts` — single large data loader; will need splitting when dashboard adds more card types.
 - Test coverage is thin (6 unit specs, 9 E2E) relative to the domain surface. Sprint 7 adds tests in parallel with new features.

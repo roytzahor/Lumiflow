@@ -1,6 +1,8 @@
 'use client';
 
-import { completeOnboarding, updateCurrentUserProfile, updateThemePreference } from '@/app/actions';
+import { completeOnboarding } from '@/app/actions/onboarding';
+import { updateCurrentUserProfile } from '@/app/actions/profile';
+import { updateThemePreference } from '@/app/actions/settings';
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';

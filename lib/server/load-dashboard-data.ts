@@ -2,15 +2,14 @@ import {
   getAccountContributionTotals,
   getAccounts,
   getAllAccountContributionRatios,
-  getBudgetSettings,
-  getCategories,
-  getCurrentUserProfile,
-  getMonthlyIncomeEntries,
   getMyContributionRatios,
-  getSavingsAllocations,
-  getSavingsLabels,
-  getTransactions,
-} from '@/app/actions';
+} from '@/app/actions/accounts';
+import { getBudgetSettings } from '@/app/actions/settings';
+import { getCategories } from '@/app/actions/categories';
+import { getCurrentUserProfile } from '@/app/actions/profile';
+import { getMonthlyIncomeEntries } from '@/app/actions/income';
+import { getSavingsAllocations, getSavingsLabels } from '@/app/actions/savings';
+import { getTransactions } from '@/app/actions/transactions';
 import { fetchActiveRecurringForAccounts } from '@/lib/server/recurring-query';
 import { ensureUserBootstrap, getUserAccountIds, requireUserId } from '@/lib/server-user';
 import { buildRetentionSignals } from '@/lib/retention-signals';
