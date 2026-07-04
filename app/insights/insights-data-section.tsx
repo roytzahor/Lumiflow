@@ -1,7 +1,9 @@
 import { getCategoryAnomalies, getCategories, getSavingsAllocationInsights } from "@/app/actions";
+import { getBudgetSettings } from "@/app/actions/settings";
 import { formatIlsAmount } from "@/lib/formatters";
 import InsightsAnomalyCard from "@/components/insights-anomaly-card";
 import InfoHint from "@/components/InfoHint";
+import Link from "next/link";
 import type { Category, CategoryAnomaly } from "@/lib/types";
 
 function getCategoryIcon(categories: Category[], categoryName: string): string {
@@ -36,11 +38,36 @@ const INSIGHTS_EXAMPLE_ROWS: { anomaly: CategoryAnomaly; icon: string }[] = [
 ];
 
 export default async function InsightsDataSection() {
-    const [{ anomalies, hasEnoughHistory }, categories, savingsInsight] = await Promise.all([
+    const [{ anomalies, hasEnoughHistory }, categories, savingsInsight, budgetSettings] = await Promise.all([
         getCategoryAnomalies(),
         getCategories(),
         getSavingsAllocationInsights(),
+        getBudgetSettings(),
     ]);
+
+    if (!budgetSettings || budgetSettings.monthlyIncome === 0) {
+        return (
+            <section data-testid="insights-data-section">
+                <div className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-6 shadow-card text-center">
+                    <div className="w-12 h-12 rounded-full bg-ios-blue/10 flex items-center justify-center mx-auto mb-3">
+                        <span className="text-2xl">📊</span>
+                    </div>
+                    <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text mb-1">
+                        הגדירו תקציב לפני שמתחילים
+                    </p>
+                    <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle leading-relaxed mb-4 text-pretty">
+                        הגדרת הכנסה חודשית תאפשר לנו להשוות בין הוצאות, לזהות חריגות, ולהציג תובנות מותאמות אישית.
+                    </p>
+                    <Link
+                        href="/settings?section=budget"
+                        className="inline-flex items-center justify-center rounded-xl bg-ios-blue px-5 py-2.5 text-sm font-bold text-white active:opacity-90"
+                    >
+                        הגדרת תקציב חודשי
+                    </Link>
+                </div>
+            </section>
+        );
+    }
 
     const showSavingsBlock =
         savingsInsight != null &&

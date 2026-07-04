@@ -297,9 +297,35 @@ export default function HistoryView({
                         <div className="w-14 h-14 bg-ios-gray-6 dark:bg-ios-dark-fill rounded-full flex items-center justify-center mb-3">
                             <Search className="h-6 w-6 opacity-60" aria-hidden />
                         </div>
-                        <p className="text-sm font-medium text-center px-4 text-ios-subtle dark:text-ios-dark-subtle">
+                        <p className="text-sm font-medium text-center px-4 text-ios-subtle dark:text-ios-dark-subtle mb-3">
                             אין תוצאות עבור &quot;{searchQuery.trim()}&quot;
                         </p>
+                        <button
+                            type="button"
+                            onClick={() => setSearchQuery('')}
+                            className="text-sm font-semibold text-ios-blue active:opacity-70"
+                        >
+                            נקה חיפוש
+                        </button>
+                    </div>
+                ) : !normalizedSearchQuery && selectedCategories.length === 0 && visibleTransactions.length === 0 && visibleSavings.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-center px-4">
+                        <div className="w-14 h-14 bg-ios-gray-6 dark:bg-ios-dark-fill rounded-full flex items-center justify-center mb-3">
+                            <span className="text-2xl opacity-60">💸</span>
+                        </div>
+                        <p className="text-sm font-semibold text-ios-text dark:text-ios-dark-text mb-1">
+                            אין הוצאות החודש
+                        </p>
+                        <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle mb-4 text-pretty">
+                            הוסיפו הוצאה ראשונה לחודש הזה
+                        </p>
+                        <button
+                            type="button"
+                            onClick={() => { setEditingTransaction(null); setIsSheetOpen(true); }}
+                            className="inline-flex items-center gap-1.5 rounded-xl bg-ios-blue px-5 py-2.5 text-sm font-bold text-white active:opacity-90"
+                        >
+                            הוספת הוצאה
+                        </button>
                     </div>
                 ) : (
                     <TransactionFeed
