@@ -14,6 +14,7 @@ import { detectAllCategoryMatches } from '@/lib/category-dictionary';
 import { formatDateInputForDisplay, getTodayDateInputValue, toDateInputValueFromUtc } from '@/lib/date-only';
 import type { TransactionListItem, AccountSummary, Category, RecurringMonthPolicy } from '@/lib/types';
 import { splitInstallmentAmounts } from '@/lib/installment-utils';
+import { normalizeAmountInput } from '@/lib/amount-input';
 
 interface QuickAddSheetProps {
     isOpen: boolean;
@@ -63,6 +64,11 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
     const [isCategoryTouched, setIsCategoryTouched] = useState(false);
     const [isAccountListExpanded, setIsAccountListExpanded] = useState(false);
     const [hasUserPickedAccount, setHasUserPickedAccount] = useState(false);
+    const [showDismissConfirm, setShowDismissConfirm] = useState(false);
+    const [categoryAutoDetected, setCategoryAutoDetected] = useState(false);
+    const [savedSummary, setSavedSummary] = useState<{ amount: number; category: string } | null>(null);
+
+    const isDirty = amount !== '' || description !== '';
 
     const dragControls = useDragControls();
     const { trigger } = useHaptic();
@@ -152,9 +158,17 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
     }, [isOpen, initialData, accounts, openWithRecurring]);
 
     useEffect(() => {
-        if (initialData || isCategoryTouched || !description.trim()) return;
+        if (initialData || isCategoryTouched || !description.trim()) {
+            setCategoryAutoDetected(false);
+            return;
+        }
         const all = detectAllCategoryMatches(description);
-        if (all.length === 1) setCategory(all[0].name);
+        if (all.length === 1) {
+            setCategory(all[0].name);
+            setCategoryAutoDetected(true);
+        } else {
+            setCategoryAutoDetected(false);
+        }
     }, [description, initialData, isCategoryTouched]);
 
     const ambiguousCategoryMatches = useMemo(() => {
@@ -181,14 +195,15 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
     }, [installmentCount]);
 
     const installmentPreviewParts = useMemo(() => {
-        const num = parseFloat(amount);
+        const num = parseFloat(normalizeAmountInput(amount));
         if (!amount || Number.isNaN(num) || num <= 0 || installmentCount < 2) return null;
         return splitInstallmentAmounts(num, installmentCount);
     }, [amount, installmentCount]);
 
     const handleSubmit = async () => {
-        const num = parseFloat(amount);
-        if (!amount || isNaN(num)) { setAmountError('הזן סכום'); return; }
+        const normalizedAmount = normalizeAmountInput(amount);
+        const num = parseFloat(normalizedAmount);
+        if (!normalizedAmount || isNaN(num)) { setAmountError('הזן סכום'); return; }
         if (num <= 0) { setAmountError('הסכום חייב להיות גדול מ-0'); return; }
         if (!date) { setDateError('יש לבחור תאריך'); return; }
         if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { setDateError('פורמט תאריך לא תקין'); return; }
@@ -199,7 +214,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
         setIsSubmitting(true);
 
         const formData = new FormData();
-        formData.append('amount', amount);
+        formData.append('amount', normalizedAmount);
         formData.append('description', description);
         formData.append('date', date);
         formData.append('accountId', accountId);
@@ -218,11 +233,14 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
             }
 
             if (res.success) {
+                trigger(25);
                 toast.success(initialData ? 'עודכן בהצלחה' : 'נוסף בהצלחה');
                 router.refresh();
                 if (initialData) {
                     onClose();
                 } else {
+                    setSavedSummary({ amount: parseFloat(normalizedAmount), category });
+                    setTimeout(() => setSavedSummary(null), 750);
                     setAmount('');
                     setDescription('');
                     setDate(getTodayDateInputValue());
@@ -233,10 +251,12 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                     setHasUserPickedAccount(accounts.length <= 1);
                     setCategory('כללי');
                     setIsCategoryTouched(false);
+                    setCategoryAutoDetected(false);
                     setCategorySearch('');
                     setAmountError('');
                     setAccountError('');
                     setDateError('');
+                    setShowDismissConfirm(false);
                     requestAnimationFrame(() => amountInputRef.current?.focus());
                 }
             } else {
@@ -270,7 +290,10 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
     };
 
     const onDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-        if (info.offset.y > 100) onClose();
+        if (info.offset.y > 100) {
+            if (isDirty) setShowDismissConfirm(true);
+            else onClose();
+        }
     };
 
     const selectedDate = date ? new Date(`${date}T00:00:00`) : null;
@@ -356,7 +379,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.2 }}
                         className="fixed inset-0 z-[70] bg-black/30 backdrop-blur-sm"
-                        onClick={onClose}
+                        onClick={isDirty ? () => setShowDismissConfirm(true) : onClose}
                     />
 
                     <motion.div
@@ -382,6 +405,28 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                         </div>
 
                         <div className="flex-1 overflow-y-auto px-5 pb-8">
+                            {/* Save success banner (S7-7) */}
+                            <AnimatePresence>
+                                {savedSummary && (
+                                    <motion.div
+                                        key="save-success"
+                                        initial={{ opacity: 0, scale: 0.95, y: -8 }}
+                                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                                        exit={{ opacity: 0, scale: 0.95, y: -8 }}
+                                        transition={{ type: 'spring', damping: 30, stiffness: 400 }}
+                                        className="mb-4 flex items-center gap-3 rounded-2xl bg-ios-green/12 dark:bg-ios-green/20 px-4 py-3"
+                                    >
+                                        <span className="text-xl" aria-hidden>✓</span>
+                                        <div>
+                                            <p className="text-sm font-bold text-ios-green">נוסף בהצלחה</p>
+                                            <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle tabular-nums">
+                                                <Money amount={savedSummary.amount} signed={false} /> · {savedSummary.category}
+                                            </p>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
                             {/* Header */}
                             <div className="flex items-center justify-between mb-6">
                                 <h2 id="sheet-title" className="text-xl font-bold text-ios-text dark:text-ios-dark-text">
@@ -390,7 +435,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                 <button
                                     data-testid="quickadd-open-close"
                                     type="button"
-                                    onClick={onClose}
+                                    onClick={isDirty ? () => setShowDismissConfirm(true) : onClose}
                                     className="w-8 h-8 bg-ios-gray-5 dark:bg-ios-dark-fill rounded-full flex items-center justify-center"
                                     aria-label="סגור"
                                 >
@@ -406,11 +451,11 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                     <input
                                         ref={amountInputRef}
                                         data-testid="quickadd-amount"
-                                        type="number"
+                                        type="text"
                                         inputMode="decimal"
                                         value={amount}
                                         onChange={(e) => {
-                                            setAmount(e.target.value);
+                                            setAmount(normalizeAmountInput(e.target.value));
                                             if (amountError) setAmountError('');
                                             trigger(5);
                                         }}
@@ -554,6 +599,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                                     onClick={() => {
                                                         setCategory(m.name);
                                                         setIsCategoryTouched(true);
+                                                        setCategoryAutoDetected(false);
                                                         trigger(8);
                                                     }}
                                                     className="inline-flex items-center gap-1.5 rounded-xl bg-ios-blue/10 dark:bg-ios-blue/20 text-ios-text dark:text-ios-dark-text text-xs font-semibold py-2 px-3 active:opacity-80"
@@ -576,9 +622,11 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                 newCategoryName={newCategoryName}
                                 newCategoryEmojiInput={newCategoryEmojiInput}
                                 isAddingCategory={isAddingCategory}
+                                autoDetectedCategory={categoryAutoDetected ? category : undefined}
                                 onSelectCategory={(name) => {
                                     setCategory(name);
                                     setIsCategoryTouched(true);
+                                    setCategoryAutoDetected(false);
                                     trigger(10);
                                 }}
                                 onSearchChange={setCategorySearch}
@@ -632,17 +680,15 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                         className="w-full bg-ios-gray-6 dark:bg-ios-dark-fill rounded-xl px-3 py-2.5 text-sm text-ios-text dark:text-ios-dark-text focus:outline-none focus:ring-2 focus:ring-ios-blue/30 disabled:opacity-50"
                                     />
                                     {installmentPreviewParts && installmentPreviewParts.length > 0 && (
-                                        <p className="text-xs text-ios-subtle dark:text-ios-dark-subtle mt-2">
-                                            סכום לכל חודש: <Money amount={installmentPreviewParts[0] ?? 0} signed={false} />
-                                            {installmentPreviewParts.length > 1 &&
-                                                installmentPreviewParts[0] !==
-                                                    installmentPreviewParts[installmentPreviewParts.length - 1] && (
-                                                    <span>
-                                                        {' '}
-                                                        – <Money amount={installmentPreviewParts[installmentPreviewParts.length - 1] ?? 0} signed={false} />
-                                                    </span>
+                                        <div className="mt-2 rounded-xl bg-ios-blue/8 dark:bg-ios-blue/15 px-3 py-2">
+                                            <p className="text-xs font-semibold text-ios-blue tabular-nums">
+                                                {installmentCount} תשלומים × <Money amount={installmentPreviewParts[0] ?? 0} signed={false} />
+                                                {installmentPreviewParts.length > 1 && installmentPreviewParts[0] !== installmentPreviewParts[installmentPreviewParts.length - 1] && (
+                                                    <span> – <Money amount={installmentPreviewParts[installmentPreviewParts.length - 1] ?? 0} signed={false} /></span>
                                                 )}
-                                        </p>
+                                                {' '}= <Money amount={parseFloat(normalizeAmountInput(amount)) || 0} signed={false} /> סה״כ
+                                            </p>
+                                        </div>
                                     )}
                                 </div>
                             )}
@@ -683,6 +729,38 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                                     </select>
                                 </div>
                             )}
+
+                            {/* Dismiss confirm banner (S7-3) */}
+                            <AnimatePresence>
+                                {showDismissConfirm && (
+                                    <motion.div
+                                        key="dismiss-confirm"
+                                        initial={{ opacity: 0, y: 8 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: 8 }}
+                                        transition={{ type: 'spring', damping: 30, stiffness: 400 }}
+                                        className="mb-4 flex items-center justify-between gap-3 rounded-2xl bg-ios-orange/10 dark:bg-ios-orange/15 px-4 py-3"
+                                    >
+                                        <p className="text-sm font-medium text-ios-text dark:text-ios-dark-text">לסגור ולמחוק את מה שהוקלד?</p>
+                                        <div className="flex gap-2 shrink-0">
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowDismissConfirm(false)}
+                                                className="px-3 py-1.5 rounded-xl bg-ios-gray-6 dark:bg-ios-dark-fill text-sm font-semibold text-ios-text dark:text-ios-dark-text active:opacity-80"
+                                            >
+                                                המשך
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={onClose}
+                                                className="px-3 py-1.5 rounded-xl bg-ios-orange text-white text-sm font-semibold active:opacity-80"
+                                            >
+                                                סגור
+                                            </button>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
 
                             {/* Actions */}
                             <div className="space-y-3">

@@ -14,6 +14,8 @@ interface CategoryPickerSectionProps {
     newCategoryName: string;
     newCategoryEmojiInput: string;
     isAddingCategory: boolean;
+    /** When set, shows a "זוהה אוטומטית" chip to indicate AI auto-detection. */
+    autoDetectedCategory?: string;
     onSelectCategory: (name: string) => void;
     onSearchChange: (v: string) => void;
     onNewNameChange: (v: string) => void;
@@ -29,6 +31,7 @@ export default function CategoryPickerSection({
     newCategoryName,
     newCategoryEmojiInput,
     isAddingCategory,
+    autoDetectedCategory,
     onSelectCategory,
     onSearchChange,
     onNewNameChange,
@@ -37,7 +40,14 @@ export default function CategoryPickerSection({
 }: CategoryPickerSectionProps) {
     return (
         <div className="bg-ios-card dark:bg-ios-dark-card rounded-2xl shadow-card mb-4 p-4">
-            <p className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle uppercase tracking-wider mb-3">קטגוריה</p>
+            <div className="flex items-center gap-2 mb-3">
+                <p className="text-xs font-semibold text-ios-subtle dark:text-ios-dark-subtle uppercase tracking-wider">קטגוריה</p>
+                {autoDetectedCategory && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-ios-teal/15 dark:bg-ios-teal/25 px-2 py-0.5 text-[10px] font-semibold text-ios-teal">
+                        ✨ זוהה אוטומטית
+                    </span>
+                )}
+            </div>
 
             {/* Add new category row */}
             <div className="flex gap-2 mb-3">
