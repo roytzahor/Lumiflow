@@ -1,6 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import { computeMemberContributionRatios, computeMyContributionRatios } from '@/lib/contribution-ratios';
 import { ensureUserBootstrap, getUserAccountIds, requireUserId } from '@/lib/server-user';
 import { unstable_cache } from 'next/cache';
 import type { AccountType } from '@prisma/client';
@@ -272,22 +273,7 @@ export async function getMyContributionRatios() {
       select: { userId: true, accountId: true, monthlyAmount: true },
     });
 
-    const myPlans = allPlans.filter((p) => p.userId === userId);
-
-    const totalsByAccount = new Map<string, number>();
-    for (const p of allPlans) {
-      totalsByAccount.set(p.accountId, (totalsByAccount.get(p.accountId) ?? 0) + p.monthlyAmount);
-    }
-
-    return myPlans.map((p) => ({
-      accountId: p.accountId,
-      myAmount: p.monthlyAmount,
-      totalAmount: totalsByAccount.get(p.accountId) ?? 0,
-      ratio:
-        (totalsByAccount.get(p.accountId) ?? 0) > 0
-          ? p.monthlyAmount / (totalsByAccount.get(p.accountId) ?? 1)
-          : 1,
-    }));
+    return computeMyContributionRatios(allPlans, userId);
   } catch {
     return [];
   }
@@ -304,14 +290,13 @@ export async function getAccountMemberContributions(accountId: string) {
       orderBy: { monthlyAmount: 'desc' },
     });
 
-    const total = plans.reduce((sum, p) => sum + p.monthlyAmount, 0);
-
-    return plans.map((p) => ({
-      userId: p.userId,
-      name: p.user.name?.trim() || p.user.email,
-      monthlyAmount: p.monthlyAmount,
-      ratio: total > 0 ? p.monthlyAmount / total : 0,
-    }));
+    return computeMemberContributionRatios(
+      plans.map((p) => ({
+        userId: p.userId,
+        name: p.user.name?.trim() || p.user.email,
+        monthlyAmount: p.monthlyAmount,
+      }))
+    );
   } catch {
     return [];
   }
@@ -337,15 +322,15 @@ export async function getAllAccountContributionRatios() {
 
     return accountIds.map((accountId) => {
       const accountPlans = byAccount.get(accountId) ?? [];
-      const total = accountPlans.reduce((sum, p) => sum + p.monthlyAmount, 0);
       return {
         accountId,
-        members: accountPlans.map((p) => ({
-          userId: p.userId,
-          name: p.user.name?.trim() || p.user.email,
-          monthlyAmount: p.monthlyAmount,
-          ratio: total > 0 ? p.monthlyAmount / total : 0,
-        })),
+        members: computeMemberContributionRatios(
+          accountPlans.map((p) => ({
+            userId: p.userId,
+            name: p.user.name?.trim() || p.user.email,
+            monthlyAmount: p.monthlyAmount,
+          }))
+        ),
       };
     });
   } catch {
