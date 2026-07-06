@@ -61,6 +61,23 @@ Entry format: `## <date> — <title>` with **Mistake / Root cause / Rule**.
   (`cypress/support/lumiflow-helpers.ts`), which verifies the sheet actually opened and
   retries the click once after a grace period.
 
+## 2026-07-06 — "Local" E2E scripts ran dev mode; a false bisect blamed a phase that was innocent
+- **Mistake:** Chased two full-suite failures (settings profile-save, quick-add dirty-guard) as a
+  desktop-shell regression, including a git-stash bisect whose "baseline" also failed — because
+  BOTH `scripts/cypress-e2e-local.sh` and `scripts/cypress-e2e-spec-local.sh` run `yarn dev`,
+  the exact mode the 2026-07-04 entry says produces roaming timing flakes. The 2026-07-04 rule
+  ("suite verdicts on a production build") was never encoded in a script, so it was silently
+  violated by every scripted run.
+- **Root cause:** The prescribed verification method existed only as prose in LESSONS.md; the
+  convenient scripts did something else. Under dev-mode load, the failing test changes from run
+  to run (comma → dirty-guard → installment-preview/history-search), which makes any single run
+  look like a regression bisect signal when it is noise.
+- **Rule:** Use `scripts/cypress-e2e-prod-local.sh` (added today: build + `next start` + full
+  suite, `CYPRESS_PROD_BUILD=1` skips the dev-only failure-injection test) for every suite-level
+  verdict. Never bisect on a dev-mode run. A bisect where the baseline fails the same way as the
+  candidate means the harness, not the code, is the variable — verify the harness first.
+  `openQuickAddSheet()` now retries the FAB click up to 4× until the sheet dialog mounts.
+
 ## 2026-07-06 — S7-7 banner assertion still flakes under full-suite load (recurrence, no regression)
 - **Mistake / observation:** In a full-suite production-build run, `quick-add.cy.ts` "normalises a
   comma decimal amount" failed on `quickadd-save-success` never becoming visible, while the form

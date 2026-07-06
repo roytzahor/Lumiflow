@@ -41,7 +41,10 @@ describe('Welcome and dashboard resilience', () => {
     cy.contains('החשבון האישי שלי').should('be.visible');
   });
 
-  it('shows dashboard retry state without bouncing to welcome', () => {
+  it('shows dashboard retry state without bouncing to welcome', function () {
+    // Failure injection is NODE_ENV !== "production"-gated (app/dashboard-data-loader.tsx);
+    // skip under the production-build suite (scripts/cypress-e2e-prod-local.sh).
+    if (Cypress.env('PROD_BUILD')) this.skip();
     const stamp = Date.now();
     const email = `retry+${stamp}@lumiflow.local`;
     const password = 'Password123!';

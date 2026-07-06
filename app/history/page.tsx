@@ -18,8 +18,10 @@ export default async function HistoryPage({
     const month = Number.isFinite(parsedMonth) && parsedMonth >= 0 && parsedMonth <= 11 ? parsedMonth : now.getMonth();
 
     return (
-        <Suspense fallback={<HistoryPageSkeleton />}>
-            <HistoryDataLoader year={year} month={month} />
-        </Suspense>
+        <div className="lg:ps-64">
+            <Suspense fallback={<HistoryPageSkeleton />}>
+                <HistoryDataLoader year={year} month={month} />
+            </Suspense>
+        </div>
     );
 }

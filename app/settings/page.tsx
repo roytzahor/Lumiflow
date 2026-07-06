@@ -4,7 +4,7 @@ import { getCurrentUserProfile } from '../actions/profile';
 import { getSavingsLabels } from '../actions/savings';
 import { getBudgetSettings } from '../actions/settings';
 import SettingsContent from './SettingsContent';
-import BottomNav from '@/components/BottomNav';
+import AppNav from '@/components/AppNav';
 import { redirectToOnboardingIfNeeded } from '@/lib/onboarding';
 
 export default async function SettingsPage() {
@@ -19,7 +19,7 @@ export default async function SettingsPage() {
   ]);
 
   return (
-    <div className="min-h-screen pb-28 font-sans text-ios-text dark:text-ios-dark-text bg-ios-bg dark:bg-ios-dark-bg transition-colors" dir="rtl">
+    <div className="min-h-screen pb-28 lg:pb-8 font-sans text-ios-text dark:text-ios-dark-text bg-ios-bg dark:bg-ios-dark-bg transition-colors lg:ps-64" dir="rtl">
       <div className="w-full max-w-md mx-auto">
         {/* Header */}
         <header className="pt-safe px-5 pt-8 pb-4">
@@ -46,7 +46,7 @@ export default async function SettingsPage() {
         </main>
       </div>
 
-      <BottomNav />
+      <AppNav />
     </div>
   );
 }

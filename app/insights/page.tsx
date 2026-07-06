@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import BottomNav from "@/components/BottomNav";
+import AppNav from "@/components/AppNav";
 import InsightsBodySkeleton from "@/components/insights-body-skeleton";
 import InsightsDataSection from "@/app/insights/insights-data-section";
 import { redirectToOnboardingIfNeeded } from "@/lib/onboarding";
@@ -13,7 +13,7 @@ export default async function InsightsPage() {
   const thisMonthLabel = format(now, "MMMM yyyy", { locale: he });
 
   return (
-    <main className="min-h-screen pb-28 pt-safe bg-ios-bg dark:bg-ios-dark-bg text-ios-text dark:text-ios-dark-text">
+    <main className="min-h-screen pb-28 lg:pb-8 pt-safe bg-ios-bg dark:bg-ios-dark-bg text-ios-text dark:text-ios-dark-text lg:ps-64">
       <div className="w-full max-w-md mx-auto px-5 py-8 space-y-4">
         <header className="mb-2">
           <h1 className="text-3xl font-bold tracking-tight">תובנות</h1>
@@ -25,7 +25,7 @@ export default async function InsightsPage() {
         </Suspense>
       </div>
 
-      <BottomNav />
+      <AppNav />
     </main>
   );
 }

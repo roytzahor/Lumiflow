@@ -2,7 +2,7 @@ import InsightsBodySkeleton from "@/components/insights-body-skeleton";
 
 export default function InsightsLoading() {
     return (
-        <main className="min-h-screen pb-28 pt-safe bg-ios-bg dark:bg-ios-dark-bg text-ios-text dark:text-ios-dark-text">
+        <main className="min-h-screen pb-28 lg:pb-8 pt-safe bg-ios-bg dark:bg-ios-dark-bg text-ios-text dark:text-ios-dark-text lg:ps-64">
             <div className="w-full max-w-md mx-auto px-5 py-8 space-y-4">
                 <header className="mb-2">
                     <div className="h-9 w-28 bg-ios-gray-5 dark:bg-ios-dark-fill rounded-lg skeleton-shimmer" />

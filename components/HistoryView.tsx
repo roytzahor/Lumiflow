@@ -10,7 +10,7 @@ import RecurringEditSheet from "./RecurringEditSheet";
 const SavingsAllocationSheet = dynamic(() => import("./SavingsAllocationSheet"), { ssr: false });
 import HistoryControlsCard from "./HistoryControlsCard";
 import { useHaptic } from "@/hooks/useHaptic";
-import BottomNav from "./BottomNav";
+import AppNav from "./AppNav";
 import MonthSelector from "./MonthSelector";
 import type {
     TransactionListItem,
@@ -340,7 +340,7 @@ export default function HistoryView({
                 )}
             </div>
 
-            <BottomNav />
+            <AppNav />
 
             <QuickAddSheet
                 isOpen={isSheetOpen}

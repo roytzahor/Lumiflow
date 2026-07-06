@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useHaptic } from "@/hooks/useHaptic";
+import { MAIN_NAV_ITEMS, buildNavHref, buildQuickAddHref, type MainNavQuery } from "@/lib/nav-links";
 
 const LONG_PRESS_MS = 480;
 
@@ -20,25 +21,21 @@ export default function BottomNav() {
     const month = searchParams.get("month");
     const year = searchParams.get("year");
     const account = searchParams.get("account");
+    const navQuery: MainNavQuery = { month, year, account };
 
-    const buildMainHref = (path: string) => {
-        const params = new URLSearchParams();
-        if (month) params.set("month", month);
-        if (year) params.set("year", year);
-        if (account) params.set("account", account);
-        const q = params.toString();
-        return q ? `${path}?${q}` : path;
+    const tabExtras: Record<string, { icon: typeof Home; col: string }> = {
+        "/": { icon: Home, col: "col-start-1" },
+        "/history": { icon: Clock, col: "col-start-2" },
+        "/insights": { icon: PieChart, col: "col-start-4" },
+        "/settings": { icon: Settings, col: "col-start-5" },
     };
 
-    const historyHref = buildMainHref("/history");
-    const homeHref = buildMainHref("/");
-
-    const navItems = [
-        { name: "סקירה", path: homeHref, basePath: "/", icon: Home, col: "col-start-1" },
-        { name: "היסטוריה", path: historyHref, basePath: "/history", icon: Clock, col: "col-start-2" },
-        { name: "תובנות", path: "/insights", basePath: "/insights", icon: PieChart, col: "col-start-4" },
-        { name: "הגדרות", path: "/settings", basePath: "/settings", icon: Settings, col: "col-start-5" },
-    ];
+    const navItems = MAIN_NAV_ITEMS.map((item) => ({
+        name: item.name,
+        path: buildNavHref(item, navQuery),
+        basePath: item.basePath,
+        ...tabExtras[item.basePath],
+    }));
 
     const clearLongPressTimer = useCallback(() => {
         if (longPressTimerRef.current) {
@@ -64,13 +61,7 @@ export default function BottomNav() {
         (recurring: boolean) => {
             closeFabMenu();
             trigger(10);
-            const qs = new URLSearchParams();
-            if (month) qs.set("month", month);
-            if (year) qs.set("year", year);
-            if (account) qs.set("account", account);
-            qs.set("quickAdd", "1");
-            if (recurring) qs.set("recurring", "1");
-            router.push(`/?${qs.toString()}`);
+            router.push(buildQuickAddHref({ month, year, account }, recurring));
         },
         [router, trigger, closeFabMenu, month, year, account]
     );
@@ -97,7 +88,7 @@ export default function BottomNav() {
     };
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 z-50 pb-safe bg-ios-card/85 dark:bg-ios-dark-card/85 backdrop-blur-2xl border-t border-gray-200/50 dark:border-white/10 will-change-transform">
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 pb-safe bg-ios-card/85 dark:bg-ios-dark-card/85 backdrop-blur-2xl border-t border-gray-200/50 dark:border-white/10 will-change-transform">
             {fabMenuOpen ? (
                 <button
                     type="button"

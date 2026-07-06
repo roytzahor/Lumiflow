@@ -17,13 +17,22 @@ export function signUpThroughWelcome(email: string, password: string) {
  * swallowed right after signup/navigation; retry once after a grace period.
  */
 export function openQuickAddSheet() {
-  cy.get('[data-testid="fab-add-button"]', { timeout: 20000 }).should('be.visible').click({ force: true });
-  cy.wait(1000);
-  cy.get('body').then(($body) => {
-    if ($body.find('[data-testid="quickadd-sheet-dialog"]').length === 0) {
-      cy.get('[data-testid="fab-add-button"]').click({ force: true });
-    }
-  });
+  cy.get('[data-testid="fab-add-button"]', { timeout: 20000 }).should('exist');
+
+  // Under full-suite load the first click(s) can be swallowed (pre-hydration) or the sheet's
+  // open roundtrip (?quickAdd=1 push → RSC → effect) can outlast one grace period. Retry the
+  // click until the sheet dialog is actually mounted, up to 4 attempts.
+  const clickUntilOpen = (attempt: number) => {
+    cy.get('[data-testid="fab-add-button"]').click({ force: true });
+    cy.wait(1000);
+    cy.get('body').then(($body) => {
+      if ($body.find('[data-testid="quickadd-sheet-dialog"]').length === 0 && attempt < 4) {
+        clickUntilOpen(attempt + 1);
+      }
+    });
+  };
+  clickUntilOpen(1);
+
   cy.get('[data-testid="quickadd-amount"]', { timeout: 15000 }).should('be.visible');
 }
 
