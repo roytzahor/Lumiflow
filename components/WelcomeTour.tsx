@@ -12,6 +12,8 @@ type WelcomeTourProps = {
 
 type TourStep = {
   element: string;
+  /** Tried in order; the first VISIBLE match anchors the step (e.g. FAB on mobile, sidebar button at lg+). */
+  fallbackElements?: string[];
   popover: { title: string; description: string };
 };
 
@@ -47,16 +49,24 @@ const ALL_STEPS: TourStep[] = [
   },
   {
     element: '[data-testid="fab-add-button"]',
+    fallbackElements: ['[data-testid="sidebar-add-button"]'],
     popover: { title: 'הוספת הוצאה', description: 'לחיצה קצרה — הוצאה מהירה. לחיצה ארוכה — גם הוצאה קבועה.' },
   },
   {
     element: '[data-testid="bottom-nav-settings"]',
+    fallbackElements: ['[data-testid="sidebar-nav-settings"]'],
     popover: {
       title: 'הגדרות',
       description: 'חשבונות משותפים, הזמנות, קטגוריות והוצאות קבועות — כאן ממשיכים להגדיר את LumiFlow.',
     },
   },
 ];
+
+/** driver.js highlights display:none elements as broken overlays; only visible anchors count. */
+function isElementVisible(selector: string): boolean {
+  const el = document.querySelector<HTMLElement>(selector);
+  return el != null && el.offsetParent !== null;
+}
 
 export default function WelcomeTour({ welcomeTourCompletedAt }: WelcomeTourProps) {
   const persistedRef = useRef(false);
@@ -69,7 +79,11 @@ export default function WelcomeTour({ welcomeTourCompletedAt }: WelcomeTourProps
     if (w.Cypress || (typeof navigator !== 'undefined' && Boolean(navigator.webdriver))) return;
 
     const timer = window.setTimeout(() => {
-      const availableSteps = ALL_STEPS.filter((step) => document.querySelector(step.element));
+      const availableSteps = ALL_STEPS.flatMap((step) => {
+        const candidates = [step.element, ...(step.fallbackElements ?? [])];
+        const visible = candidates.find(isElementVisible);
+        return visible ? [{ element: visible, popover: step.popover }] : [];
+      });
       if (availableSteps.length === 0) return;
 
       const driverObj = driver({

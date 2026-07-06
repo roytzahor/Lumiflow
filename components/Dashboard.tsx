@@ -680,7 +680,8 @@ export default function Dashboard({
                                             cx="50"
                                             cy="50"
                                             r="42"
-                                            stroke="#E5E5EA"
+                                            stroke="currentColor"
+                                            className="text-ios-gray-5 dark:text-ios-dark-fill"
                                             strokeWidth="6"
                                             fill="transparent"
                                         />
@@ -688,7 +689,8 @@ export default function Dashboard({
                                             cx="50"
                                             cy="50"
                                             r="42"
-                                            stroke={savedSoFar >= 0 ? "#34C759" : "#FF3B30"}
+                                            stroke="currentColor"
+                                            className={savedSoFar >= 0 ? "text-ios-green" : "text-ios-red"}
                                             strokeWidth="6"
                                             fill="transparent"
                                             strokeLinecap="round"
