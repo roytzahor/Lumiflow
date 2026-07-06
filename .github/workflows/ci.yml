@@ -42,4 +42,4 @@ jobs:
       - run: yarn typecheck
       - run: yarn test:unit
       - run: yarn build
-      - run: yarn start-server-and-test "yarn dev" http://localhost:3000/auth/signup "yarn test:e2e"
+      - run: CYPRESS_PROD_BUILD=1 yarn start-server-and-test "yarn start" http://localhost:3000/auth/signup "yarn test:e2e"
