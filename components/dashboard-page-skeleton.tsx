@@ -2,7 +2,7 @@
 export default function DashboardPageSkeleton() {
     return (
         <main role="status" aria-label="טוען" className="min-h-screen pb-28 pt-safe bg-ios-bg dark:bg-ios-dark-bg">
-            <div className="w-full max-w-md mx-auto px-5 pt-6 skeleton-shimmer">
+            <div className="w-full max-w-md lg:max-w-5xl mx-auto px-5 pt-6 lg:px-8 lg:pt-10 skeleton-shimmer">
                 <header className="mb-3">
                     <div className="h-4 w-36 bg-ios-gray-5 dark:bg-ios-dark-fill rounded-lg mb-2" />
                     <div className="h-9 w-52 max-w-[85%] bg-ios-gray-5 dark:bg-ios-dark-fill rounded-lg" />

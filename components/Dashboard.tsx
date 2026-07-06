@@ -579,13 +579,13 @@ export default function Dashboard({
     const sectionDelay = (seconds: number) => ({ delay: reduceMotion ? 0 : seconds });
 
     return (
-        <div className="w-full max-w-md mx-auto h-full relative min-h-screen pb-28 pt-safe">
+        <div className="w-full max-w-md lg:max-w-5xl mx-auto h-full relative min-h-screen pb-28 lg:pb-10 pt-safe">
             {/* Sticky Header */}
             {showStickyHeader && hasIncomeConfigured && (
                 <motion.div
                     initial={reduceMotion ? false : { y: -60, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
-                    className="fixed top-0 inset-x-0 z-50 bg-ios-card/85 dark:bg-ios-dark-card/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-white/10 pt-safe will-change-transform"
+                    className="lg:hidden fixed top-0 inset-x-0 z-50 bg-ios-card/85 dark:bg-ios-dark-card/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-white/10 pt-safe will-change-transform"
                 >
                     <div className="max-w-md mx-auto px-5 py-3 flex justify-between items-center">
                         <span className="font-bold text-base text-ios-text dark:text-ios-dark-text">
@@ -600,9 +600,9 @@ export default function Dashboard({
                 </motion.div>
             )}
 
-            <div className="px-5 pt-6">
+            <div className="px-5 pt-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:px-8 lg:pt-10">
                 {/* Header */}
-                <header className="mb-3">
+                <header className="mb-3 lg:col-span-2 lg:mb-0">
                     <p className="text-base text-ios-subtle dark:text-ios-dark-subtle mb-1">
                         {viewerName?.trim() ? `${getGreeting(stableNow)}, ${viewerName.trim()}` : getGreeting(stableNow)}
                     </p>
@@ -611,12 +611,12 @@ export default function Dashboard({
                     </h1>
                 </header>
 
-                <div className={`min-w-0 ${scopeSelectorVisible ? "mb-4" : "mb-8"}`} data-testid="dashboard-month-selector">
+                <div className={`min-w-0 lg:col-span-2 lg:mb-0 ${scopeSelectorVisible ? "mb-4" : "mb-8"}`} data-testid="dashboard-month-selector">
                     <MonthSelector basePath="/" />
                 </div>
 
                 {scopeSelectorVisible && (
-                    <div className="mb-6 min-w-0" data-testid="dashboard-scope-selector">
+                    <div className="mb-6 min-w-0 lg:col-span-2 lg:mb-0 lg:max-w-md" data-testid="dashboard-scope-selector">
                         {scopeSegments.kind === "segmented" ? (
                             <SegmentedControl
                                 options={scopeSegments.segments}
@@ -663,7 +663,7 @@ export default function Dashboard({
                     initial={sectionEnter}
                     animate={{ opacity: 1, y: 0 }}
                     transition={sectionDelay(0.1)}
-                    className={`bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 sm:p-6 shadow-card mb-4 ${hasIncomeConfigured ? "" : "opacity-80"}`}
+                    className={`bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 sm:p-6 lg:p-8 shadow-card mb-4 lg:col-span-2 lg:mb-0 ${hasIncomeConfigured ? "" : "opacity-80"}`}
                 >
                     <div className="mb-5 flex min-w-0 flex-row items-center justify-between gap-3">
                         <h2 className="min-w-0 flex-1 truncate text-lg font-bold tracking-tight text-ios-text dark:text-ios-dark-text">
@@ -673,8 +673,8 @@ export default function Dashboard({
 
                     {hasIncomeConfigured ? (
                         <>
-                            <div className="flex items-center gap-6">
-                                <div className="relative h-24 w-24 flex-shrink-0">
+                            <div className="flex items-center gap-6 lg:gap-10">
+                                <div className="relative h-24 w-24 lg:h-28 lg:w-28 flex-shrink-0">
                                     <svg className="h-full w-full -rotate-90" viewBox="0 0 100 100">
                                         <circle
                                             cx="50"
@@ -738,7 +738,7 @@ export default function Dashboard({
                                 </div>
                             </div>
 
-                            <div className="mt-5 grid grid-cols-2 gap-2">
+                            <div className="mt-5 grid grid-cols-2 gap-2 lg:grid-cols-4 lg:gap-3">
                                 <div className="rounded-xl bg-white/70 px-2 py-2.5 text-center dark:bg-ios-dark-card/70">
                                     <p className="text-[11px] font-medium text-ios-subtle dark:text-ios-dark-subtle">
                                         {incomeTileLabel}
@@ -828,7 +828,7 @@ export default function Dashboard({
                         initial={sectionEnter}
                         animate={{ opacity: 1, y: 0 }}
                         transition={sectionDelay(0.11)}
-                        className="mb-4"
+                        className="mb-4 lg:col-span-2 lg:mb-0"
                         data-testid="dashboard-budget-prompt"
                     >
                         <BudgetSetupPromptCard />
@@ -840,7 +840,7 @@ export default function Dashboard({
                         initial={sectionEnter}
                         animate={{ opacity: 1, y: 0 }}
                         transition={sectionDelay(0.12)}
-                        className="mb-6"
+                        className="mb-6 lg:mb-0 lg:self-stretch"
                         data-testid="dashboard-daily-snapshot"
                     >
                         <DailySnapshotCard alert={dailyAlert} nudge={dailyNudge} />
@@ -852,7 +852,7 @@ export default function Dashboard({
                         initial={sectionEnter}
                         animate={{ opacity: 1, y: 0 }}
                         transition={sectionDelay(0.15)}
-                        className="mb-6"
+                        className="mb-6 lg:mb-0 lg:self-stretch"
                         data-testid="dashboard-personal-income"
                     >
                         <PersonalIncomeSummaryCard
@@ -870,7 +870,7 @@ export default function Dashboard({
                         initial={sectionEnter}
                         animate={{ opacity: 1, y: 0 }}
                         transition={sectionDelay(0.2)}
-                        className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 shadow-card mb-6"
+                        className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 shadow-card mb-6 lg:col-span-2 lg:mb-0"
                     >
                         <div className="mb-3 flex items-center justify-between">
                             <h2 className="text-lg font-bold text-ios-text dark:text-ios-dark-text">מאזן לפי חשבון</h2>
@@ -878,11 +878,11 @@ export default function Dashboard({
                                 {accountBalancesAll.length} חשבונות
                             </span>
                         </div>
-                        <div className="-mx-1 flex snap-x snap-mandatory flex-row-reverse gap-3 overflow-x-auto px-1 pb-2 pt-0.5 no-scrollbar">
+                        <div className="-mx-1 flex snap-x snap-mandatory flex-row-reverse gap-3 overflow-x-auto px-1 pb-2 pt-0.5 no-scrollbar lg:mx-0 lg:grid lg:grid-cols-3 lg:snap-none lg:overflow-visible lg:px-0">
                             {accountBalancesAll.map((row, index) => (
                                 <div
                                     key={row.account.id}
-                                    className="w-[min(100%,17.5rem)] max-w-[280px] shrink-0 snap-center"
+                                    className="w-[min(100%,17.5rem)] max-w-[280px] shrink-0 snap-center lg:w-auto lg:max-w-none"
                                 >
                                     <DashboardAccountBalanceCard row={row} index={index} reduceMotion={!!reduceMotion} />
                                 </div>
@@ -896,7 +896,7 @@ export default function Dashboard({
                     initial={sectionEnter}
                     animate={{ opacity: 1, y: 0 }}
                     transition={sectionDelay(0.35)}
-                    className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 shadow-card mb-6"
+                    className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 shadow-card mb-6 lg:mb-0"
                 >
                     <div className="flex items-start justify-between gap-2">
                         <button
@@ -1015,7 +1015,7 @@ export default function Dashboard({
                 </motion.div>
 
                 {currentUserId && visibleSharedAccountSplits.length > 0 && (
-                    <div className="space-y-3 mb-6" data-testid="dashboard-shared-split">
+                    <div className="space-y-3 mb-6 lg:mb-0" data-testid="dashboard-shared-split">
                         {visibleSharedAccountSplits.map(({ account, splits, hasAllMembersContributing }, index) => (
                             <motion.div
                                 key={account.id}
@@ -1039,7 +1039,7 @@ export default function Dashboard({
                         initial={sectionEnter}
                         animate={{ opacity: 1, y: 0 }}
                         transition={sectionDelay(0.38)}
-                        className="mt-3"
+                        className="mt-3 lg:mt-0"
                     >
                         <BudgetHealthCard
                             monthlyIncome={budgetSettings.monthlyIncome}
@@ -1054,7 +1054,7 @@ export default function Dashboard({
                     initial={sectionEnter}
                     animate={{ opacity: 1, y: 0 }}
                     transition={sectionDelay(0.4)}
-                    className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 shadow-card mt-3"
+                    className="bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 shadow-card mt-3 lg:mt-0"
                 >
                     <button
                         type="button"
@@ -1153,6 +1153,7 @@ export default function Dashboard({
                     initial={sectionEnter}
                     animate={{ opacity: 1, y: 0 }}
                     transition={sectionDelay(0.45)}
+                    className="lg:col-span-2"
                 >
                     <SavingsAllocationCard
                         allocations={scopedSavings}
