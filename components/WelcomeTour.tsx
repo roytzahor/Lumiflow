@@ -24,7 +24,7 @@ const ALL_STEPS: TourStep[] = [
     element: '[data-testid="dashboard-scope-selector"]',
     popover: {
       title: 'תצוגת חשבון',
-      description: 'אפשר לבחור כאן בין כל החשבונות, "הכסף שלי" (החלק שמיוחס לכם בלבד), או חשבון ספציפי.',
+      description: 'מחליפים כאן תצוגה בלחיצה: "הכסף שלי" (החלק שמיוחס לכם בלבד), חשבון ספציפי, או הכל יחד.',
     },
   },
   {

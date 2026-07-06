@@ -48,6 +48,8 @@ import type {
     DailyNudge,
 } from "@/lib/types";
 import { parseScopeAccountId } from "@/lib/scope-account";
+import { buildScopeSegments } from "@/lib/scope-segments";
+import SegmentedControl from "@/components/ui/SegmentedControl";
 import { computeMyMoneyBreakdown, computeAccountMemberSplit } from "@/lib/my-money-utils";
 
 interface DashboardProps {
@@ -553,6 +555,10 @@ export default function Dashboard({
     };
 
     const scopeSelectorVisible = accounts.length > 1 || myContributionRatios.length > 0;
+    const scopeSegments = useMemo(
+        () => buildScopeSegments(accounts, myContributionRatios.length > 0),
+        [accounts, myContributionRatios.length]
+    );
     const perAccountBreakdownVisible = scopeAccountId === "all" && accountBalancesAll.length >= 1;
 
     const heroTitle =
@@ -605,23 +611,21 @@ export default function Dashboard({
                     </h1>
                 </header>
 
-                <div className="mb-8 min-w-0" data-testid="dashboard-month-selector">
+                <div className={`min-w-0 ${scopeSelectorVisible ? "mb-4" : "mb-8"}`} data-testid="dashboard-month-selector">
                     <MonthSelector basePath="/" />
                 </div>
 
-                {/* Hero: scope + monthly status */}
-                <motion.div
-                    initial={sectionEnter}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={sectionDelay(0.1)}
-                    className={`bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 sm:p-6 shadow-card mb-4 ${hasIncomeConfigured ? "" : "opacity-80"}`}
-                >
-                    <div className="mb-5 flex min-w-0 flex-row items-center justify-between gap-3">
-                        <h2 className="min-w-0 flex-1 truncate text-lg font-bold tracking-tight text-ios-text dark:text-ios-dark-text">
-                            {heroTitle}
-                        </h2>
-                        {scopeSelectorVisible ? (
-                            <div className="relative w-full min-w-0 max-w-[11rem] shrink-0" data-testid="dashboard-scope-selector">
+                {scopeSelectorVisible && (
+                    <div className="mb-6 min-w-0" data-testid="dashboard-scope-selector">
+                        {scopeSegments.kind === "segmented" ? (
+                            <SegmentedControl
+                                options={scopeSegments.segments}
+                                value={scopeAccountId}
+                                onChange={(v) => setScopeAccount(v === "all" ? "all" : v)}
+                                ariaLabel="חשבון לתצוגה בסקירה"
+                            />
+                        ) : (
+                            <div className="relative w-full min-w-0 max-w-[13rem]">
                                 <label htmlFor="dashboard-scope-account" className="sr-only">
                                     חשבון לתצוגה בסקירה
                                 </label>
@@ -635,7 +639,6 @@ export default function Dashboard({
                                     aria-label="חשבון לתצוגה בסקירה"
                                     className="w-full min-w-0 appearance-none rounded-xl border border-gray-200/50 dark:border-white/10 bg-ios-gray-6 py-2 ps-3 pe-8 text-sm font-semibold text-ios-text shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ios-blue/40 dark:bg-ios-dark-fill dark:text-ios-dark-text"
                                 >
-                                    <option value="all">כל החשבונות</option>
                                     {myContributionRatios.length > 0 && (
                                         <option value="my-money">הכסף שלי</option>
                                     )}
@@ -644,13 +647,28 @@ export default function Dashboard({
                                             {getAccountLabel(acc)}
                                         </option>
                                     ))}
+                                    <option value="all">כל החשבונות</option>
                                 </select>
                                 <ChevronDown
                                     className="pointer-events-none absolute end-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ios-subtle dark:text-ios-dark-subtle"
                                     aria-hidden
                                 />
                             </div>
-                        ) : null}
+                        )}
+                    </div>
+                )}
+
+                {/* Hero: scope + monthly status */}
+                <motion.div
+                    initial={sectionEnter}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={sectionDelay(0.1)}
+                    className={`bg-ios-card dark:bg-ios-dark-card rounded-3xl p-5 sm:p-6 shadow-card mb-4 ${hasIncomeConfigured ? "" : "opacity-80"}`}
+                >
+                    <div className="mb-5 flex min-w-0 flex-row items-center justify-between gap-3">
+                        <h2 className="min-w-0 flex-1 truncate text-lg font-bold tracking-tight text-ios-text dark:text-ios-dark-text">
+                            {heroTitle}
+                        </h2>
                     </div>
 
                     {hasIncomeConfigured ? (

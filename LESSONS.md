@@ -61,6 +61,18 @@ Entry format: `## <date> — <title>` with **Mistake / Root cause / Rule**.
   (`cypress/support/lumiflow-helpers.ts`), which verifies the sheet actually opened and
   retries the click once after a grace period.
 
+## 2026-07-06 — S7-7 banner assertion still flakes under full-suite load (recurrence, no regression)
+- **Mistake / observation:** In a full-suite production-build run, `quick-add.cy.ts` "normalises a
+  comma decimal amount" failed on `quickadd-save-success` never becoming visible, while the form
+  did reset (save succeeded). Spec passes 4/4 in isolation; the change under test (dashboard scope
+  segmented control) does not touch QuickAddSheet.
+- **Root cause:** The success banner's ~750ms visibility window is suite-load sensitive — same
+  surface as the 2026-07-04 AnimatePresence entry, different symptom (missed window vs. stuck exit).
+- **Rule:** Treat a solo failure of this assertion in full-suite runs as the known flake after one
+  green isolated re-run; only investigate as a regression if it fails in isolation or alongside
+  other QuickAdd failures. Longer-term fix candidate: assert on the transaction row instead of the
+  transient banner, or lengthen the banner window under Cypress.
+
 ## 2026-07-04 — Sprint 7 UI changes shipped without updating the E2E specs that assert those surfaces
 - **Mistake:** Phase 1 baseline run (10/14 passing) showed 4 failures caused by Sprint 7 itself:
   1. `insights.cy.ts` ×3 — S7-9 gates the whole Insights body behind budget setup, but all three
