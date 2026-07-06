@@ -11,6 +11,7 @@ import CategoryPickerSection from '@/components/CategoryPickerSection';
 import { addCategory } from '@/app/actions/categories';
 import { addTransaction } from '@/app/actions/transactions';
 import { useHaptic } from '@/hooks/useHaptic';
+import { useIsDesktop } from '@/hooks/useIsDesktop';
 import { detectAllCategoryMatches } from '@/lib/category-dictionary';
 import { formatDateInputForDisplay, getTodayDateInputValue, toDateInputValueFromUtc } from '@/lib/date-only';
 import type { TransactionListItem, AccountSummary, Category, RecurringMonthPolicy } from '@/lib/types';
@@ -72,6 +73,7 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
     const isDirty = amount !== '' || description !== '';
 
     const dragControls = useDragControls();
+    const isDesktop = useIsDesktop();
     const { trigger } = useHaptic();
     const sheetRef = useRef<HTMLDivElement>(null);
     const amountInputRef = useRef<HTMLInputElement>(null);
@@ -390,23 +392,23 @@ export default function QuickAddSheet({ isOpen, onClose, initialData, categories
                         role="dialog"
                         aria-modal="true"
                         aria-labelledby="sheet-title"
-                        initial={{ y: '100%', opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        exit={{ y: '100%', opacity: 0 }}
+                        initial={isDesktop ? { opacity: 0, scale: 0.96 } : { y: '100%', opacity: 0 }}
+                        animate={isDesktop ? { opacity: 1, scale: 1 } : { y: 0, opacity: 1 }}
+                        exit={isDesktop ? { opacity: 0, scale: 0.96 } : { y: '100%', opacity: 0 }}
                         transition={{ type: 'spring', damping: 32, stiffness: 380, mass: 0.8 }}
-                        drag="y"
+                        drag={isDesktop ? false : 'y'}
                         dragControls={dragControls}
                         dragConstraints={{ top: 0 }}
                         dragElastic={0.15}
                         onDragEnd={onDragEnd}
-                        className="fixed bottom-0 left-0 right-0 z-[80] max-h-[92vh] bg-ios-bg dark:bg-ios-dark-bg shadow-sheet flex flex-col pb-safe rounded-t-[20px] max-w-md mx-auto"
+                        className="fixed bottom-0 left-0 right-0 z-[80] max-h-[92vh] bg-ios-bg dark:bg-ios-dark-bg shadow-sheet flex flex-col pb-safe rounded-t-[20px] max-w-md mx-auto lg:inset-0 lg:m-auto lg:h-fit lg:rounded-3xl"
                     >
                         {/* Drag Handle */}
-                        <div className="w-full flex justify-center pt-3 pb-2" onPointerDown={(e) => dragControls.start(e)}>
+                        <div className="w-full flex justify-center pt-3 pb-2 lg:hidden" onPointerDown={(e) => dragControls.start(e)}>
                             <div className="w-9 h-[5px] bg-ios-gray-4 dark:bg-ios-dark-subtle/60 rounded-full" />
                         </div>
 
-                        <div className="flex-1 overflow-y-auto px-5 pb-8">
+                        <div className="flex-1 overflow-y-auto px-5 pb-8 lg:pt-6">
                             {/* Save success banner (S7-7). Removal must NOT depend on an
                                 AnimatePresence exit callback: a router.refresh() RSC commit can
                                 land mid-exit and drop the unmount, leaving an invisible banner
