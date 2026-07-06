@@ -20,7 +20,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="min-h-screen pb-28 lg:pb-8 font-sans text-ios-text dark:text-ios-dark-text bg-ios-bg dark:bg-ios-dark-bg transition-colors lg:ps-64" dir="rtl">
-      <div className="w-full max-w-md mx-auto">
+      <div className="w-full max-w-md lg:max-w-2xl mx-auto">
         {/* Header */}
         <header className="pt-safe px-5 pt-8 pb-4">
           <h1 className="text-3xl font-bold text-ios-text dark:text-ios-dark-text tracking-tight">

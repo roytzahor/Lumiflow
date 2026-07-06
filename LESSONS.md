@@ -78,6 +78,21 @@ Entry format: `## <date> — <title>` with **Mistake / Root cause / Rule**.
   candidate means the harness, not the code, is the variable — verify the harness first.
   `openQuickAddSheet()` now retries the FAB click up to 4× until the sheet dialog mounts.
 
+## 2026-07-06 — Stale `next start` on :3000 + in-place rebuild produced phantom "regressions"
+- **Mistake:** A leftover production server (from a manual visual check; killed with a bad
+  `pkill -f "next-server\|next start"` pattern that matched nothing) stayed on port 3000. The
+  next scripted run rebuilt `.next` UNDER that live server, and `start-server-and-test` silently
+  reused it — history specs then failed on the page's error boundary ("לא הצלחנו לטעון את
+  ההיסטוריה") and looked exactly like a code regression from the phase under test.
+- **Root cause:** Two compounding traps: (1) `start-server-and-test` reuses any process already
+  answering on the target port; (2) `yarn build` swaps `.next` while an old `next start` process
+  serves from it, yielding chunk/RSC mismatches and server-side loader errors.
+- **Rule:** Before any suite run or after any manual server session, free port 3000 by PID:
+  `for pid in $(lsof -nP -t -iTCP:3000 -sTCP:LISTEN); do kill $pid; done` — never trust
+  `pkill -f` patterns. `scripts/cypress-e2e-prod-local.sh` now does this automatically before
+  building. An error-boundary screenshot in E2E means "check the server process/build first",
+  not "bisect the diff".
+
 ## 2026-07-06 — S7-7 banner assertion still flakes under full-suite load (recurrence, no regression)
 - **Mistake / observation:** In a full-suite production-build run, `quick-add.cy.ts` "normalises a
   comma decimal amount" failed on `quickadd-save-success` never becoming visible, while the form

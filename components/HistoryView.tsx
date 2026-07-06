@@ -250,7 +250,7 @@ export default function HistoryView({
     };
 
     return (
-        <div className="w-full max-w-md mx-auto min-h-screen pb-28 overflow-x-clip font-sans text-ios-text dark:text-ios-dark-text">
+        <div className="w-full max-w-md lg:max-w-2xl mx-auto min-h-screen pb-28 lg:pb-8 overflow-x-clip font-sans text-ios-text dark:text-ios-dark-text">
             {/* Header */}
             <header className="pt-safe px-5 pt-8 pb-4">
                 <h1 className="text-3xl font-bold text-ios-text dark:text-ios-dark-text tracking-tight">

@@ -4,7 +4,7 @@ export default function SettingsLoading() {
             className="min-h-screen pb-28 lg:pb-8 font-sans text-ios-text dark:text-ios-dark-text bg-ios-bg dark:bg-ios-dark-bg transition-colors lg:ps-64"
             dir="rtl"
         >
-            <div className="w-full max-w-md mx-auto animate-pulse">
+            <div className="w-full max-w-md lg:max-w-2xl mx-auto animate-pulse">
                 <header className="pt-safe px-5 pt-8 pb-4">
                     <div className="h-9 w-32 bg-ios-gray-5 dark:bg-ios-dark-fill rounded-lg" />
                     <div className="h-4 w-48 bg-ios-gray-6 dark:bg-ios-dark-fill rounded mt-2" />

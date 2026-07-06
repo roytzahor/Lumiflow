@@ -2,7 +2,7 @@
 export default function HistoryPageSkeleton() {
     return (
         <main className="min-h-screen pb-28 pt-safe overflow-x-hidden bg-ios-bg dark:bg-ios-dark-bg">
-            <div className="w-full max-w-md mx-auto overflow-x-hidden skeleton-shimmer">
+            <div className="w-full max-w-md lg:max-w-2xl mx-auto overflow-x-hidden skeleton-shimmer">
                 <div className="px-5 pt-8 pb-4">
                     <div className="h-8 w-28 bg-ios-gray-5 dark:bg-ios-dark-fill rounded-lg mb-1.5" />
                     <div className="h-4 w-36 bg-ios-gray-6 dark:bg-ios-dark-fill rounded-lg" />

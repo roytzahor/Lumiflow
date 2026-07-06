@@ -26,6 +26,12 @@ echo "==> Prisma generate + migrate deploy (local DB)"
 yarn prisma generate
 yarn prisma migrate deploy
 
+echo "==> Ensuring port 3000 is free (start-server-and-test silently reuses stale servers)"
+for pid in $(lsof -nP -t -iTCP:3000 -sTCP:LISTEN 2>/dev/null); do
+  echo "    killing stale listener pid $pid"
+  kill "$pid" || true
+done
+
 echo "==> Production build"
 yarn build
 
