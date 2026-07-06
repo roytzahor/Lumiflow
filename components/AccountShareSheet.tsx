@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { Link2, Mail, Share2, X } from "lucide-react";
+import { useIsDesktop } from "@/hooks/useIsDesktop";
 
 interface AccountShareSheetProps {
   isOpen: boolean;
@@ -28,6 +29,7 @@ export default function AccountShareSheet({
   onEmailChange,
   onSubmit,
 }: AccountShareSheetProps) {
+  const isDesktop = useIsDesktop();
   return (
     <AnimatePresence>
       {isOpen ? (
@@ -46,17 +48,17 @@ export default function AccountShareSheet({
             role="dialog"
             aria-modal="true"
             aria-labelledby="account-share-title"
-            initial={{ y: "100%", opacity: 0.9 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: "100%", opacity: 0.95 }}
+            initial={isDesktop ? { opacity: 0, scale: 0.96 } : { y: "100%", opacity: 0.9 }}
+            animate={isDesktop ? { opacity: 1, scale: 1 } : { y: 0, opacity: 1 }}
+            exit={isDesktop ? { opacity: 0, scale: 0.96 } : { y: "100%", opacity: 0.95 }}
             transition={{ type: "spring", damping: 32, stiffness: 360, mass: 0.8 }}
-            className="fixed bottom-0 left-0 right-0 z-[110] mx-auto w-full max-w-md rounded-t-[20px] bg-ios-bg dark:bg-ios-dark-bg shadow-sheet pb-safe"
+            className="fixed bottom-0 left-0 right-0 z-[110] mx-auto w-full max-w-md rounded-t-[20px] bg-ios-bg dark:bg-ios-dark-bg shadow-sheet pb-safe lg:inset-0 lg:m-auto lg:h-fit lg:rounded-3xl"
           >
-            <div className="flex w-full justify-center pt-3 pb-2">
+            <div className="flex w-full justify-center pt-3 pb-2 lg:hidden">
               <div className="h-[5px] w-9 rounded-full bg-ios-gray-4 dark:bg-ios-dark-subtle/60" />
             </div>
 
-            <div className="space-y-4 px-5 pb-8">
+            <div className="space-y-4 px-5 pb-8 lg:pt-6">
               <div className="flex items-center justify-between gap-2">
                 <h3 id="account-share-title" className="text-lg font-bold text-ios-text dark:text-ios-dark-text">
                   שיתוף חשבון · {accountName}

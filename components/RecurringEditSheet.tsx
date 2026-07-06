@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { formatDateInputForDisplay, toDateInputValueFromUtc } from '@/lib/date-only';
 import type { AccountSummary, Category, RecurringMonthPolicy, RecurringWithAccount } from '@/lib/types';
 import { updateRecurringTransaction } from '@/app/actions/recurring';
+import { useIsDesktop } from '@/hooks/useIsDesktop';
 
 interface RecurringEditSheetProps {
   isOpen: boolean;
@@ -31,6 +32,7 @@ export default function RecurringEditSheet({
 }: RecurringEditSheetProps) {
   const router = useRouter();
   const dragControls = useDragControls();
+  const isDesktop = useIsDesktop();
   const sheetRef = useRef<HTMLDivElement>(null);
 
   const [amount, setAmount] = useState('');
@@ -152,22 +154,22 @@ export default function RecurringEditSheet({
 
           <motion.div
             ref={sheetRef}
-            initial={{ y: '100%', opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: '100%', opacity: 0 }}
+            initial={isDesktop ? { opacity: 0, scale: 0.96 } : { y: '100%', opacity: 0 }}
+            animate={isDesktop ? { opacity: 1, scale: 1 } : { y: 0, opacity: 1 }}
+            exit={isDesktop ? { opacity: 0, scale: 0.96 } : { y: '100%', opacity: 0 }}
             transition={{ type: 'spring', damping: 32, stiffness: 380, mass: 0.8 }}
-            drag="y"
+            drag={isDesktop ? false : 'y'}
             dragControls={dragControls}
             dragConstraints={{ top: 0 }}
             dragElastic={0.15}
             onDragEnd={onDragEnd}
-            className="fixed bottom-0 left-0 right-0 z-[80] max-h-[92vh] bg-ios-bg dark:bg-ios-dark-bg shadow-sheet flex flex-col pb-safe rounded-t-[20px] max-w-md mx-auto"
+            className="fixed bottom-0 left-0 right-0 z-[80] max-h-[92vh] bg-ios-bg dark:bg-ios-dark-bg shadow-sheet flex flex-col pb-safe rounded-t-[20px] max-w-md mx-auto lg:inset-0 lg:m-auto lg:h-fit lg:rounded-3xl"
           >
-            <div className="w-full flex justify-center pt-3 pb-2" onPointerDown={(e) => dragControls.start(e)}>
+            <div className="w-full flex justify-center pt-3 pb-2 lg:hidden" onPointerDown={(e) => dragControls.start(e)}>
               <div className="w-9 h-[5px] bg-ios-gray-4 dark:bg-ios-dark-subtle/60 rounded-full" />
             </div>
 
-            <div className="flex-1 overflow-y-auto px-5 pb-8">
+            <div className="flex-1 overflow-y-auto px-5 pb-8 lg:pt-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-ios-text dark:text-ios-dark-text">עריכת הוצאה קבועה</h2>
                 <button

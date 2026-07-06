@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { addIncomeEntry } from '@/app/actions/income';
 import { formatDateInputForDisplay, getTodayDateInputValue } from '@/lib/date-only';
 import { normalizeAmountInput } from '@/lib/amount-input';
+import { useIsDesktop } from '@/hooks/useIsDesktop';
 import type { AccountSummary } from '@/lib/types';
 
 interface IncomeEntrySheetProps {
@@ -26,6 +27,7 @@ export default function IncomeEntrySheet({ isOpen, onClose, accounts }: IncomeEn
     const [amountError, setAmountError] = useState('');
 
     const dragControls = useDragControls();
+    const isDesktop = useIsDesktop();
     const sheetRef = useRef<HTMLDivElement>(null);
     const amountInputRef = useRef<HTMLInputElement>(null);
     const prevIsOpenRef = useRef(false);
@@ -98,22 +100,22 @@ export default function IncomeEntrySheet({ isOpen, onClose, accounts }: IncomeEn
                         role="dialog"
                         aria-modal="true"
                         aria-labelledby="income-sheet-title"
-                        initial={{ y: '100%', opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        exit={{ y: '100%', opacity: 0 }}
+                        initial={isDesktop ? { opacity: 0, scale: 0.96 } : { y: '100%', opacity: 0 }}
+                        animate={isDesktop ? { opacity: 1, scale: 1 } : { y: 0, opacity: 1 }}
+                        exit={isDesktop ? { opacity: 0, scale: 0.96 } : { y: '100%', opacity: 0 }}
                         transition={{ type: 'spring', damping: 32, stiffness: 380, mass: 0.8 }}
-                        drag="y"
+                        drag={isDesktop ? false : 'y'}
                         dragControls={dragControls}
                         dragConstraints={{ top: 0 }}
                         dragElastic={0.15}
                         onDragEnd={(_e, info) => { if (info.offset.y > 100) onClose(); }}
-                        className="fixed bottom-0 left-0 right-0 z-[80] max-h-[80vh] bg-ios-bg dark:bg-ios-dark-bg shadow-sheet flex flex-col pb-safe rounded-t-[20px] max-w-md mx-auto"
+                        className="fixed bottom-0 left-0 right-0 z-[80] max-h-[80vh] bg-ios-bg dark:bg-ios-dark-bg shadow-sheet flex flex-col pb-safe rounded-t-[20px] max-w-md mx-auto lg:inset-0 lg:m-auto lg:h-fit lg:rounded-3xl"
                     >
-                        <div className="w-full flex justify-center pt-3 pb-2" onPointerDown={(e) => dragControls.start(e)}>
+                        <div className="w-full flex justify-center pt-3 pb-2 lg:hidden" onPointerDown={(e) => dragControls.start(e)}>
                             <div className="w-9 h-[5px] bg-ios-gray-4 dark:bg-ios-dark-subtle/60 rounded-full" />
                         </div>
 
-                        <div className="flex-1 overflow-y-auto px-5 pb-8">
+                        <div className="flex-1 overflow-y-auto px-5 pb-8 lg:pt-6">
                             <div className="flex items-center justify-between mb-6">
                                 <h2 id="income-sheet-title" className="text-xl font-bold text-ios-text dark:text-ios-dark-text">הוספת הכנסה</h2>
                                 <button type="button" onClick={onClose} className="w-8 h-8 bg-ios-gray-5 dark:bg-ios-dark-fill rounded-full flex items-center justify-center" aria-label="סגור">
